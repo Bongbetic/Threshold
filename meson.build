@@ -26,6 +26,12 @@ subdir('src')
 subdir('po')
 subdir('tests')
 
+# udev rule for passwordless charge-threshold writes (plugdev group)
+install_data(
+    '99-msi-battery.rules',
+    install_dir: get_option('prefix') / 'lib' / 'udev' / 'rules.d',
+)
+
 gnome.post_install(
     glib_compile_schemas: true,
     gtk_update_icon_cache: true,

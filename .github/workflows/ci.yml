@@ -46,3 +46,33 @@ jobs:
           name: batteryguard-build
           path: builddir/
           retention-days: 7
+
+  deb-package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev lintian
+
+      - name: Install build dependencies
+        run: sudo apt-get build-dep -y .
+
+      - name: Build .deb
+        run: |
+          dpkg-buildpackage -us -uc -b
+          mkdir -p artifacts
+          cp ../msi-batteryguard_*.deb artifacts/
+
+      - name: Lintian
+        run: lintian artifacts/msi-batteryguard_*.deb
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msi-batteryguard-deb
+          path: artifacts/msi-batteryguard_*.deb
+          retention-days: 14
+          if-no-files-found: error

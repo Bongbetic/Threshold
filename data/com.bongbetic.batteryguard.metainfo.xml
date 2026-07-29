@@ -15,11 +15,10 @@
   </description>
   <url type="homepage">https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX</url>
   <launchable type="desktop-id">com.bongbetic.batteryguard.desktop</launchable>
-  <screenshots>
-    <screenshot type="default">
-      <caption>Main window</caption>
-    </screenshot>
-  </screenshots>
+  <developer id="com.bongbetic">
+    <name>Bongbetic</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
   <releases>
     <release version="2.0.0" date="2026-07-30">
       <description>
