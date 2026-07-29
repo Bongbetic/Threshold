@@ -15,7 +15,10 @@ Build-Depends: debhelper-compat (= 13),
                python3-pytest,
                blueprint-compiler,
                libgtk-4-dev,
-               libadwaita-1-dev
+               libadwaita-1-dev,
+               gir1.2-gtk-4.0,
+               gir1.2-adw-1,
+               gir1.2-notify-0.7
 Standards-Version: 4.7.0
 Homepage: https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX
 Vcs-Browser: https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX
