@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=MSI BatteryGuard
+Comment=Battery charge threshold controller for MSI laptops
+Icon=com.bongbetic.batteryguard
+StartupNotify=true
+Exec=com.bongbetic.batteryguard
+Categories=GTK;GNOME;System;Utility;
+Keywords=battery;charge;threshold;MSI;laptop;

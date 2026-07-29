@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            meson \
+            ninja-build \
+            pkg-config \
+            desktop-file-utils \
+            gettext \
+            gobject-introspection \
+            python3 \
+            python3-gi \
+            python3-pytest \
+            blueprint-compiler \
+            libgtk-4-dev \
+            libadwaita-1-dev
+
+      - name: Configure
+        run: meson setup builddir
+
+      - name: Compile
+        run: meson compile -C builddir
+
+      - name: Test
+        run: meson test -C builddir --print-errorlogs
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: batteryguard-build
+          path: builddir/
+          retention-days: 7

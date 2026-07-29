@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema path="/com/bongbetic/batteryguard/" id="com.bongbetic.batteryguard">
+    <key name="window-width" type="i">
+      <default>480</default>
+      <summary>Window width</summary>
+      <description>Default window width in pixels.</description>
+    </key>
+    <key name="window-height" type="i">
+      <default>540</default>
+      <summary>Window height</summary>
+      <description>Default window height in pixels.</description>
+    </key>
+    <key name="charge-threshold" type="i">
+      <default>80</default>
+      <range min="20" max="100"/>
+      <summary>Charge threshold</summary>
+      <description>Battery charge limit as a percentage (20–100).</description>
+    </key>
+  </schema>
+</schemalist>
