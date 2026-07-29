@@ -1,1 +1,29 @@
-/* BatteryGuard GTK4 styles — placeholder */
+/* BatteryGuard GTK4 styles */
+
+.card {
+  background: @card_bg_color;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0;
+}
+
+.card label.title-1 {
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.accent {
+  color: @accent_color;
+}
+
+.caption {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Dark mode overrides — adwaita handles most of this, but keep for completeness */
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: @card_bg_color;
+  }
+}

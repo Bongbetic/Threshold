@@ -2,24 +2,169 @@ using Gtk 4.0;
 using Adw 1;
 
 template $BatteryGuardWindow: Adw.ApplicationWindow {
-  default-width: 480;
-  default-height: 540;
+  default-width: 800;
+  default-height: 600;
+  min-width: 400;
+  min-height: 400;
   title: _("MSI BatteryGuard");
 
   Gtk.Box {
     orientation: vertical;
 
     Adw.HeaderBar {
+      show-end-title-buttons: false;
       title-widget: Adw.WindowTitle {
         title: _("BatteryGuard");
       };
+
+      [end]
+      Gtk.MenuButton {
+        icon-name: "open-menu-symbolic";
+      }
     }
 
-    Gtk.Label {
-      label: _("MSI BatteryGuard");
-      margin-top: 48;
-      css-classes: ["title-1"];
-      halign: center;
+    Gtk.ScrolledWindow {
+      vexpand: true;
+
+      Adw.Clamp {
+        maximum-size: 600;
+
+        Gtk.Box {
+          orientation: vertical;
+          spacing: 16;
+          margin-top: 16;
+          margin-bottom: 16;
+          margin-start: 16;
+          margin-end: 16;
+
+          Gtk.Box {
+            orientation: horizontal;
+            homogeneous: true;
+            spacing: 12;
+
+            Gtk.Box {
+              orientation: vertical;
+              css-classes: ["card"];
+
+              Gtk.Label {
+                label: _("Current Charge");
+                css-classes: ["dim-label"];
+                xalign: 0.0;
+              }
+              Gtk.Label {
+                name: "current_charge_label";
+                label: "72%";
+                css-classes: ["title-1"];
+              }
+              Gtk.Label {
+                name: "current_status_label";
+                label: _("⚡ Charging");
+                css-classes: ["dim-label"];
+                xalign: 0.0;
+              }
+            }
+
+            Gtk.Box {
+              orientation: vertical;
+              css-classes: ["card"];
+
+              Gtk.Label {
+                label: _("Active Threshold");
+                css-classes: ["dim-label"];
+                xalign: 0.0;
+              }
+              Gtk.Label {
+                name: "active_threshold_label";
+                label: "80%";
+                css-classes: ["title-1"];
+              }
+              Gtk.Label {
+                label: _("BAT1");
+                css-classes: ["dim-label"];
+                xalign: 0.0;
+              }
+            }
+          }
+
+          Gtk.Box {
+            orientation: vertical;
+            css-classes: ["card"];
+            spacing: 12;
+
+            Gtk.Label {
+              label: _("Charge Limit");
+              css-classes: ["heading"];
+            }
+
+            Gtk.Box {
+              orientation: horizontal;
+              spacing: 12;
+
+              Gtk.Label {
+                label: "20";
+                css-classes: ["dim-label"];
+              }
+              Gtk.Scale {
+                name: "charge_scale";
+                adjustment: Gtk.Adjustment {
+                  lower: 20;
+                  upper: 100;
+                  value: 80;
+                };
+                draw-value: false;
+                hexpand: true;
+              }
+              Gtk.Label {
+                label: "100";
+                css-classes: ["dim-label"];
+              }
+            }
+
+            Gtk.Label {
+              name: "charge_value_label";
+              label: "80%";
+              css-classes: ["title-1"];
+              halign: center;
+            }
+          }
+
+          Gtk.Label {
+            label: _("Recommended: 60–80% for daily use");
+            css-classes: ["dim-label", "caption"];
+            halign: center;
+          }
+
+          Gtk.Box {
+            orientation: horizontal;
+            homogeneous: true;
+            spacing: 8;
+
+            Gtk.Button {
+              name: "apply_button";
+              label: _("Apply Threshold");
+              css-classes: ["suggested-action", "pill"];
+            }
+            Gtk.Button {
+              name: "restore_button";
+              label: _("Restore to 100%");
+            }
+          }
+
+          Adw.ExpanderRow {
+            title: _("Settings");
+
+            Adw.SwitchRow {
+              name: "dark_mode_switch";
+              title: _("Dark Mode");
+              active: true;
+            }
+            Adw.SwitchRow {
+              name: "launch_switch";
+              title: _("Launch at login");
+            }
+          }
+        }
+      }
     }
   }
 }
