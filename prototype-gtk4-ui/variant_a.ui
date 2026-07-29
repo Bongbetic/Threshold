@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkScrolledWindow" id="root">
+    <property name="child">
+      <object class="AdwPreferencesPage">
+        <property name="title">BatteryGuard</property>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title">Battery Status</property>
+            <property name="description">Live readings from sysfs</property>
+            <child>
+              <object class="AdwActionRow">
+                <property name="title">Current charge</property>
+                <property name="subtitle">BAT1</property>
+                <child type="suffix">
+                  <object class="GtkLabel">
+                    <property name="label">⚡ 72%</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwActionRow">
+                <property name="title">Active threshold</property>
+                <child type="suffix">
+                  <object class="GtkLabel">
+                    <property name="label">80%</property>
+                    <property name="css-classes">accent</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title">Charge Limit</property>
+            <child>
+              <object class="AdwActionRow">
+                <property name="title">Set threshold to</property>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">12</property>
+                    <child>
+                      <object class="GtkScale">
+                        <property name="adjustment">
+                          <object class="GtkAdjustment">
+                            <property name="lower">20</property>
+                            <property name="upper">100</property>
+                            <property name="value">80</property>
+                          </object>
+                        </property>
+                        <property name="draw-value">False</property>
+                        <property name="hexpand">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">80%</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwActionRow">
+                <property name="subtitle">Recommended: 60–80% for daily use, 100% for travel</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title">Actions</property>
+            <child>
+              <object class="AdwActionRow">
+                <child>
+                  <object class="GtkButton">
+                    <property name="label">Apply Threshold</property>
+                    <property name="css-classes">suggested-action</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwActionRow">
+                <child>
+                  <object class="GtkButton">
+                    <property name="label">Restore to 100%</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title">Settings</property>
+            <child>
+              <object class="AdwSwitchRow">
+                <property name="title">Dark Mode</property>
+                <property name="active">True</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow">
+                <property name="title">Launch at login</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </property>
+  </object>
+</interface>
