@@ -1,7 +1,7 @@
 # udev rule – allow members of the 'plugdev' group to write battery charge
 # thresholds without requiring root or a password prompt.
 #
-# Installed by the msi-batteryguard package (Meson) to /etc/udev/rules.d/.
+# Installed by the msi-batteryguard package (Meson) to <prefix>/lib/udev/rules.d/.
 # After manual meson install: sudo udevadm control --reload-rules && sudo udevadm trigger
 #
 # Then add your user to plugdev (if not already):

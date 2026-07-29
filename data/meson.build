@@ -72,10 +72,11 @@ install_subdir(
     install_dir: get_option('datadir') / 'icons',
 )
 
-# udev rule for passwordless charge-threshold writes (plugdev group)
+# udev rule for passwordless charge-threshold writes (plugdev group).
+# Packaged into /usr/lib/udev/rules.d (not /etc — lintian udev-rule-in-etc).
 install_data(
     '99-msi-battery.rules',
-    install_dir: '/etc/udev/rules.d',
+    install_dir: get_option('prefix') / 'lib' / 'udev' / 'rules.d',
 )
 
 # CSS (also in GResource — separate install for development convenience)

@@ -90,13 +90,13 @@ def test_metainfo_installed(destdir: Path):
     assert candidates and candidates[0].is_file()
 
 
-def test_udev_rule_installed_under_etc(destdir: Path):
-    rule = destdir / "etc" / "udev" / "rules.d" / "99-msi-battery.rules"
-    assert rule.is_file(), (
-        "udev rule must install to /etc/udev/rules.d/ "
-        f"(not found at {rule}; tree={list(destdir.rglob('*.rules'))})"
+def test_udev_rule_installed_under_lib(destdir: Path):
+    candidates = list(destdir.glob("**/lib/udev/rules.d/99-msi-battery.rules"))
+    assert candidates and candidates[0].is_file(), (
+        "udev rule must install to <prefix>/lib/udev/rules.d/ "
+        f"(found={list(destdir.rglob('*.rules'))})"
     )
-    text = rule.read_text(encoding="utf-8")
+    text = candidates[0].read_text(encoding="utf-8")
     assert "charge_control_end_threshold" in text
     assert "plugdev" in text
 
