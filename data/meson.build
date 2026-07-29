@@ -19,7 +19,7 @@ endif
 app_resources = gnome.compile_resources(
     'batteryguard',
     'resources/resources.gresource.xml',
-    source_dir: [meson.current_build_dir(), meson.current_source_dir() / 'ui'],
+    source_dir: [meson.current_build_dir(), meson.current_source_dir() / 'ui', meson.current_source_dir()],
     dependencies: [window_ui],
     gresource_bundle: true,
     install: true,

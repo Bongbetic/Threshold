@@ -5,6 +5,7 @@ python_sources = [
     'batteryguard/battery.py',
     'batteryguard/main.py',
     'batteryguard/application.py',
+    'batteryguard/window.py',
 ]
 
 install_data(
