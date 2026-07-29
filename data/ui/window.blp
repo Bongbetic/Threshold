@@ -46,43 +46,43 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
 
             Gtk.Box {
               orientation: vertical;
-              css-classes: ["card"];
+              styles ["card"]
 
               Gtk.Label {
                 label: _("Current Charge");
-                css-classes: ["dim-label"];
+                styles ["dim-label"]
                 xalign: 0.0;
               }
               Gtk.Label {
                 name: "current_charge_label";
                 label: "72%";
-                css-classes: ["title-1"];
+                styles ["title-1"]
               }
               Gtk.Label {
                 name: "current_status_label";
                 label: _("⚡ Charging");
-                css-classes: ["dim-label"];
+                styles ["dim-label"]
                 xalign: 0.0;
               }
             }
 
             Gtk.Box {
               orientation: vertical;
-              css-classes: ["card"];
+              styles ["card"]
 
               Gtk.Label {
                 label: _("Active Threshold");
-                css-classes: ["dim-label"];
+                styles ["dim-label"]
                 xalign: 0.0;
               }
               Gtk.Label {
                 name: "active_threshold_label";
                 label: "80%";
-                css-classes: ["title-1"];
+                styles ["title-1"]
               }
               Gtk.Label {
                 label: _("BAT1");
-                css-classes: ["dim-label"];
+                styles ["dim-label"]
                 xalign: 0.0;
               }
             }
@@ -90,12 +90,12 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
 
           Gtk.Box {
             orientation: vertical;
-            css-classes: ["card"];
+            styles ["card"]
             spacing: 12;
 
             Gtk.Label {
               label: _("Charge Limit");
-              css-classes: ["heading"];
+              styles ["heading"]
             }
 
             Gtk.Box {
@@ -104,7 +104,7 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
 
               Gtk.Label {
                 label: "20";
-                css-classes: ["dim-label"];
+                styles ["dim-label"]
               }
               Gtk.Scale {
                 name: "charge_scale";
@@ -118,21 +118,21 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
               }
               Gtk.Label {
                 label: "100";
-                css-classes: ["dim-label"];
+                styles ["dim-label"]
               }
             }
 
             Gtk.Label {
               name: "charge_value_label";
               label: "80%";
-              css-classes: ["title-1"];
+              styles ["title-1"]
               halign: center;
             }
           }
 
           Gtk.Label {
             label: _("Recommended: 60–80% for daily use");
-            css-classes: ["dim-label", "caption"];
+            styles ["dim-label", "caption"]
             halign: center;
           }
 
@@ -144,7 +144,7 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
             Gtk.Button {
               name: "apply_button";
               label: _("Apply Threshold");
-              css-classes: ["suggested-action", "pill"];
+              styles ["suggested-action", "pill"]
             }
             Gtk.Button {
               name: "restore_button";
@@ -174,12 +174,12 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
             Gtk.Label {
               name: "live_dot";
               label: "○";
-              css-classes: ["dim-label", "caption"];
+              styles ["dim-label", "caption"]
             }
             Gtk.Label {
               name: "status_bar";
               label: _("Ready");
-              css-classes: ["dim-label", "caption"];
+              styles ["dim-label", "caption"]
               hexpand: true;
               xalign: 0.0;
             }
