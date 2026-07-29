@@ -3,6 +3,7 @@ pkgdatadir = get_option('prefix') / get_option('datadir') / 'com.bongbetic.batte
 python_sources = [
     'batteryguard/__init__.py',
     'batteryguard/battery.py',
+    'batteryguard/config.py',
     'batteryguard/main.py',
     'batteryguard/application.py',
     'batteryguard/window.py',
