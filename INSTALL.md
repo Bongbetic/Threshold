@@ -1,127 +1,113 @@
 # MSI BatteryGuard – Installation Guide
 
 ## Target Hardware
-**MSI Thin A15 B7UCX** (AMD Ryzen 7000 series)
+
+**MSI Thin A15 B7UCX** (AMD Ryzen 7000 series), EC firmware **`16RKIMS1.111`**.
+
+Other MSI machines supported by upstream `msi-ec` may work; verify the
+threshold sysfs path after loading the module.
 
 ---
 
-## Step 1 – Install Build Dependencies
+## Recommended: install the `.deb`
+
+```bash
+sudo apt install ./msi-batteryguard_1.0.0-1_all.deb
+```
+
+This installs:
+
+- The GTK4 app (`msi-batteryguard`)
+- Desktop entry, icons, and AppStream metainfo (GNOME Software)
+- The udev rule under `/etc/udev/rules.d/` for `plugdev` write access
+
+Then install and load `msi-ec` (next section) if it is not already present.
+The package **Recommends** `msi-ec-dkms` when that package is available.
+
+Add yourself to `plugdev` if needed:
+
+```bash
+sudo usermod -aG plugdev $USER
+# log out and back in
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+Launch from the app menu (**MSI BatteryGuard**) or:
+
+```bash
+msi-batteryguard
+```
+
+---
+
+## msi-ec kernel module (DKMS)
 
 ```bash
 sudo apt update
-sudo apt install -y git dkms linux-headers-$(uname -r) python3-pip
-```
+sudo apt install -y git dkms linux-headers-$(uname -r)
 
-> On Arch/Manjaro: `sudo pacman -S git dkms linux-headers python`
-> On Fedora: `sudo dnf install git dkms kernel-devel python3-pip`
-
----
-
-## Step 2 – Install the msi-ec Kernel Module (via DKMS)
-
-```bash
 git clone https://github.com/BeardOverflow/msi-ec.git
 cd msi-ec
-sudo apt install -y linux-headers-$(uname -r)   # also triggers DKMS auto-build
-# If DKMS didn't auto-build during headers install, run:
 sudo make dkms-install
 ```
 
-This installs the upstream DKMS module which supports `16RKIMS1.111` (your EC firmware).
-It lives in `updates/dkms/` which takes precedence over the outdated built-in kernel module.
-DKMS rebuilds it automatically on every kernel update.
-
-### Load the module now (without rebooting)
+Load without rebooting:
 
 ```bash
 sudo modprobe -r msi_ec 2>/dev/null; sudo modprobe msi_ec
 ```
 
-### Verify it loaded and found your EC
+Verify:
 
 ```bash
 dmesg | grep msi_ec | tail -5
-ls /sys/class/power_supply/BAT1/charge_control_end_threshold
-cat /sys/class/power_supply/BAT1/charge_control_end_threshold
-# Should print 60 (MSI default battery care threshold)
+ls /sys/class/power_supply/BAT*/charge_control_end_threshold
+modinfo msi_ec | grep filename
+# Prefer: .../updates/dkms/msi-ec.ko.xz  (not the built-in driver path)
 ```
 
-### Make it load on every boot
+Autoload on boot:
 
 ```bash
 echo "msi-ec" | sudo tee /etc/modules-load.d/msi-ec.conf
 ```
 
+### EC ID (MSI Thin A15 B7UCX)
+
+Firmware ID **`16RKIMS1.111`** is supported upstream (CONF_G2_6, charge
+register `0xd7`).
+
 ---
 
-## Step 3 – EC ID (MSI Thin A15 B7UCX)
+## Manual build (developers)
 
-Your laptop's EC firmware ID is **`16RKIMS1.111`**. This is confirmed supported
-by the upstream DKMS module (CONF_G2_6, charge register `0xd7`).
-
-Verify the DKMS version is active (not the outdated built-in):
+Build dependencies (Ubuntu 24.04+):
 
 ```bash
-modinfo msi_ec | grep filename
-# Should show: .../updates/dkms/msi-ec.ko.xz   (NOT kernel/drivers/...)
+sudo apt install -y \
+  meson ninja-build pkg-config desktop-file-utils gettext \
+  gobject-introspection python3 python3-gi python3-pytest \
+  blueprint-compiler libgtk-4-dev libadwaita-1-dev \
+  gir1.2-gtk-4.0 gir1.2-adw-1
 ```
 
----
-
-## Step 4 – Install udev Rule (write without sudo every time)
+Configure, test, install:
 
 ```bash
-sudo cp 99-msi-battery.rules /etc/udev/rules.d/
+meson setup builddir
+meson compile -C builddir
+meson test -C builddir --print-errorlogs
+sudo meson install -C builddir
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
 
-Verify permissions:
+Default prefix is `/usr/local`. For a layout closer to the `.deb`, use:
 
 ```bash
-ls -l /sys/class/power_supply/BAT0/charge_control_end_threshold
-# Should be writable by group 'plugdev' or your user
+meson setup builddir --prefix=/usr --sysconfdir=/etc
 ```
-
-Add yourself to the `plugdev` group if needed:
-
-```bash
-sudo usermod -aG plugdev $USER
-# Then log out and back in
-```
-
----
-
-## Step 5 – Install Python Dependencies
-
-```bash
-pip3 install --user customtkinter pillow
-```
-
----
-
-## Step 6 – Install the App
-
-```bash
-# Copy desktop entry
-cp batteryguard.desktop ~/.local/share/applications/
-
-# Make the script executable
-chmod +x msi-batteryguard.py
-
-# Optional: install system-wide
-sudo cp msi-batteryguard.py /usr/local/bin/msi-batteryguard
-```
-
----
-
-## Step 7 – Run
-
-```bash
-python3 msi-batteryguard.py
-```
-
-Or launch from your application menu: **MSI BatteryGuard**
 
 ---
 
@@ -129,7 +115,8 @@ Or launch from your application menu: **MSI BatteryGuard**
 
 | Problem | Fix |
 |---|---|
-| `lsmod` shows no msi_ec | Run `sudo modprobe msi-ec` and check `dmesg` |
-| Threshold file not found | Module loaded but EC not supported – check dmesg |
-| Permission denied writing threshold | udev rule not applied – repeat Step 4 |
-| App shows "BAT path not found" | Run `ls /sys/class/power_supply/` and report |
+| `lsmod` shows no `msi_ec` | `sudo modprobe msi-ec` and check `dmesg` |
+| Threshold file not found | Module loaded but EC not supported — check `dmesg` |
+| Permission denied writing threshold | udev rule / `plugdev` membership — reload rules, re-login |
+| App missing from GNOME Software | Ensure metainfo installed; refresh Software / AppStream cache |
+| App shows battery path not found | `ls /sys/class/power_supply/` and report |
