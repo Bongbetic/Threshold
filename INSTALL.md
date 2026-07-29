@@ -19,7 +19,7 @@ This installs:
 
 - The GTK4 app (`msi-batteryguard`)
 - Desktop entry, icons, and AppStream metainfo (GNOME Software)
-- The udev rule under `/etc/udev/rules.d/` for `plugdev` write access
+- The udev rule under `/usr/lib/udev/rules.d/` for `plugdev` write access
 
 Then install and load `msi-ec` (next section) if it is not already present.
 The package **Recommends** `msi-ec-dkms` when that package is available.
