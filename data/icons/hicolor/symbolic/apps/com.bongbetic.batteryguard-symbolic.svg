@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-  <rect x="2" y="4" width="10" height="8.5" rx="1" ry="1" fill="#241f31"/>
-  <rect x="12" y="6.5" width="2" height="4" rx="1" ry="1" fill="#241f31"/>
+  <!-- Symbolic monochrome battery; currentColor for panel/tray recoloring -->
+  <path
+    fill="currentColor"
+    d="M1.5 4.5h10c.83 0 1.5.67 1.5 1.5v4c0 .83-.67 1.5-1.5 1.5h-10C.67 11.5 0 10.83 0 10V6c0-.83.67-1.5 1.5-1.5zm11.75 2.25h1.5c.41 0 .75.34.75.75v1c0 .41-.34.75-.75.75h-1.5v-2.5zM2.25 6h7.5v4h-7.5V6z"/>
 </svg>

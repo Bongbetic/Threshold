@@ -3,6 +3,7 @@
   <id>com.bongbetic.batteryguard</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
+  <project_group>Bongbetic</project_group>
   <name>MSI BatteryGuard</name>
   <summary>Battery charge threshold controller for MSI laptops</summary>
   <description>
@@ -13,11 +14,25 @@
       persists across reboots.
     </p>
   </description>
+  <categories>
+    <category>System</category>
+    <category>HardwareSettings</category>
+  </categories>
   <url type="homepage">https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX</url>
+  <url type="bugtracker">https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX/issues</url>
   <launchable type="desktop-id">com.bongbetic.batteryguard.desktop</launchable>
   <developer id="com.bongbetic">
     <name>Bongbetic</name>
   </developer>
+  <recommends>
+    <id>msi-ec-dkms</id>
+  </recommends>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX/raw/main/data/screenshots/main-window.png</image>
+      <caption>Set the battery charge threshold from the main window</caption>
+    </screenshot>
+  </screenshots>
   <content_rating type="oars-1.1"/>
   <releases>
     <release version="2.0.0" date="2026-07-30">
