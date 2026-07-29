@@ -1,0 +1,41 @@
+Source: msi-batteryguard
+Section: utils
+Priority: optional
+Maintainer: Soubarna <Soubarna@live.in>
+Build-Depends: debhelper-compat (= 13),
+               meson (>= 1.0),
+               ninja-build,
+               pkg-config,
+               desktop-file-utils,
+               gettext (>= 0.19.8),
+               gobject-introspection,
+               python3,
+               python3-gi,
+               python3-pytest,
+               blueprint-compiler,
+               libgtk-4-dev,
+               libadwaita-1-dev
+Standards-Version: 4.7.0
+Homepage: https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX
+Vcs-Browser: https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX
+Vcs-Git: https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX.git
+Rules-Requires-Root: no
+
+Package: msi-batteryguard
+Architecture: all
+Depends: ${python3:Depends},
+         ${misc:Depends},
+         python3-gi,
+         gir1.2-gtk-4.0,
+         gir1.2-adw-1,
+         gir1.2-notify-0.7
+Recommends: msi-ec-dkms,
+            gir1.2-ayatanaappindicator3-0.1
+Description: Battery charge threshold controller for MSI laptops
+ MSI BatteryGuard provides a GTK4 graphical interface for setting the
+ battery charge threshold on MSI laptops. The charge limit is written
+ directly to the EC microcontroller via the msi-ec kernel module and
+ persists across reboots.
+ .
+ Typical use cases include setting a 60–80% charge ceiling to extend
+ long-term battery lifespan when the laptop is primarily used plugged in.

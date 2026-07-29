@@ -21,7 +21,7 @@ script_conf.set('python', find_program('python3').full_path())
 
 configure_file(
     input: 'launcher.in',
-    output: 'com.bongbetic.batteryguard',
+    output: 'msi-batteryguard',
     configuration: script_conf,
     install: true,
     install_dir: get_option('bindir'),
