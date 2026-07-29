@@ -37,10 +37,12 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
           margin-start: 16;
           margin-end: 16;
 
-          Gtk.Box {
-            orientation: horizontal;
+          Gtk.FlowBox {
+            max-children-per-line: 2;
+            min-children-per-line: 1;
             homogeneous: true;
-            spacing: 12;
+            row-spacing: 12;
+            column-spacing: 12;
 
             Gtk.Box {
               orientation: vertical;

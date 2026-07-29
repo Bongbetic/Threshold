@@ -5,8 +5,9 @@ import gi
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
+gi.require_version('Notify', '0.7')
 
-from gi.repository import Gio, Adw, GObject
+from gi.repository import Gio, Adw, GObject, Notify
 
 from batteryguard.window import BatteryGuardWindow, load_css_from_resource
 from batteryguard.config import Config
@@ -24,6 +25,7 @@ class BatteryGuardApplication(Adw.Application):
     def do_startup(self):
         Adw.Application.do_startup(self)
         load_css_from_resource()
+        Notify.init('com.bongbetic.batteryguard')
 
     def do_activate(self):
         win = self.props.active_window

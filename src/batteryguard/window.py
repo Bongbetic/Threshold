@@ -9,10 +9,19 @@ import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 
-from gi.repository import Gio, GLib, Gtk, Adw, Gdk, GObject
+from gi.repository import Gio, GLib, Gtk, Adw, Gdk, GObject, Notify
 
 from batteryguard.battery import find_battery_path, read_sysfs, write_threshold
 from batteryguard.config import Config
+
+
+try:
+    gi.require_version('AyatanaAppIndicator3', '0.1')
+    from gi.repository import AyatanaAppIndicator3
+    HAS_TRAY = True
+except (ValueError, ImportError):
+    AyatanaAppIndicator3 = None  # type: ignore
+    HAS_TRAY = False
 
 
 AUTOSTART_DIR = Path.home() / '.config' / 'autostart'
@@ -53,6 +62,8 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         self._battery_path = find_battery_path()
         self._polling_id = None
         self._writing = False
+        self._indicator = None
+        self._charge_pct = 0
 
         # Connect scale slider to the percentage label
         self.charge_scale.connect('value-changed', self._on_scale_changed)
@@ -72,11 +83,17 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         self.connect('size-allocate', self._on_size_allocate)
         self.connect('notify::maximized', self._on_maximized_changed)
 
+        # Close-to-tray: hide instead of destroy
+        self.connect('close-request', self._on_close_request)
+
         # Load persisted settings
         self._load_settings()
 
         # Populate with real data
         self._refresh_battery_data()
+
+        # Setup system tray
+        self._setup_tray()
 
         # Start polling for live updates
         self._start_polling()
@@ -112,8 +129,10 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         if charge_now is not None and charge_full is not None:
             try:
                 pct = int(float(charge_now) / float(charge_full) * 100)
+                self._charge_pct = pct
                 self.current_charge_label.set_label(f'{pct}%')
             except (ValueError, ZeroDivisionError):
+                self._charge_pct = 0
                 self.current_charge_label.set_label('--%')
 
         # Status (charging / discharging)
@@ -157,6 +176,8 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
     def _poll_tick(self):
         """Called every 5 seconds — refresh battery data and animate dot."""
         self._refresh_battery_data()
+        # Update tray label
+        self._update_tray_label()
         # Animate live dot
         self.live_dot.set_label('●')
         GLib.timeout_add(500, self._reset_dot)
@@ -191,8 +212,17 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
             self._config.set_charge_threshold(value)
             self.active_threshold_label.set_label(f'{value}%')
             self._set_status(f'Threshold set to {value}% via {message}', is_success=True)
+            self._show_notification(
+                f'Threshold set to {value}%',
+                f'Written to EC firmware (via {message}). Persists across reboots.',
+            )
         else:
             self._set_status(f'Error: {message}', is_error=True)
+            self._show_notification(
+                'Failed to set threshold',
+                message,
+                is_error=True,
+            )
 
         button.set_sensitive(True)
         button.set_label('Apply Threshold')
@@ -219,8 +249,17 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
             self._config.set_charge_threshold(100)
             self.active_threshold_label.set_label('100%')
             self._set_status('Threshold restored to 100%', is_success=True)
+            self._show_notification(
+                'Threshold restored to 100%',
+                'Written to EC firmware. Persists across reboots.',
+            )
         else:
             self._set_status(f'Error: {message}', is_error=True)
+            self._show_notification(
+                'Failed to restore threshold',
+                message,
+                is_error=True,
+            )
 
         button.set_sensitive(True)
         button.set_label('Restore to 100%')
@@ -275,6 +314,81 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
 
     def _on_maximized_changed(self, *args):
         self._config.set_maximized(self.props.maximized)
+
+    # ── system tray ────────────────────────────────────────────────────────────
+
+    def _setup_tray(self):
+        """Create the system tray indicator (AyatanaAppIndicator3)."""
+        if not HAS_TRAY:
+            return
+
+        self._indicator = AyatanaAppIndicator3.Indicator.new(
+            'com.bongbetic.batteryguard',
+            'com.bongbetic.batteryguard',
+            AyatanaAppIndicator3.IndicatorCategory.APPLICATION_STATUS,
+        )
+        self._indicator.set_status(AyatanaAppIndicator3.IndicatorStatus.ACTIVE)
+
+        # Build right-click menu
+        menu = Gtk.Menu.new()
+
+        show_item = Gtk.MenuItem.new_with_label('Show BatteryGuard')
+        show_item.connect('activate', self._on_tray_show)
+        menu.append(show_item)
+
+        quit_item = Gtk.MenuItem.new_with_label('Quit')
+        quit_item.connect('activate', self._on_tray_quit)
+        menu.append(quit_item)
+
+        menu.show_all()
+        self._indicator.set_menu(menu)
+
+        # Left-click restore
+        self._indicator.connect('activate', self._on_tray_show)
+
+        self._update_tray_label()
+
+    def _update_tray_label(self):
+        """Update the tray indicator label with current charge percentage."""
+        if self._indicator is not None:
+            self._indicator.set_label(f'{self._charge_pct}%', '100%')
+
+    def _on_tray_show(self, *_args):
+        """Restore the window from tray."""
+        self.present()
+
+    def _on_tray_quit(self, *_args):
+        """Quit the application from tray."""
+        self._cleanup_tray()
+        self.get_application().quit()
+
+    def _cleanup_tray(self):
+        """Clean up the tray indicator."""
+        if self._indicator is not None:
+            self._indicator.set_status(AyatanaAppIndicator3.IndicatorStatus.PASSIVE)
+            self._indicator = None
+
+    def _on_close_request(self, *_args):
+        """Close-to-tray: hide window instead of destroying."""
+        if HAS_TRAY:
+            self.hide()
+            return True  # inhibit destruction
+        return False  # allow normal close
+
+    # ── notifications ──────────────────────────────────────────────────────────
+
+    def _show_notification(self, title: str, body: str, is_error: bool = False):
+        """Show a desktop notification via libnotify."""
+        try:
+            notification = Notify.Notification.new(
+                f'BatteryGuard \u2014 {title}',
+                body,
+            )
+            if is_error:
+                notification.set_urgency(Notify.Urgency.CRITICAL)
+            notification.show()
+        except Exception:
+            pass  # Notifications are best-effort
 
     # ── status bar ─────────────────────────────────────────────────────────────
 

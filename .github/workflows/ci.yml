@@ -27,7 +27,9 @@ jobs:
             python3-pytest \
             blueprint-compiler \
             libgtk-4-dev \
-            libadwaita-1-dev
+            libadwaita-1-dev \
+            gir1.2-ayatanaappindicator3-0.1 \
+            gir1.2-notify-0.7
 
       - name: Configure
         run: meson setup builddir
