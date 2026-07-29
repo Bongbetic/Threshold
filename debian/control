@@ -3,6 +3,7 @@ Section: utils
 Priority: optional
 Maintainer: Soubarna <Soubarna@live.in>
 Build-Depends: debhelper-compat (= 13),
+               dh-python,
                meson (>= 1.0),
                ninja-build,
                pkg-config,
