@@ -1,15 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema path="/com/bongbetic/batteryguard/" id="com.bongbetic.batteryguard">
+    <key name="dark-mode" type="b">
+      <default>false</default>
+      <summary>Dark mode</summary>
+      <description>Whether to use dark color scheme.</description>
+    </key>
+    <key name="autostart" type="b">
+      <default>false</default>
+      <summary>Launch at login</summary>
+      <description>Whether to launch the application automatically at login.</description>
+    </key>
     <key name="window-width" type="i">
-      <default>480</default>
+      <default>800</default>
       <summary>Window width</summary>
       <description>Default window width in pixels.</description>
     </key>
     <key name="window-height" type="i">
-      <default>540</default>
+      <default>600</default>
       <summary>Window height</summary>
       <description>Default window height in pixels.</description>
+    </key>
+    <key name="maximized" type="b">
+      <default>false</default>
+      <summary>Window maximized</summary>
+      <description>Whether the window is maximized.</description>
     </key>
     <key name="charge-threshold" type="i">
       <default>80</default>

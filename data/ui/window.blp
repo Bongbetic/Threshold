@@ -163,6 +163,25 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
               title: _("Launch at login");
             }
           }
+
+          Gtk.Box {
+            orientation: horizontal;
+            spacing: 6;
+            margin-top: 4;
+
+            Gtk.Label {
+              name: "live_dot";
+              label: "○";
+              css-classes: ["dim-label", "caption"];
+            }
+            Gtk.Label {
+              name: "status_bar";
+              label: _("Ready");
+              css-classes: ["dim-label", "caption"];
+              hexpand: true;
+              xalign: 0.0;
+            }
+          }
         }
       }
     }
