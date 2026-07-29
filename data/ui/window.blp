@@ -1,0 +1,25 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $BatteryGuardWindow: Adw.ApplicationWindow {
+  default-width: 480;
+  default-height: 540;
+  title: _("MSI BatteryGuard");
+
+  Gtk.Box {
+    orientation: vertical;
+
+    Adw.HeaderBar {
+      title-widget: Adw.WindowTitle {
+        title: _("BatteryGuard");
+      };
+    }
+
+    Gtk.Label {
+      label: _("MSI BatteryGuard");
+      margin-top: 48;
+      css-classes: ["title-1"];
+      halign: center;
+    }
+  }
+}

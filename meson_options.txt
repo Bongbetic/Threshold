@@ -1,0 +1,8 @@
+option(
+    'python-bytecompile',
+    type: 'integer',
+    min: 0,
+    max: 2,
+    value: 2,
+    description: 'Python byte-compile optimisation level',
+)

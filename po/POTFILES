@@ -1,0 +1,5 @@
+data/ui/window.blp
+data/com.bongbetic.batteryguard.desktop
+data/com.bongbetic.batteryguard.gschema.xml
+src/batteryguard/main.py
+src/batteryguard/application.py

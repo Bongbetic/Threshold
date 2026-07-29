@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.bongbetic.batteryguard</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>MSI BatteryGuard</name>
+  <summary>Battery charge threshold controller for MSI laptops</summary>
+  <description>
+    <p>
+      MSI BatteryGuard provides a graphical interface for setting the
+      battery charge threshold on MSI laptops. The charge limit is written
+      directly to the EC microcontroller via the msi-ec kernel module and
+      persists across reboots.
+    </p>
+  </description>
+  <url type="homepage">https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX</url>
+  <launchable type="desktop-id">com.bongbetic.batteryguard.desktop</launchable>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main window</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="2.0.0" date="2026-07-30">
+      <description>
+        <p>GTK4 + libadwaita rebuild with Meson build system.</p>
+      </description>
+    </release>
+  </releases>
+</component>
