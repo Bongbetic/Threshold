@@ -1,16 +1,19 @@
 """Application class — startup, activation, shutdown, and autostart management."""
 
-import sys
 import gi
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 gi.require_version('Notify', '0.7')
 
-from gi.repository import Gio, Adw, GObject, Notify
+from gi.repository import Gio, Adw, Notify  # noqa: E402
 
-from batteryguard.window import BatteryGuardWindow, load_css_from_resource
-from batteryguard.config import Config
+from batteryguard.resources import register_resources  # noqa: E402
+
+register_resources()
+
+from batteryguard.window import BatteryGuardWindow, load_css_from_resource  # noqa: E402
+from batteryguard.config import Config  # noqa: E402
 
 
 class BatteryGuardApplication(Adw.Application):
@@ -31,7 +34,6 @@ class BatteryGuardApplication(Adw.Application):
         win = self.props.active_window
         if not win:
             win = BatteryGuardWindow(application=self, config=self._config)
-            # Restore window geometry
             if self._config.get_maximized():
                 win.maximize()
             else:

@@ -7,6 +7,7 @@ python_sources = [
     'batteryguard/main.py',
     'batteryguard/application.py',
     'batteryguard/window.py',
+    'batteryguard/resources.py',
 ]
 
 install_data(
@@ -17,6 +18,7 @@ install_data(
 script_conf = configuration_data()
 script_conf.set('app_id', 'com.bongbetic.batteryguard')
 script_conf.set('pkgdatadir', pkgdatadir)
+script_conf.set('localedir', get_option('prefix') / get_option('localedir'))
 script_conf.set('python', find_program('python3').full_path())
 
 configure_file(

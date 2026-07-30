@@ -1,11 +1,10 @@
 """GSettings wrapper — typed access to application preferences."""
 
-import sys
 import gi
 
 gi.require_version('Gio', '2.0')
 
-from gi.repository import Gio
+from gi.repository import Gio  # noqa: E402
 
 SCHEMA_ID = 'com.bongbetic.batteryguard'
 

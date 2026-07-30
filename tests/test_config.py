@@ -122,6 +122,7 @@ def test_set_charge_threshold(config):
 
 
 def test_connect(config):
-    callback = lambda *a: None
+    def callback(*_a):
+        return None
     conn_id = config.connect('changed::dark-mode', callback)
     assert conn_id == 42

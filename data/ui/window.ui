@@ -17,17 +17,11 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
         <property name="orientation">1</property>
         <child>
           <object class="AdwHeaderBar">
-            <property name="show-end-title-buttons">false</property>
             <property name="title-widget">
               <object class="AdwWindowTitle">
                 <property name="title" translatable="yes">BatteryGuard</property>
               </object>
             </property>
-            <child type="end">
-              <object class="GtkMenuButton">
-                <property name="icon-name">open-menu-symbolic</property>
-              </object>
-            </child>
           </object>
         </child>
         <child>
@@ -45,18 +39,24 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                     <property name="margin-start">16</property>
                     <property name="margin-end">16</property>
                     <child>
-                      <object class="GtkBox">
-                        <property name="orientation">0</property>
+                      <object class="GtkFlowBox">
+                        <property name="max-children-per-line">2</property>
+                        <property name="min-children-per-line">1</property>
                         <property name="homogeneous">true</property>
-                        <property name="spacing">12</property>
+                        <property name="row-spacing">12</property>
+                        <property name="column-spacing">12</property>
                         <child>
                           <object class="GtkBox">
                             <property name="orientation">1</property>
-                            <property name="css-classes">card</property>
+                            <style>
+                              <class name="card"/>
+                            </style>
                             <child>
                               <object class="GtkLabel">
                                 <property name="label" translatable="yes">Current Charge</property>
-                                <property name="css-classes">dim-label</property>
+                                <style>
+                                  <class name="dim-label"/>
+                                </style>
                                 <property name="xalign">0</property>
                               </object>
                             </child>
@@ -64,14 +64,18 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                               <object class="GtkLabel">
                                 <property name="name">current_charge_label</property>
                                 <property name="label">72%</property>
-                                <property name="css-classes">title-1</property>
+                                <style>
+                                  <class name="title-1"/>
+                                </style>
                               </object>
                             </child>
                             <child>
                               <object class="GtkLabel">
                                 <property name="name">current_status_label</property>
                                 <property name="label" translatable="yes">⚡ Charging</property>
-                                <property name="css-classes">dim-label</property>
+                                <style>
+                                  <class name="dim-label"/>
+                                </style>
                                 <property name="xalign">0</property>
                               </object>
                             </child>
@@ -80,11 +84,15 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                         <child>
                           <object class="GtkBox">
                             <property name="orientation">1</property>
-                            <property name="css-classes">card</property>
+                            <style>
+                              <class name="card"/>
+                            </style>
                             <child>
                               <object class="GtkLabel">
                                 <property name="label" translatable="yes">Active Threshold</property>
-                                <property name="css-classes">dim-label</property>
+                                <style>
+                                  <class name="dim-label"/>
+                                </style>
                                 <property name="xalign">0</property>
                               </object>
                             </child>
@@ -92,13 +100,18 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                               <object class="GtkLabel">
                                 <property name="name">active_threshold_label</property>
                                 <property name="label">80%</property>
-                                <property name="css-classes">title-1</property>
+                                <style>
+                                  <class name="title-1"/>
+                                </style>
                               </object>
                             </child>
                             <child>
                               <object class="GtkLabel">
+                                <property name="name">battery_name_label</property>
                                 <property name="label" translatable="yes">BAT1</property>
-                                <property name="css-classes">dim-label</property>
+                                <style>
+                                  <class name="dim-label"/>
+                                </style>
                                 <property name="xalign">0</property>
                               </object>
                             </child>
@@ -109,12 +122,16 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                     <child>
                       <object class="GtkBox">
                         <property name="orientation">1</property>
-                        <property name="css-classes">card</property>
+                        <style>
+                          <class name="card"/>
+                        </style>
                         <property name="spacing">12</property>
                         <child>
                           <object class="GtkLabel">
                             <property name="label" translatable="yes">Charge Limit</property>
-                            <property name="css-classes">heading</property>
+                            <style>
+                              <class name="heading"/>
+                            </style>
                           </object>
                         </child>
                         <child>
@@ -124,7 +141,9 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                             <child>
                               <object class="GtkLabel">
                                 <property name="label">20</property>
-                                <property name="css-classes">dim-label</property>
+                                <style>
+                                  <class name="dim-label"/>
+                                </style>
                               </object>
                             </child>
                             <child>
@@ -144,7 +163,9 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                             <child>
                               <object class="GtkLabel">
                                 <property name="label">100</property>
-                                <property name="css-classes">dim-label</property>
+                                <style>
+                                  <class name="dim-label"/>
+                                </style>
                               </object>
                             </child>
                           </object>
@@ -153,7 +174,9 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                           <object class="GtkLabel">
                             <property name="name">charge_value_label</property>
                             <property name="label">80%</property>
-                            <property name="css-classes">title-1</property>
+                            <style>
+                              <class name="title-1"/>
+                            </style>
                             <property name="halign">3</property>
                           </object>
                         </child>
@@ -161,9 +184,11 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                     </child>
                     <child>
                       <object class="GtkLabel">
-                        <property name="label" translatable="yes">Recommended: 60–80% for daily use</property>
-                        <property name="css-classes">dim-label
-caption</property>
+                        <property name="label" translatable="yes">Recommended: 60–80% daily · 100% for travel</property>
+                        <style>
+                          <class name="dim-label"/>
+                          <class name="caption"/>
+                        </style>
                         <property name="halign">3</property>
                       </object>
                     </child>
@@ -176,8 +201,10 @@ caption</property>
                           <object class="GtkButton">
                             <property name="name">apply_button</property>
                             <property name="label" translatable="yes">Apply Threshold</property>
-                            <property name="css-classes">suggested-action
-pill</property>
+                            <style>
+                              <class name="suggested-action"/>
+                              <class name="pill"/>
+                            </style>
                           </object>
                         </child>
                         <child>
@@ -215,16 +242,20 @@ pill</property>
                           <object class="GtkLabel">
                             <property name="name">live_dot</property>
                             <property name="label">○</property>
-                            <property name="css-classes">dim-label
-caption</property>
+                            <style>
+                              <class name="dim-label"/>
+                              <class name="caption"/>
+                            </style>
                           </object>
                         </child>
                         <child>
                           <object class="GtkLabel">
                             <property name="name">status_bar</property>
                             <property name="label" translatable="yes">Ready</property>
-                            <property name="css-classes">dim-label
-caption</property>
+                            <style>
+                              <class name="dim-label"/>
+                              <class name="caption"/>
+                            </style>
                             <property name="hexpand">true</property>
                             <property name="xalign">0</property>
                           </object>

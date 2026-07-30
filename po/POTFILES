@@ -3,3 +3,6 @@ data/com.bongbetic.batteryguard.desktop
 data/com.bongbetic.batteryguard.gschema.xml
 src/batteryguard/main.py
 src/batteryguard/application.py
+src/batteryguard/window.py
+src/batteryguard/config.py
+src/batteryguard/battery.py

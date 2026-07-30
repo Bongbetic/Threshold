@@ -1,26 +1,26 @@
 """BatteryGuard main window — wires battery logic, GSettings, and UI together."""
 
-import os
-import sys
+from gettext import gettext as _
 from pathlib import Path
 
 import gi
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
+gi.require_version('Notify', '0.7')
 
-from gi.repository import Gio, GLib, Gtk, Adw, Gdk, GObject, Notify
+from gi.repository import GLib, Gtk, Adw, Gdk, Notify  # noqa: E402
 
-from batteryguard.battery import find_battery_path, read_sysfs, write_threshold
-from batteryguard.config import Config
+from batteryguard.battery import find_battery_path, read_sysfs, write_threshold  # noqa: E402
+from batteryguard.config import Config  # noqa: E402
 
 
 try:
-    gi.require_version('AyatanaAppIndicator3', '0.1')
-    from gi.repository import AyatanaAppIndicator3
+    gi.require_version('AyatanaAppIndicatorGlib', '2.0')
+    from gi.repository import AyatanaAppIndicatorGlib as AppIndicator
     HAS_TRAY = True
 except (ValueError, ImportError):
-    AyatanaAppIndicator3 = None  # type: ignore
+    AppIndicator = None  # type: ignore
     HAS_TRAY = False
 
 
@@ -34,7 +34,7 @@ Name=MSI BatteryGuard
 Comment=Battery charge threshold controller for MSI laptops
 Icon=com.bongbetic.batteryguard
 StartupNotify=true
-Exec=com.bongbetic.batteryguard
+Exec=msi-batteryguard
 Categories=GTK;GNOME;System;Utility;
 """
 
@@ -46,6 +46,7 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
     current_charge_label: Gtk.Label = Gtk.Template.Child()
     current_status_label: Gtk.Label = Gtk.Template.Child()
     active_threshold_label: Gtk.Label = Gtk.Template.Child()
+    battery_name_label: Gtk.Label = Gtk.Template.Child()
     charge_scale: Gtk.Scale = Gtk.Template.Child()
     charge_value_label: Gtk.Label = Gtk.Template.Child()
     apply_button: Gtk.Button = Gtk.Template.Child()
@@ -64,58 +65,50 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         self._writing = False
         self._indicator = None
         self._charge_pct = 0
+        self._geometry_debounce_id = None
 
-        # Connect scale slider to the percentage label
         self.charge_scale.connect('value-changed', self._on_scale_changed)
-
-        # Wire apply/restore buttons
         self.apply_button.connect('clicked', self._on_apply)
         self.restore_button.connect('clicked', self._on_restore)
-
-        # Dark mode toggling via adw style manager
         self.dark_mode_switch.connect('notify::active', self._on_dark_mode_toggled)
-
-        # Launch at login switch
         self.launch_switch.connect('notify::active', self._on_launch_toggled)
-
-        # Window geometry signals
-        self._geometry_debounce_id = None
-        self.connect('size-allocate', self._on_size_allocate)
+        self.connect('notify::default-width', self._on_default_size_changed)
+        self.connect('notify::default-height', self._on_default_size_changed)
         self.connect('notify::maximized', self._on_maximized_changed)
-
-        # Close-to-tray: hide instead of destroy
         self.connect('close-request', self._on_close_request)
 
-        # Load persisted settings
         self._load_settings()
-
-        # Populate with real data
         self._refresh_battery_data()
-
-        # Setup system tray
         self._setup_tray()
-
-        # Start polling for live updates
         self._start_polling()
 
-    # ── settings load / save ───────────────────────────────────────────────────
-
     def _load_settings(self):
-        """Restore dark mode and autostart from GSettings."""
-        # Dark mode
+        """Restore preferences from GSettings into the UI."""
         dark = self._config.get_dark_mode()
         self.dark_mode_switch.set_active(dark)
+        self._apply_color_scheme(dark)
+
+        self.launch_switch.set_active(self._config.get_autostart())
+
+        # Prefer live EC threshold; fall back to last applied GSettings value.
+        threshold = self._config.get_charge_threshold()
+        if self._battery_path is not None:
+            ec = read_sysfs(self._battery_path / 'charge_control_end_threshold')
+            if ec is not None:
+                try:
+                    threshold = int(ec)
+                except ValueError:
+                    pass
+        self.charge_scale.set_value(threshold)
+        self.charge_value_label.set_label(f'{threshold}%')
+
+    @staticmethod
+    def _apply_color_scheme(force_dark: bool) -> None:
         style_manager = Adw.StyleManager.get_default()
         style_manager.set_color_scheme(
-            Adw.ColorScheme.FORCE_DARK if dark
-            else Adw.ColorScheme.FORCE_LIGHT
+            Adw.ColorScheme.FORCE_DARK if force_dark
+            else Adw.ColorScheme.DEFAULT
         )
-
-        # Autostart
-        autostart = self._config.get_autostart()
-        self.launch_switch.set_active(autostart)
-
-    # ── battery data ───────────────────────────────────────────────────────────
 
     def _refresh_battery_data(self):
         """Read current battery data from sysfs and update the UI."""
@@ -123,7 +116,6 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
             self._show_error_state()
             return
 
-        # Current charge level
         charge_now = read_sysfs(self._battery_path / 'charge_now')
         charge_full = read_sysfs(self._battery_path / 'charge_full_design')
         if charge_now is not None and charge_full is not None:
@@ -135,13 +127,11 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
                 self._charge_pct = 0
                 self.current_charge_label.set_label('--%')
 
-        # Status (charging / discharging)
         status = read_sysfs(self._battery_path / 'status')
         if status:
             icon = '⚡' if status == 'Charging' else '🔋'
             self.current_status_label.set_label(f'{icon} {status}')
 
-        # Active threshold
         threshold = read_sysfs(
             self._battery_path / 'charge_control_end_threshold'
         )
@@ -150,24 +140,17 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         else:
             self.active_threshold_label.set_label('--%')
 
-        # Battery name
-        bat_name = self._battery_path.name
-        for child in self.active_threshold_label.get_parent().get_children():
-            if isinstance(child, Gtk.Label) and child is not self.active_threshold_label:
-                if child.get_css_classes() and 'dim-label' in child.get_css_classes():
-                    child.set_label(bat_name)
+        self.battery_name_label.set_label(self._battery_path.name)
 
     def _show_error_state(self):
         """Display error state when no battery path is found."""
         self.current_charge_label.set_label('--')
-        self.current_status_label.set_label('msi-ec not loaded')
+        self.current_status_label.set_label(_('msi-ec not loaded'))
         self.active_threshold_label.set_label('--')
         self.charge_scale.set_sensitive(False)
         self.apply_button.set_sensitive(False)
         self.restore_button.set_sensitive(False)
-        self._set_status('msi-ec kernel module not detected', is_error=True)
-
-    # ── polling ────────────────────────────────────────────────────────────────
+        self._set_status(_('msi-ec kernel module not detected'), is_error=True)
 
     def _start_polling(self):
         """Start 5-second polling for battery charge refresh."""
@@ -176,9 +159,7 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
     def _poll_tick(self):
         """Called every 5 seconds — refresh battery data and animate dot."""
         self._refresh_battery_data()
-        # Update tray label
         self._update_tray_label()
-        # Animate live dot
         self.live_dot.set_label('●')
         GLib.timeout_add(500, self._reset_dot)
         return GLib.SOURCE_CONTINUE
@@ -187,23 +168,17 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         self.live_dot.set_label('○')
         return GLib.SOURCE_REMOVE
 
-    # ── scale / slider ─────────────────────────────────────────────────────────
-
     def _on_scale_changed(self, scale):
         value = int(scale.get_value())
         self.charge_value_label.set_label(f'{value}%')
 
-    # ── apply threshold ────────────────────────────────────────────────────────
-
     def _on_apply(self, button):
-        if self._battery_path is None:
-            return
-        if self._writing:
+        if self._battery_path is None or self._writing:
             return
 
         self._writing = True
         button.set_sensitive(False)
-        button.set_label('Applying…')
+        button.set_label(_('Applying…'))
 
         value = int(self.charge_scale.get_value())
         success, message = write_threshold(self._battery_path, value)
@@ -211,34 +186,38 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         if success:
             self._config.set_charge_threshold(value)
             self.active_threshold_label.set_label(f'{value}%')
-            self._set_status(f'Threshold set to {value}% via {message}', is_success=True)
+            self._set_status(
+                _('Threshold set to {value}% via {message}').format(
+                    value=value, message=message
+                ),
+                is_success=True,
+            )
             self._show_notification(
-                f'Threshold set to {value}%',
-                f'Written to EC firmware (via {message}). Persists across reboots.',
+                _('Threshold set to {value}%').format(value=value),
+                _(
+                    'Written to EC firmware (via {message}). '
+                    'Persists across reboots.'
+                ).format(message=message),
             )
         else:
-            self._set_status(f'Error: {message}', is_error=True)
+            self._set_status(_('Error: {message}').format(message=message), is_error=True)
             self._show_notification(
-                'Failed to set threshold',
+                _('Failed to set threshold'),
                 message,
                 is_error=True,
             )
 
         button.set_sensitive(True)
-        button.set_label('Apply Threshold')
+        button.set_label(_('Apply Threshold'))
         self._writing = False
 
-    # ── restore to 100% ────────────────────────────────────────────────────────
-
     def _on_restore(self, button):
-        if self._battery_path is None:
-            return
-        if self._writing:
+        if self._battery_path is None or self._writing:
             return
 
         self._writing = True
         button.set_sensitive(False)
-        button.set_label('Restoring…')
+        button.set_label(_('Restoring…'))
 
         self.charge_scale.set_value(100)
         self.charge_value_label.set_label('100%')
@@ -248,37 +227,29 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         if success:
             self._config.set_charge_threshold(100)
             self.active_threshold_label.set_label('100%')
-            self._set_status('Threshold restored to 100%', is_success=True)
+            self._set_status(_('Threshold restored to 100%'), is_success=True)
             self._show_notification(
-                'Threshold restored to 100%',
-                'Written to EC firmware. Persists across reboots.',
+                _('Threshold restored to 100%'),
+                _('Written to EC firmware. Persists across reboots.'),
             )
         else:
-            self._set_status(f'Error: {message}', is_error=True)
+            self._set_status(_('Error: {message}').format(message=message), is_error=True)
             self._show_notification(
-                'Failed to restore threshold',
+                _('Failed to restore threshold'),
                 message,
                 is_error=True,
             )
 
         button.set_sensitive(True)
-        button.set_label('Restore to 100%')
+        button.set_label(_('Restore to 100%'))
         self._writing = False
 
-    # ── dark mode ──────────────────────────────────────────────────────────────
-
-    def _on_dark_mode_toggled(self, switch, param):
+    def _on_dark_mode_toggled(self, switch, _param):
         active = switch.get_active()
-        style_manager = Adw.StyleManager.get_default()
-        style_manager.set_color_scheme(
-            Adw.ColorScheme.FORCE_DARK if active
-            else Adw.ColorScheme.FORCE_LIGHT
-        )
+        self._apply_color_scheme(active)
         self._config.set_dark_mode(active)
 
-    # ── autostart ──────────────────────────────────────────────────────────────
-
-    def _on_launch_toggled(self, switch, param):
+    def _on_launch_toggled(self, switch, _param):
         active = switch.get_active()
         if active:
             self._enable_autostart()
@@ -289,21 +260,19 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
     def _enable_autostart(self):
         AUTOSTART_DIR.mkdir(parents=True, exist_ok=True)
         AUTOSTART_FILE.write_text(DESKTOP_ENTRY_TEMPLATE)
-        self._set_status('Launch at login enabled')
+        self._set_status(_('Launch at login enabled'))
 
     def _disable_autostart(self):
         if AUTOSTART_FILE.exists():
             AUTOSTART_FILE.unlink()
-        self._set_status('Launch at login disabled')
+        self._set_status(_('Launch at login disabled'))
 
-    # ── window geometry ────────────────────────────────────────────────────────
-
-    def _on_size_allocate(self, widget, allocation):
-        if not self.props.maximized:
-            # Debounce: save geometry at most once every 500ms
-            if self._geometry_debounce_id:
-                GLib.source_remove(self._geometry_debounce_id)
-            self._geometry_debounce_id = GLib.timeout_add(500, self._save_geometry)
+    def _on_default_size_changed(self, *_args):
+        if self.props.maximized:
+            return
+        if self._geometry_debounce_id:
+            GLib.source_remove(self._geometry_debounce_id)
+        self._geometry_debounce_id = GLib.timeout_add(500, self._save_geometry)
 
     def _save_geometry(self):
         self._geometry_debounce_id = None
@@ -312,39 +281,40 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
             self._config.set_window_height(self.get_height())
         return GLib.SOURCE_REMOVE
 
-    def _on_maximized_changed(self, *args):
+    def _on_maximized_changed(self, *_args):
         self._config.set_maximized(self.props.maximized)
 
-    # ── system tray ────────────────────────────────────────────────────────────
-
     def _setup_tray(self):
-        """Create the system tray indicator (AyatanaAppIndicator3)."""
+        """Create the system tray indicator (AyatanaAppIndicatorGlib + Gio.Menu)."""
         if not HAS_TRAY:
             return
 
-        self._indicator = AyatanaAppIndicator3.Indicator.new(
+        from gi.repository import Gio
+
+        self._indicator = AppIndicator.Indicator.new(
             'com.bongbetic.batteryguard',
             'com.bongbetic.batteryguard',
-            AyatanaAppIndicator3.IndicatorCategory.APPLICATION_STATUS,
+            AppIndicator.IndicatorCategory.APPLICATION_STATUS,
         )
-        self._indicator.set_status(AyatanaAppIndicator3.IndicatorStatus.ACTIVE)
+        self._indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
+        self._indicator.set_title(_('MSI BatteryGuard'))
 
-        # Build right-click menu
-        menu = Gtk.Menu.new()
+        actions = Gio.SimpleActionGroup.new()
+        show_action = Gio.SimpleAction.new('show', None)
+        show_action.connect('activate', self._on_tray_show)
+        actions.add_action(show_action)
 
-        show_item = Gtk.MenuItem.new_with_label('Show BatteryGuard')
-        show_item.connect('activate', self._on_tray_show)
-        menu.append(show_item)
+        quit_action = Gio.SimpleAction.new('quit', None)
+        quit_action.connect('activate', self._on_tray_quit)
+        actions.add_action(quit_action)
 
-        quit_item = Gtk.MenuItem.new_with_label('Quit')
-        quit_item.connect('activate', self._on_tray_quit)
-        menu.append(quit_item)
+        menu = Gio.Menu.new()
+        menu.append(_('Show BatteryGuard'), 'indicator.show')
+        menu.append(_('Quit'), 'indicator.quit')
 
-        menu.show_all()
         self._indicator.set_menu(menu)
-
-        # Left-click restore
-        self._indicator.connect('activate', self._on_tray_show)
+        self._indicator.set_actions(actions)
+        self._indicator.set_secondary_activate_target('show')
 
         self._update_tray_label()
 
@@ -360,22 +330,23 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
     def _on_tray_quit(self, *_args):
         """Quit the application from tray."""
         self._cleanup_tray()
-        self.get_application().quit()
+        app = self.get_application()
+        if app is not None:
+            app.quit()
 
     def _cleanup_tray(self):
         """Clean up the tray indicator."""
         if self._indicator is not None:
-            self._indicator.set_status(AyatanaAppIndicator3.IndicatorStatus.PASSIVE)
+            self._indicator.set_status(AppIndicator.IndicatorStatus.PASSIVE)
             self._indicator = None
 
     def _on_close_request(self, *_args):
         """Close-to-tray: hide window instead of destroying."""
-        if HAS_TRAY:
-            self.hide()
-            return True  # inhibit destruction
-        return False  # allow normal close
-
-    # ── notifications ──────────────────────────────────────────────────────────
+        self._save_geometry()
+        if HAS_TRAY and self._indicator is not None:
+            self.set_visible(False)
+            return True
+        return False
 
     def _show_notification(self, title: str, body: str, is_error: bool = False):
         """Show a desktop notification via libnotify."""
@@ -388,9 +359,7 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
                 notification.set_urgency(Notify.Urgency.CRITICAL)
             notification.show()
         except Exception:
-            pass  # Notifications are best-effort
-
-    # ── status bar ─────────────────────────────────────────────────────────────
+            pass
 
     def _set_status(self, message: str, is_success: bool = False, is_error: bool = False):
         self.status_bar.set_label(message)

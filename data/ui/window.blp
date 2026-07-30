@@ -12,15 +12,9 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
     orientation: vertical;
 
     Adw.HeaderBar {
-      show-end-title-buttons: false;
       title-widget: Adw.WindowTitle {
         title: _("BatteryGuard");
       };
-
-      [end]
-      Gtk.MenuButton {
-        icon-name: "open-menu-symbolic";
-      }
     }
 
     Gtk.ScrolledWindow {
@@ -81,6 +75,7 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
                 styles ["title-1"]
               }
               Gtk.Label {
+                name: "battery_name_label";
                 label: _("BAT1");
                 styles ["dim-label"]
                 xalign: 0.0;
@@ -131,7 +126,7 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
           }
 
           Gtk.Label {
-            label: _("Recommended: 60–80% for daily use");
+            label: _("Recommended: 60–80% daily · 100% for travel");
             styles ["dim-label", "caption"]
             halign: center;
           }

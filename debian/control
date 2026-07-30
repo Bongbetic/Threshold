@@ -34,7 +34,7 @@ Depends: ${python3:Depends},
          gir1.2-adw-1,
          gir1.2-notify-0.7
 Recommends: msi-ec-dkms,
-            gir1.2-ayatanaappindicator3-0.1
+            gir1.2-ayatanaappindicatorglib-2.0
 Description: Battery charge threshold controller for MSI laptops
  MSI BatteryGuard provides a GTK4 graphical interface for setting the
  battery charge threshold on MSI laptops. The charge limit is written

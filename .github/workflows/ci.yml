@@ -3,12 +3,10 @@ name: CI
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v4
 
@@ -25,10 +23,12 @@ jobs:
             python3 \
             python3-gi \
             python3-pytest \
+            python3-pytest-cov \
+            flake8 \
             blueprint-compiler \
             libgtk-4-dev \
             libadwaita-1-dev \
-            gir1.2-ayatanaappindicator3-0.1 \
+            gir1.2-ayatanaappindicatorglib-2.0 \
             gir1.2-notify-0.7
 
       - name: Configure
@@ -40,6 +40,16 @@ jobs:
       - name: Test
         run: meson test -C builddir --print-errorlogs
 
+      - name: Coverage (battery.py ≥ 80%)
+        run: |
+          PYTHONPATH=src python3 -m pytest tests/test_battery.py -q \
+            --cov=batteryguard.battery \
+            --cov-fail-under=80 \
+            --cov-report=term-missing
+
+      - name: Lint
+        run: flake8 src/batteryguard tests
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -48,7 +58,7 @@ jobs:
           retention-days: 7
 
   deb-package:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v4
 
