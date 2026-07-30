@@ -1,4 +1,5 @@
 #!/bin/sh
 export BATTERYGUARD_PKGDATADIR="@pkgdatadir@"
+export LOCALEDIR="@localedir@"
 export PYTHONPATH="@pkgdatadir@:$PYTHONPATH"
 exec @python@ -m batteryguard.main "$@"
