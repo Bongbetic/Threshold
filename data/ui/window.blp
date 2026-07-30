@@ -4,8 +4,8 @@ using Adw 1;
 template $BatteryGuardWindow: Adw.ApplicationWindow {
   default-width: 800;
   default-height: 600;
-  min-width: 400;
-  min-height: 400;
+  width-request: 400;
+  height-request: 400;
   title: _("MSI BatteryGuard");
 
   Gtk.Box {
@@ -47,13 +47,11 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
                 styles ["dim-label"]
                 xalign: 0.0;
               }
-              Gtk.Label {
-                name: "current_charge_label";
+              Gtk.Label current_charge_label {
                 label: "72%";
                 styles ["title-1"]
               }
-              Gtk.Label {
-                name: "current_status_label";
+              Gtk.Label current_status_label {
                 label: _("⚡ Charging");
                 styles ["dim-label"]
                 xalign: 0.0;
@@ -69,13 +67,11 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
                 styles ["dim-label"]
                 xalign: 0.0;
               }
-              Gtk.Label {
-                name: "active_threshold_label";
+              Gtk.Label active_threshold_label {
                 label: "80%";
                 styles ["title-1"]
               }
-              Gtk.Label {
-                name: "battery_name_label";
+              Gtk.Label battery_name_label {
                 label: _("BAT1");
                 styles ["dim-label"]
                 xalign: 0.0;
@@ -101,8 +97,7 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
                 label: "20";
                 styles ["dim-label"]
               }
-              Gtk.Scale {
-                name: "charge_scale";
+              Gtk.Scale charge_scale {
                 adjustment: Gtk.Adjustment {
                   lower: 20;
                   upper: 100;
@@ -117,8 +112,7 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
               }
             }
 
-            Gtk.Label {
-              name: "charge_value_label";
+            Gtk.Label charge_value_label {
               label: "80%";
               styles ["title-1"]
               halign: center;
@@ -136,13 +130,11 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
             homogeneous: true;
             spacing: 8;
 
-            Gtk.Button {
-              name: "apply_button";
+            Gtk.Button apply_button {
               label: _("Apply Threshold");
               styles ["suggested-action", "pill"]
             }
-            Gtk.Button {
-              name: "restore_button";
+            Gtk.Button restore_button {
               label: _("Restore to 100%");
             }
           }
@@ -150,13 +142,10 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
           Adw.ExpanderRow {
             title: _("Settings");
 
-            Adw.SwitchRow {
-              name: "dark_mode_switch";
+            Adw.SwitchRow dark_mode_switch {
               title: _("Dark Mode");
-              active: true;
             }
-            Adw.SwitchRow {
-              name: "launch_switch";
+            Adw.SwitchRow launch_switch {
               title: _("Launch at login");
             }
           }
@@ -166,13 +155,11 @@ template $BatteryGuardWindow: Adw.ApplicationWindow {
             spacing: 6;
             margin-top: 4;
 
-            Gtk.Label {
-              name: "live_dot";
+            Gtk.Label live_dot {
               label: "○";
               styles ["dim-label", "caption"]
             }
-            Gtk.Label {
-              name: "status_bar";
+            Gtk.Label status_bar {
               label: _("Ready");
               styles ["dim-label", "caption"]
               hexpand: true;

@@ -2,6 +2,7 @@
 
 from gettext import gettext as _
 from pathlib import Path
+import threading
 
 import gi
 
@@ -11,7 +12,12 @@ gi.require_version('Notify', '0.7')
 
 from gi.repository import GLib, Gtk, Adw, Gdk, Notify  # noqa: E402
 
-from batteryguard.battery import find_battery_path, read_sysfs, write_threshold  # noqa: E402
+from batteryguard.battery import (  # noqa: E402
+    find_battery_path,
+    read_charge_percent,
+    read_sysfs,
+    write_threshold,
+)
 from batteryguard.config import Config  # noqa: E402
 
 
@@ -62,10 +68,12 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         self._config = config or Config()
         self._battery_path = find_battery_path()
         self._polling_id = None
+        self._reset_dot_id = None
         self._writing = False
         self._indicator = None
         self._charge_pct = 0
         self._geometry_debounce_id = None
+        self._suppress_launch_toggle = False
 
         self.charge_scale.connect('value-changed', self._on_scale_changed)
         self.apply_button.connect('clicked', self._on_apply)
@@ -76,6 +84,7 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         self.connect('notify::default-height', self._on_default_size_changed)
         self.connect('notify::maximized', self._on_maximized_changed)
         self.connect('close-request', self._on_close_request)
+        self.connect('destroy', self._on_destroy)
 
         self._load_settings()
         self._refresh_battery_data()
@@ -88,7 +97,12 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         self.dark_mode_switch.set_active(dark)
         self._apply_color_scheme(dark)
 
-        self.launch_switch.set_active(self._config.get_autostart())
+        autostart = AUTOSTART_FILE.is_file()
+        if autostart != self._config.get_autostart():
+            self._config.set_autostart(autostart)
+        self._suppress_launch_toggle = True
+        self.launch_switch.set_active(autostart)
+        self._suppress_launch_toggle = False
 
         # Prefer live EC threshold; fall back to last applied GSettings value.
         threshold = self._config.get_charge_threshold()
@@ -116,16 +130,13 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
             self._show_error_state()
             return
 
-        charge_now = read_sysfs(self._battery_path / 'charge_now')
-        charge_full = read_sysfs(self._battery_path / 'charge_full_design')
-        if charge_now is not None and charge_full is not None:
-            try:
-                pct = int(float(charge_now) / float(charge_full) * 100)
-                self._charge_pct = pct
-                self.current_charge_label.set_label(f'{pct}%')
-            except (ValueError, ZeroDivisionError):
-                self._charge_pct = 0
-                self.current_charge_label.set_label('--%')
+        pct = read_charge_percent(self._battery_path)
+        if pct is not None:
+            self._charge_pct = pct
+            self.current_charge_label.set_label(f'{pct}%')
+        else:
+            self._charge_pct = 0
+            self.current_charge_label.set_label('--%')
 
         status = read_sysfs(self._battery_path / 'status')
         if status:
@@ -156,17 +167,36 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         """Start 5-second polling for battery charge refresh."""
         self._polling_id = GLib.timeout_add_seconds(5, self._poll_tick)
 
+    def _stop_polling(self):
+        """Remove polling and live-dot timeout sources."""
+        if self._polling_id is not None:
+            GLib.source_remove(self._polling_id)
+            self._polling_id = None
+        if self._reset_dot_id is not None:
+            GLib.source_remove(self._reset_dot_id)
+            self._reset_dot_id = None
+        if self._geometry_debounce_id is not None:
+            GLib.source_remove(self._geometry_debounce_id)
+            self._geometry_debounce_id = None
+
     def _poll_tick(self):
         """Called every 5 seconds — refresh battery data and animate dot."""
         self._refresh_battery_data()
         self._update_tray_label()
         self.live_dot.set_label('●')
-        GLib.timeout_add(500, self._reset_dot)
+        if self._reset_dot_id is not None:
+            GLib.source_remove(self._reset_dot_id)
+        self._reset_dot_id = GLib.timeout_add(500, self._reset_dot)
         return GLib.SOURCE_CONTINUE
 
     def _reset_dot(self):
+        self._reset_dot_id = None
         self.live_dot.set_label('○')
         return GLib.SOURCE_REMOVE
+
+    def _on_destroy(self, *_args):
+        self._stop_polling()
+        self._cleanup_tray()
 
     def _on_scale_changed(self, scale):
         value = int(scale.get_value())
@@ -178,11 +208,20 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
 
         self._writing = True
         button.set_sensitive(False)
+        self.restore_button.set_sensitive(False)
         button.set_label(_('Applying…'))
 
         value = int(self.charge_scale.get_value())
-        success, message = write_threshold(self._battery_path, value)
+        bat_path = self._battery_path
 
+        def worker():
+            result = write_threshold(bat_path, value)
+            GLib.idle_add(self._finish_apply, button, value, result)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _finish_apply(self, button, value, result):
+        success, message = result
         if success:
             self._config.set_charge_threshold(value)
             self.active_threshold_label.set_label(f'{value}%')
@@ -208,8 +247,10 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
             )
 
         button.set_sensitive(True)
+        self.restore_button.set_sensitive(True)
         button.set_label(_('Apply Threshold'))
         self._writing = False
+        return GLib.SOURCE_REMOVE
 
     def _on_restore(self, button):
         if self._battery_path is None or self._writing:
@@ -217,14 +258,22 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
 
         self._writing = True
         button.set_sensitive(False)
+        self.apply_button.set_sensitive(False)
         button.set_label(_('Restoring…'))
 
-        self.charge_scale.set_value(100)
-        self.charge_value_label.set_label('100%')
+        bat_path = self._battery_path
 
-        success, message = write_threshold(self._battery_path, 100)
+        def worker():
+            result = write_threshold(bat_path, 100)
+            GLib.idle_add(self._finish_restore, button, result)
 
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _finish_restore(self, button, result):
+        success, message = result
         if success:
+            self.charge_scale.set_value(100)
+            self.charge_value_label.set_label('100%')
             self._config.set_charge_threshold(100)
             self.active_threshold_label.set_label('100%')
             self._set_status(_('Threshold restored to 100%'), is_success=True)
@@ -241,8 +290,10 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
             )
 
         button.set_sensitive(True)
+        self.apply_button.set_sensitive(True)
         button.set_label(_('Restore to 100%'))
         self._writing = False
+        return GLib.SOURCE_REMOVE
 
     def _on_dark_mode_toggled(self, switch, _param):
         active = switch.get_active()
@@ -250,11 +301,23 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         self._config.set_dark_mode(active)
 
     def _on_launch_toggled(self, switch, _param):
+        if self._suppress_launch_toggle:
+            return
         active = switch.get_active()
-        if active:
-            self._enable_autostart()
-        else:
-            self._disable_autostart()
+        try:
+            if active:
+                self._enable_autostart()
+            else:
+                self._disable_autostart()
+        except OSError as e:
+            self._suppress_launch_toggle = True
+            switch.set_active(not active)
+            self._suppress_launch_toggle = False
+            self._set_status(
+                _('Autostart error: {message}').format(message=e),
+                is_error=True,
+            )
+            return
         self._config.set_autostart(active)
 
     def _enable_autostart(self):
@@ -329,6 +392,7 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
 
     def _on_tray_quit(self, *_args):
         """Quit the application from tray."""
+        self._stop_polling()
         self._cleanup_tray()
         app = self.get_application()
         if app is not None:

@@ -9,8 +9,8 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
   <template class="BatteryGuardWindow" parent="AdwApplicationWindow">
     <property name="default-width">800</property>
     <property name="default-height">600</property>
-    <property name="min-width">400</property>
-    <property name="min-height">400</property>
+    <property name="width-request">400</property>
+    <property name="height-request">400</property>
     <property name="title" translatable="yes">MSI BatteryGuard</property>
     <child>
       <object class="GtkBox">
@@ -61,8 +61,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                               </object>
                             </child>
                             <child>
-                              <object class="GtkLabel">
-                                <property name="name">current_charge_label</property>
+                              <object class="GtkLabel" id="current_charge_label">
                                 <property name="label">72%</property>
                                 <style>
                                   <class name="title-1"/>
@@ -70,8 +69,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                               </object>
                             </child>
                             <child>
-                              <object class="GtkLabel">
-                                <property name="name">current_status_label</property>
+                              <object class="GtkLabel" id="current_status_label">
                                 <property name="label" translatable="yes">⚡ Charging</property>
                                 <style>
                                   <class name="dim-label"/>
@@ -97,8 +95,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                               </object>
                             </child>
                             <child>
-                              <object class="GtkLabel">
-                                <property name="name">active_threshold_label</property>
+                              <object class="GtkLabel" id="active_threshold_label">
                                 <property name="label">80%</property>
                                 <style>
                                   <class name="title-1"/>
@@ -106,8 +103,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                               </object>
                             </child>
                             <child>
-                              <object class="GtkLabel">
-                                <property name="name">battery_name_label</property>
+                              <object class="GtkLabel" id="battery_name_label">
                                 <property name="label" translatable="yes">BAT1</property>
                                 <style>
                                   <class name="dim-label"/>
@@ -147,8 +143,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                               </object>
                             </child>
                             <child>
-                              <object class="GtkScale">
-                                <property name="name">charge_scale</property>
+                              <object class="GtkScale" id="charge_scale">
                                 <property name="adjustment">
                                   <object class="GtkAdjustment">
                                     <property name="lower">20</property>
@@ -171,8 +166,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                           </object>
                         </child>
                         <child>
-                          <object class="GtkLabel">
-                            <property name="name">charge_value_label</property>
+                          <object class="GtkLabel" id="charge_value_label">
                             <property name="label">80%</property>
                             <style>
                               <class name="title-1"/>
@@ -198,8 +192,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                         <property name="homogeneous">true</property>
                         <property name="spacing">8</property>
                         <child>
-                          <object class="GtkButton">
-                            <property name="name">apply_button</property>
+                          <object class="GtkButton" id="apply_button">
                             <property name="label" translatable="yes">Apply Threshold</property>
                             <style>
                               <class name="suggested-action"/>
@@ -208,8 +201,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                           </object>
                         </child>
                         <child>
-                          <object class="GtkButton">
-                            <property name="name">restore_button</property>
+                          <object class="GtkButton" id="restore_button">
                             <property name="label" translatable="yes">Restore to 100%</property>
                           </object>
                         </child>
@@ -219,15 +211,12 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                       <object class="AdwExpanderRow">
                         <property name="title" translatable="yes">Settings</property>
                         <child>
-                          <object class="AdwSwitchRow">
-                            <property name="name">dark_mode_switch</property>
+                          <object class="AdwSwitchRow" id="dark_mode_switch">
                             <property name="title" translatable="yes">Dark Mode</property>
-                            <property name="active">true</property>
                           </object>
                         </child>
                         <child>
-                          <object class="AdwSwitchRow">
-                            <property name="name">launch_switch</property>
+                          <object class="AdwSwitchRow" id="launch_switch">
                             <property name="title" translatable="yes">Launch at login</property>
                           </object>
                         </child>
@@ -239,8 +228,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                         <property name="spacing">6</property>
                         <property name="margin-top">4</property>
                         <child>
-                          <object class="GtkLabel">
-                            <property name="name">live_dot</property>
+                          <object class="GtkLabel" id="live_dot">
                             <property name="label">○</property>
                             <style>
                               <class name="dim-label"/>
@@ -249,8 +237,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                           </object>
                         </child>
                         <child>
-                          <object class="GtkLabel">
-                            <property name="name">status_bar</property>
+                          <object class="GtkLabel" id="status_bar">
                             <property name="label" translatable="yes">Ready</property>
                             <style>
                               <class name="dim-label"/>
