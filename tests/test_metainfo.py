@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
@@ -62,6 +63,23 @@ def test_metainfo_screenshots_point_at_github_hosted_images():
         assert url.endswith((".png", ".jpg", ".jpeg", ".webp")), url
         local = ROOT / "data" / "screenshots" / Path(url).name
         assert local.is_file(), f"screenshot asset missing: {local}"
+
+
+def test_metainfo_release_matches_meson_version():
+    meson_build = ROOT / "meson.build"
+    text = meson_build.read_text(encoding="utf-8")
+    match = re.search(
+        r"project\s*\(\s*'[^']+'\s*,\s*version:\s*'([^']+)'",
+        text,
+        re.DOTALL,
+    )
+    assert match, "could not parse meson.project version"
+    meson_version = match.group(1)
+    releases = [el.get("version") for el in _root().findall("releases/release")]
+    assert releases, "metainfo has no <release> entries"
+    assert meson_version in releases, (
+        f"metainfo releases {releases} missing meson version {meson_version}"
+    )
 
 
 def test_metainfo_passes_appstreamcli_validate():

@@ -1,4 +1,4 @@
-"""Meson install layout: icons, metainfo, and udev rule destinations."""
+"""Meson install layout: icons, metainfo, udev, and ship-critical files."""
 
 from __future__ import annotations
 
@@ -24,6 +24,24 @@ def _build_root() -> Path:
     pytest.skip("no configured Meson build directory")
 
 
+def _assert_builddir_matches_repo(build: Path) -> None:
+    """Fail clearly when builddir was configured from a moved source tree."""
+    meson_log = build / "meson-logs" / "meson-log.txt"
+    if not meson_log.is_file():
+        return
+    text = meson_log.read_text(encoding="utf-8", errors="replace")
+    for line in text.splitlines()[:120]:
+        if "Source dir:" in line:
+            configured = line.split("Source dir:", 1)[1].strip()
+            if configured and Path(configured).resolve() != ROOT.resolve():
+                pytest.fail(
+                    f"stale Meson builddir: configured source is {configured}, "
+                    f"but tests run from {ROOT}. Re-run: "
+                    f"meson setup --wipe {build.name}"
+                )
+            return
+
+
 def _meson() -> str:
     meson = shutil.which("meson")
     if meson is None:
@@ -33,9 +51,12 @@ def _meson() -> str:
 
 def _install_to_destdir() -> Path:
     build = _build_root()
+    _assert_builddir_matches_repo(build)
     destdir = Path(tempfile.mkdtemp(prefix="batteryguard-destdir-"))
+    # Allow rebuild so Blueprint/UI changes are picked up; stale --no-rebuild
+    # fails hard after source-tree moves.
     result = subprocess.run(
-        [_meson(), "install", "-C", str(build), f"--destdir={destdir}", "--no-rebuild"],
+        [_meson(), "install", "-C", str(build), f"--destdir={destdir}"],
         capture_output=True,
         text=True,
         check=False,
@@ -43,6 +64,16 @@ def _install_to_destdir() -> Path:
     if result.returncode != 0:
         pytest.fail(result.stdout + result.stderr)
     return destdir
+
+
+def _under_prefix(destdir: Path, *parts: str) -> list[Path]:
+    """Return matching paths under /usr/local or /usr prefixes."""
+    found = []
+    for prefix in ("usr/local", "usr"):
+        candidate = destdir.joinpath(prefix, *parts)
+        if candidate.exists():
+            found.append(candidate)
+    return found
 
 
 @pytest.fixture(scope="module")
@@ -64,7 +95,6 @@ def test_scalable_icon_installed(destdir: Path):
         / "apps"
         / f"{APP_ID}.svg"
     )
-    # Default meson prefix is /usr/local; packaged builds use /usr.
     alt = (
         destdir
         / "usr"
@@ -99,6 +129,32 @@ def test_udev_rule_installed_under_lib(destdir: Path):
     text = candidates[0].read_text(encoding="utf-8")
     assert "charge_control_end_threshold" in text
     assert "plugdev" in text
+
+
+def test_gresource_installed(destdir: Path):
+    candidates = list(destdir.glob(f"**/{APP_ID}/batteryguard.gresource"))
+    assert candidates and candidates[0].is_file(), (
+        f"missing batteryguard.gresource under {destdir}"
+    )
+
+
+def test_gschema_installed(destdir: Path):
+    candidates = list(destdir.glob(f"**/glib-2.0/schemas/{APP_ID}.gschema.xml"))
+    assert candidates and candidates[0].is_file()
+
+
+def test_desktop_file_installed(destdir: Path):
+    candidates = list(destdir.glob(f"**/applications/{APP_ID}.desktop"))
+    assert candidates and candidates[0].is_file()
+    text = candidates[0].read_text(encoding="utf-8")
+    assert "Exec=" in text
+
+
+def test_launcher_installed(destdir: Path):
+    found = _under_prefix(destdir, "bin", "msi-batteryguard")
+    assert found and found[0].is_file(), (
+        f"missing msi-batteryguard launcher under {destdir}"
+    )
 
 
 def test_source_icons_and_udev_live_under_data():

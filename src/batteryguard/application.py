@@ -1,5 +1,7 @@
 """Application class — startup, activation, shutdown, and autostart management."""
 
+import sys
+
 import gi
 
 gi.require_version('Gtk', '4.0')
@@ -10,7 +12,13 @@ from gi.repository import Gio, Adw, Notify  # noqa: E402
 
 from batteryguard.resources import register_resources  # noqa: E402
 
-register_resources()
+if not register_resources():
+    print(
+        'error: batteryguard.gresource not found. '
+        'Build with Meson or set BATTERYGUARD_PKGDATADIR / MESON_BUILD_ROOT.',
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 from batteryguard.window import BatteryGuardWindow, load_css_from_resource  # noqa: E402
 from batteryguard.config import Config  # noqa: E402
@@ -43,11 +51,15 @@ class BatteryGuardApplication(Adw.Application):
         win.present()
 
     def do_shutdown(self):
-        """Save window geometry on shutdown."""
+        """Save window geometry and tear down notifications on shutdown."""
         win = self.props.active_window
         if win is not None:
+            if hasattr(win, '_stop_polling'):
+                win._stop_polling()
             self._config.set_maximized(win.props.maximized)
             if not win.props.maximized:
                 self._config.set_window_width(win.get_width())
                 self._config.set_window_height(win.get_height())
+        if Notify.is_initted():
+            Notify.uninit()
         Adw.Application.do_shutdown(self)

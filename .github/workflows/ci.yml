@@ -26,6 +26,7 @@ jobs:
             python3-pytest-cov \
             flake8 \
             blueprint-compiler \
+            appstream \
             libgtk-4-dev \
             libadwaita-1-dev \
             gir1.2-ayatanaappindicatorglib-2.0 \
@@ -42,7 +43,7 @@ jobs:
 
       - name: Coverage (battery.py ≥ 80%)
         run: |
-          PYTHONPATH=src python3 -m pytest tests/test_battery.py -q \
+          PYTHONPATH=src python3 -m pytest tests/test_battery.py tests/test_window_ui.py -q \
             --cov=batteryguard.battery \
             --cov-fail-under=80 \
             --cov-report=term-missing

@@ -9,6 +9,9 @@ SYSFS_BASES = [
     "/sys/class/power_supply/BAT1",
 ]
 
+THRESHOLD_MIN = 20
+THRESHOLD_MAX = 100
+
 
 def find_battery_path() -> Path | None:
     """Return the first battery sysfs path that has a charge_control_end_threshold file."""
@@ -27,14 +30,48 @@ def read_sysfs(path: Path) -> str | None:
         return None
 
 
+def read_charge_percent(bat_path: Path) -> int | None:
+    """Return state of charge as an integer percent (0–100), or None.
+
+    Prefers kernel ``capacity``, then ``charge_now / charge_full``,
+    then ``charge_now / charge_full_design``.
+    """
+    capacity = read_sysfs(bat_path / "capacity")
+    if capacity is not None:
+        try:
+            return max(0, min(100, int(float(capacity))))
+        except ValueError:
+            pass
+
+    charge_now = read_sysfs(bat_path / "charge_now")
+    if charge_now is None:
+        return None
+
+    for full_name in ("charge_full", "charge_full_design"):
+        charge_full = read_sysfs(bat_path / full_name)
+        if charge_full is None:
+            continue
+        try:
+            full = float(charge_full)
+            if full <= 0:
+                continue
+            return max(0, min(100, int(float(charge_now) / full * 100)))
+        except ValueError:
+            continue
+    return None
+
+
 def write_threshold(bat_path: Path, value: int) -> tuple[bool, str]:
     """
     Write threshold value to sysfs.
 
     Tries direct write first (works if udev rule is in place),
-    then falls back to pkexec (PolicyKit), then sudo tee.
+    then falls back to pkexec (PolicyKit).
     Returns ``(success, method_or_error)``.
     """
+    if not THRESHOLD_MIN <= value <= THRESHOLD_MAX:
+        return False, f"Threshold must be {THRESHOLD_MIN}–{THRESHOLD_MAX}"
+
     threshold_file = str(bat_path / "charge_control_end_threshold")
 
     # Try direct write first (udev rule grants permission)
@@ -43,6 +80,8 @@ def write_threshold(bat_path: Path, value: int) -> tuple[bool, str]:
         return True, "direct"
     except PermissionError:
         pass
+    except OSError as e:
+        return False, str(e)
 
     # Fallback: pkexec (PolicyKit – shows a native auth dialog, no terminal)
     try:
@@ -57,19 +96,11 @@ def write_threshold(bat_path: Path, value: int) -> tuple[bool, str]:
             return True, "pkexec"
         return False, result.stderr.strip() or "pkexec failed"
     except FileNotFoundError:
-        try:
-            result = subprocess.run(
-                ["sudo", "tee", threshold_file],
-                input=str(value),
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            if result.returncode == 0:
-                return True, "sudo"
-            return False, result.stderr.strip() or "Permission denied – see INSTALL.md Step 4"
-        except Exception as e:
-            return False, str(e)
+        return (
+            False,
+            "pkexec not found – install policykit-1, or join the "
+            "plugdev group (see INSTALL.md)",
+        )
     except subprocess.TimeoutExpired:
         return False, "Auth dialog timed out"
     except Exception as e:
