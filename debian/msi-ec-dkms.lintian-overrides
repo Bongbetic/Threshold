@@ -1,0 +1,3 @@
+# msi-ec-dkms ships no manual page; it is a kernel module installed via DKMS,
+# not a command-line tool, and upstream provides no man page to install.
+msi-ec-dkms: no-manual-page

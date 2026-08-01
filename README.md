@@ -10,19 +10,39 @@ significantly extends long-term battery lifespan. The setting is written
 directly to the **EC microcontroller** via the `msi-ec` kernel module and
 **persists across reboots** — the same idea as MSI Center on Windows.
 
-## Install (.deb)
+## Install on Ubuntu (24.04 LTS and newer)
 
-Download the `.deb` from the latest CI artifacts or release, then:
+Grab the latest release from the
+**[Releases](https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX/releases)**
+page and download **both** `.deb` files:
+
+- `msi-batteryguard_1.1.0-1_all.deb` — the app
+- `msi-ec-dkms_0.13-1_amd64.deb` — the kernel module (built via DKMS)
+
+Then install them with apt:
 
 ```bash
-sudo apt install ./msi-batteryguard_1.0.0-1_all.deb
+sudo apt install ./msi-ec-dkms_0.13-1_amd64.deb
+sudo apt install ./msi-batteryguard_1.1.0-1_all.deb
 ```
 
-The package installs the app, desktop entry, icons, AppStream metainfo, and
-udev rule (passwordless threshold writes for the `plugdev` group).
+The `msi-ec-dkms` package builds and loads the `msi-ec` kernel module for the
+running kernel automatically, and the app package installs the desktop entry,
+icons, and a udev rule that lets the `plugdev` group write the charge threshold
+without a password.
 
-You still need the `msi-ec` kernel module — see **INSTALL.md** (DKMS setup,
-`.deb` details, and developer Meson builds).
+Make sure your user is in the `plugdev` group (log out and back in after
+adding):
+
+```bash
+sudo usermod -aG plugdev $USER
+```
+
+Launch from the app menu (**MSI BatteryGuard**) or run `msi-batteryguard`.
+
+> **Ubuntu versions:** builds are tested on 24.04 LTS and 26.04 LTS. The app
+> package is architecture-independent (`all`); the kernel module package is
+> built for `amd64`.
 
 ## How it works
 
@@ -50,6 +70,12 @@ Slider → Apply → /sys/class/power_supply/BAT*/charge_control_end_threshold
 
 ## Requirements
 
-- Linux kernel module: `msi-ec` (DKMS recommended — see INSTALL.md)
-- GTK4 ≥ 4.14, libadwaita ≥ 1.5 (pulled in by the `.deb`)
+- Ubuntu 24.04 LTS or newer, `amd64`
+- The `msi-ec` kernel module — installed by the `msi-ec-dkms` package
+- GTK4 ≥ 4.14, libadwaita ≥ 1.5 (pulled in by the app package)
 - Membership in the `plugdev` group for passwordless threshold writes
+
+## Building from source
+
+See **INSTALL.md** for the developer Meson build and for building the `.deb`
+locally.

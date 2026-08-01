@@ -1,3 +1,12 @@
+msi-batteryguard (1.1.0-1) noble; urgency=medium
+
+  * Add msi-ec-dkms package (vendored msi-ec 0.13) so the kernel module
+    installs automatically with the app.
+  * CI: build on Ubuntu 24.04 and 26.04; publish .deb files to GitHub
+    Releases on version tags.
+
+ -- Soubarna <Soubarna@live.in>  Sat, 01 Aug 2026 12:00:00 +0530
+
 msi-batteryguard (1.0.0-1) noble; urgency=medium
 
   * Initial release.

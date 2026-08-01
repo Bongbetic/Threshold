@@ -8,7 +8,11 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-26.04
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-26.04]
     steps:
       - uses: actions/checkout@v4
 
@@ -56,12 +60,16 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: batteryguard-build
+          name: batteryguard-build-${{ matrix.os }}
           path: builddir/
           retention-days: 7
 
   deb-package:
-    runs-on: ubuntu-26.04
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-26.04]
     steps:
       - uses: actions/checkout@v4
 
@@ -73,19 +81,19 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get build-dep -y .
 
-      - name: Build .deb
+      - name: Build .debs
         run: |
           dpkg-buildpackage -us -uc -b
           mkdir -p artifacts
-          cp ../msi-batteryguard_*.deb artifacts/
+          cp ../msi-batteryguard_*.deb ../msi-ec-dkms_*.deb artifacts/
 
       - name: Lintian
-        run: lintian artifacts/msi-batteryguard_*.deb
+        run: lintian artifacts/*.deb
 
-      - name: Upload .deb artifact
+      - name: Upload .deb artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: msi-batteryguard-deb
-          path: artifacts/msi-batteryguard_*.deb
+          name: msi-batteryguard-deb-${{ matrix.os }}
+          path: artifacts/*.deb
           retention-days: 14
           if-no-files-found: error

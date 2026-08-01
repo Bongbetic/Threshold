@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev lintian
+
+      - name: Install build dependencies
+        run: sudo apt-get build-dep -y .
+
+      - name: Build .debs
+        run: |
+          dpkg-buildpackage -us -uc -b
+          mkdir -p artifacts
+          cp ../msi-batteryguard_*.deb ../msi-ec-dkms_*.deb artifacts/
+
+      - name: Lintian
+        run: lintian artifacts/*.deb
+
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          sha256sum *.deb > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-debs
+          path: artifacts/
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/msi-batteryguard_*.deb
+            artifacts/msi-ec-dkms_*.deb
+            artifacts/SHA256SUMS
+          generate_release_notes: true
+          draft: true
