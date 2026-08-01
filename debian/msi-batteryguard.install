@@ -1,0 +1,10 @@
+usr/bin/msi-batteryguard
+usr/lib/udev/rules.d/99-msi-battery.rules
+usr/share/applications/com.bongbetic.batteryguard.desktop
+usr/share/com.bongbetic.batteryguard/batteryguard.gresource
+usr/share/com.bongbetic.batteryguard/batteryguard/*.py
+usr/share/com.bongbetic.batteryguard/style.css
+usr/share/glib-2.0/schemas/com.bongbetic.batteryguard.gschema.xml
+usr/share/icons/hicolor/scalable/apps/com.bongbetic.batteryguard.svg
+usr/share/icons/hicolor/symbolic/apps/com.bongbetic.batteryguard-symbolic.svg
+usr/share/metainfo/com.bongbetic.batteryguard.metainfo.xml

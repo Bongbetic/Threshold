@@ -4,6 +4,7 @@
 /artifacts/
 /debian/.debhelper/
 /debian/msi-batteryguard/
+/debian/msi-ec-dkms/
 /debian/tmp/
 /debian/files
 /debian/*.substvars

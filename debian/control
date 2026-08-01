@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: Soubarna <Soubarna@live.in>
 Build-Depends: debhelper-compat (= 13),
                dh-python,
+               dkms,
                meson (>= 1.0),
                ninja-build,
                pkg-config,
@@ -43,3 +44,17 @@ Description: Battery charge threshold controller for MSI laptops
  .
  Typical use cases include setting a 60–80% charge ceiling to extend
  long-term battery lifespan when the laptop is primarily used plugged in.
+
+Package: msi-ec-dkms
+Architecture: amd64
+Depends: dkms (>= 2.2), ${misc:Depends}
+Description: MSI Embedded Controller kernel module (DKMS)
+ Kernel module that exposes battery charge control and other EC
+ features for MSI laptops. Built via DKMS against the running kernel.
+ .
+ The module registers itself with the Linux power supply subsystem and
+ exposes charge_control_start_threshold and charge_control_end_threshold
+ under /sys/class/power_supply/BAT*, which msi-batteryguard writes to.
+ .
+ Supports EC firmware 16RKIMS1.111 (MSI Thin A15 B7UCX) and other MSI
+ laptops supported by upstream msi-ec.

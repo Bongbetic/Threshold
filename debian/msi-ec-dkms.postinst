@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        if command -v dkms >/dev/null 2>&1; then
+            dkms add -m msi-ec -v 0.13 --no-depmod || true
+            dkms build -m msi-ec -v 0.13 --no-depmod || true
+            dkms install -m msi-ec -v 0.13 --no-depmod || true
+        fi
+        ;;
+esac
+
+exit 0

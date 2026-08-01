@@ -7,3 +7,6 @@ export DH_VERBOSE = 1
 
 override_dh_python3:
 	dh_python3 usr/share/com.bongbetic.batteryguard
+
+override_dh_dkms:
+	dh_dkms -p msi-ec-dkms
