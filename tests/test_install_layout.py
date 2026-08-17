@@ -166,6 +166,37 @@ def test_debian_package_installs_compatibility_schema():
     )
 
 
+def test_debian_package_installs_gsettings_convert_file():
+    convert_file = ROOT / "data" / "com.bongbetic.batteryguard.convert"
+    install_file = ROOT / "debian" / "threshold.install"
+
+    assert convert_file.is_file()
+    assert "usr/share/GConf/gsettings/" in install_file.read_text(
+        encoding="utf-8"
+    )
+
+    lines = convert_file.read_text(encoding="utf-8").splitlines()
+    assert "[com.bongbetic.threshold]" in lines
+    mappings = {
+        line.split(" = ", 1)[0]: line.split(" = ", 1)[1]
+        for line in lines
+        if " = " in line and not line.lstrip().startswith("#")
+    }
+    expected_keys = {
+        "dark-mode",
+        "autostart",
+        "window-width",
+        "window-height",
+        "maximized",
+        "charge-threshold",
+    }
+    assert set(mappings) == expected_keys
+    assert all(
+        value.startswith("/com/bongbetic/batteryguard/")
+        for value in mappings.values()
+    )
+
+
 def test_source_icons_and_udev_live_under_data():
     assert (
         ROOT

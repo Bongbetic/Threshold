@@ -65,6 +65,12 @@ configure_file(
     install_dir: get_option('datadir') / 'glib-2.0' / 'schemas',
 )
 
+# GSettings migration map for upgrades from the former application ID.
+install_data(
+    'com.bongbetic.batteryguard.convert',
+    install_dir: get_option('datadir') / 'GConf' / 'gsettings',
+)
+
 # Schema validation
 compile_schemas = find_program('glib-compile-schemas', required: false)
 if compile_schemas.found()
