@@ -1,0 +1,26 @@
+Format: 1.8
+Date: Thu, 30 Jul 2026 04:02:55 +0530
+Source: msi-batteryguard
+Binary: msi-batteryguard
+Built-For-Profiles: derivative.ubuntu noudeb
+Architecture: all
+Version: 1.0.0-1
+Distribution: noble
+Urgency: medium
+Maintainer: Soubarna <Soubarna@live.in>
+Changed-By: Soubarna <Soubarna@live.in>
+Description:
+ msi-batteryguard - Battery charge threshold controller for MSI laptops
+Changes:
+ msi-batteryguard (1.0.0-1) noble; urgency=medium
+ .
+   * Initial release.
+Checksums-Sha1:
+ 0232284e10b441a9cdb04ac836447ec7c40666e2 13440 msi-batteryguard_1.0.0-1_all.deb
+ 77470813a580f54706bd08c6276809143e330b0f 16728 msi-batteryguard_1.0.0-1_amd64.buildinfo
+Checksums-Sha256:
+ 8005a232912e2bcb731e26dce3242523c6c1afddc908d712023d8a1d79311a66 13440 msi-batteryguard_1.0.0-1_all.deb
+ 83f26fd4c00eee02c764ece34f8a826ee778fb5064f779bd500b49c9b3c2ddef 16728 msi-batteryguard_1.0.0-1_amd64.buildinfo
+Files:
+ 540e037193bae6478ef8e5e90da3586c 13440 utils optional msi-batteryguard_1.0.0-1_all.deb
+ 14dc68c9ddc00b51d6d03a45979ec3b5 16728 utils optional msi-batteryguard_1.0.0-1_amd64.buildinfo

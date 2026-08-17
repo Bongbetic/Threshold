@@ -1,0 +1,33 @@
+Format: 1.8
+Date: Sat, 01 Aug 2026 12:00:00 +0530
+Source: msi-batteryguard
+Binary: msi-batteryguard msi-ec-dkms
+Built-For-Profiles: derivative.ubuntu noudeb
+Architecture: all amd64
+Version: 1.1.0-1
+Distribution: noble
+Urgency: medium
+Maintainer: Soubarna <Soubarna@live.in>
+Changed-By: Soubarna <Soubarna@live.in>
+Description:
+ msi-batteryguard - Battery charge threshold controller for MSI laptops
+ msi-ec-dkms - MSI Embedded Controller kernel module (DKMS)
+Changes:
+ msi-batteryguard (1.1.0-1) noble; urgency=medium
+ .
+   * Add msi-ec-dkms package (vendored msi-ec 0.13) so the kernel module
+     installs automatically with the app.
+   * CI: build on Ubuntu 24.04 and 26.04; publish .deb files to GitHub
+     Releases on version tags.
+Checksums-Sha1:
+ a75a12d5d146802c7d6dcd0c9f54ea74b73d6c35 13730 msi-batteryguard_1.1.0-1_all.deb
+ 3840ffcedfc0391aa84286b5e67212ab69f2e9ac 17344 msi-batteryguard_1.1.0-1_amd64.buildinfo
+ d3f41bef46e8990fd8cecc921ec9642b120469aa 21150 msi-ec-dkms_1.1.0-1_amd64.deb
+Checksums-Sha256:
+ 8879428fbf5de05cac3101f63592389df0661a4158e163241defbdd019158ac3 13730 msi-batteryguard_1.1.0-1_all.deb
+ eb9f104ae016ee342703bcaabbc73a8e927d1f11373b8c50257a148340ff658f 17344 msi-batteryguard_1.1.0-1_amd64.buildinfo
+ 48ab893112182e9b12c7b9e24fb2b0d3990d1ac534a756f18db1ac318a0dc8dc 21150 msi-ec-dkms_1.1.0-1_amd64.deb
+Files:
+ 05c61e08aab8018f7b70d18a9c147c7e 13730 utils optional msi-batteryguard_1.1.0-1_all.deb
+ d9c23cd0fe8b0463e84eaa4db31236f9 17344 utils optional msi-batteryguard_1.1.0-1_amd64.buildinfo
+ 4277d8bc91d0b6f0ee870197306a9be4 21150 utils optional msi-ec-dkms_1.1.0-1_amd64.deb
