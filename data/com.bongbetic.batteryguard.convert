@@ -1,0 +1,11 @@
+# Migrate preferences from the former GSettings schema to Threshold.
+#
+# gsettings-data-convert uses the schema section as the destination and the
+# path on each right-hand side as the source setting.
+[com.bongbetic.threshold]
+dark-mode = /com/bongbetic/batteryguard/dark-mode
+autostart = /com/bongbetic/batteryguard/autostart
+window-width = /com/bongbetic/batteryguard/window-width
+window-height = /com/bongbetic/batteryguard/window-height
+maximized = /com/bongbetic/batteryguard/maximized
+charge-threshold = /com/bongbetic/batteryguard/charge-threshold
