@@ -34,7 +34,6 @@ jobs:
             appstream \
             libgtk-4-dev \
             libadwaita-1-dev \
-            gir1.2-ayatanaappindicatorglib-2.0 \
             gir1.2-notify-0.7
 
       - name: Configure
