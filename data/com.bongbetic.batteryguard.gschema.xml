@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Compatibility schema — installed only for migration from the old
+     com.bongbetic.batteryguard schema to com.bongbetic.threshold.
+     Can be removed once no users are expected to still have the old
+     dconf keys (i.e. a few stable releases after 1.2.0). -->
+<schemalist>
+  <schema path="/com/bongbetic/batteryguard/" id="com.bongbetic.batteryguard">
+    <key name="dark-mode" type="b">
+      <default>false</default>
+    </key>
+    <key name="autostart" type="b">
+      <default>false</default>
+    </key>
+    <key name="window-width" type="i">
+      <default>800</default>
+    </key>
+    <key name="window-height" type="i">
+      <default>600</default>
+    </key>
+    <key name="maximized" type="b">
+      <default>false</default>
+    </key>
+    <key name="charge-threshold" type="i">
+      <default>80</default>
+    </key>
+  </schema>
+</schemalist>

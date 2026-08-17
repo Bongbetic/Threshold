@@ -22,6 +22,7 @@ if not register_resources():
 
 from threshold.window import ThresholdWindow, load_css_from_resource  # noqa: E402
 from threshold.config import Config  # noqa: E402
+from threshold.migration import migrate_if_needed  # noqa: E402
 
 
 class ThresholdApplication(Adw.Application):
@@ -36,6 +37,7 @@ class ThresholdApplication(Adw.Application):
     def do_startup(self):
         Adw.Application.do_startup(self)
         load_css_from_resource()
+        migrate_if_needed()
         Notify.init('com.bongbetic.threshold')
 
     def do_activate(self):

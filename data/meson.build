@@ -47,10 +47,19 @@ configure_file(
     install_dir: get_option('datadir') / 'metainfo',
 )
 
-# GSettings schema
+# GSettings schema (new)
 configure_file(
     input: '@0@.gschema.xml'.format(app_id),
     output: '@0@.gschema.xml'.format(app_id),
+    copy: true,
+    install: true,
+    install_dir: get_option('datadir') / 'glib-2.0' / 'schemas',
+)
+
+# GSettings compatibility schema (old batteryguard → threshold migration)
+configure_file(
+    input: 'com.bongbetic.batteryguard.gschema.xml',
+    output: 'com.bongbetic.batteryguard.gschema.xml',
     copy: true,
     install: true,
     install_dir: get_option('datadir') / 'glib-2.0' / 'schemas',
