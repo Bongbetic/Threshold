@@ -13,6 +13,7 @@ def test_ci_keeps_ubuntu_matrix_and_adds_debian_13_container():
     text = CI_WORKFLOW.read_text(encoding="utf-8")
 
     assert "os: [ubuntu-24.04, ubuntu-26.04]" in text
+    assert "gir1.2-ayatanaappindicatorglib-2.0" not in text
     assert "  debian-13:" in text
     assert "container: debian:trixie" in text
     assert "useradd --create-home ci" in text
