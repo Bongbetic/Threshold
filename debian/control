@@ -47,6 +47,7 @@ Description: Battery charge threshold controller for MSI laptops
 
 Package: msi-ec-dkms
 Architecture: amd64
+Section: kernel
 Depends: dkms (>= 2.2), ${misc:Depends}
 Description: MSI Embedded Controller kernel module (DKMS)
  Kernel module that exposes battery charge control and other EC
