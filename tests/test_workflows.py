@@ -1,5 +1,6 @@
 """GitHub Actions workflow contracts for supported build environments."""
 
+import re
 from pathlib import Path
 
 
@@ -21,6 +22,16 @@ def test_ci_keeps_ubuntu_matrix_and_adds_debian_13_container():
     assert "meson compile -C builddir" in text
     assert "meson test -C builddir --print-errorlogs" in text
     assert "threshold-deb-debian-13" in text
+
+
+def test_ci_runs_on_feature_branch_pushes():
+    text = CI_WORKFLOW.read_text(encoding="utf-8")
+    push = re.search(
+        r"\n  push:\n(?P<body>(?:    .*\n)*)  pull_request:",
+        text,
+    )
+    assert push is not None
+    assert "branches:" not in push.group("body")
 
 
 def test_workflows_use_threshold_package_artifact_names():
