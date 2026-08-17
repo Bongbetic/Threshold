@@ -4,21 +4,35 @@ import subprocess
 from pathlib import Path
 
 
-SYSFS_BASES = [
-    "/sys/class/power_supply/BAT0",
-    "/sys/class/power_supply/BAT1",
-]
-
 THRESHOLD_MIN = 20
 THRESHOLD_MAX = 100
 
 
+def _enumerate_power_supplies():
+    """Yield each subdirectory under /sys/class/power_supply/."""
+    psy_dir = Path("/sys/class/power_supply")
+    if not psy_dir.is_dir():
+        return
+    for entry in sorted(psy_dir.iterdir()):
+        if entry.is_dir():
+            yield entry
+
+
 def find_battery_path() -> Path | None:
-    """Return the first battery sysfs path that has a charge_control_end_threshold file."""
-    for base in SYSFS_BASES:
-        p = Path(base)
-        if (p / "charge_control_end_threshold").exists():
-            return p
+    """Return the first battery sysfs path that has ``type == Battery`` and
+    ``charge_control_end_threshold``.
+
+    Enumerates ``/sys/class/power_supply/`` dynamically.  First qualifying
+    entry wins.
+    """
+    for psy_path in _enumerate_power_supplies():
+        # Require type file reads Battery
+        type_val = read_sysfs(psy_path / "type")
+        if type_val != "Battery":
+            continue
+        # Require threshold file exists
+        if (psy_path / "charge_control_end_threshold").exists():
+            return psy_path
     return None
 
 

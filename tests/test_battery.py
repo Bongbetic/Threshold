@@ -11,40 +11,155 @@ from threshold import battery
 
 
 def test_find_battery_path_found(tmp_path, monkeypatch):
-    """Returns the path when BAT0 has charge_control_end_threshold."""
+    """Returns the path when BAT0 has type Battery and charge_control_end_threshold."""
     bat0 = tmp_path / "BAT0"
     bat0.mkdir()
+    (bat0 / "type").write_text("Battery")
     (bat0 / "charge_control_end_threshold").write_text("80")
-    monkeypatch.setattr(battery, "SYSFS_BASES", [str(bat0)])
+    _mock_power_supply_root(monkeypatch, tmp_path)
     assert battery.find_battery_path() == bat0
 
 
 def test_find_battery_path_first_wins(tmp_path, monkeypatch):
-    """Returns the path that has the threshold file when earlier paths lack it."""
+    """Returns the path that has both type and threshold when earlier ones lack them."""
     bat0 = tmp_path / "BAT0"
     bat1 = tmp_path / "BAT1"
     bat0.mkdir()
+    (bat0 / "type").write_text("Battery")
     bat1.mkdir()
+    (bat1 / "type").write_text("Battery")
     (bat1 / "charge_control_end_threshold").write_text("80")
-    monkeypatch.setattr(battery, "SYSFS_BASES", [str(bat0), str(bat1)])
+    _mock_power_supply_root(monkeypatch, tmp_path)
     assert battery.find_battery_path() == bat1
 
 
 def test_find_battery_path_nonexistent(tmp_path, monkeypatch):
-    """Returns None when no battery path has the threshold file."""
+    """Returns None when battery dir exists but lacks threshold file."""
     bat0 = tmp_path / "BAT0"
     bat0.mkdir()
-    monkeypatch.setattr(battery, "SYSFS_BASES", [str(bat0)])
+    (bat0 / "type").write_text("Battery")
+    _mock_power_supply_root(monkeypatch, tmp_path)
     assert battery.find_battery_path() is None
 
 
 def test_find_battery_path_all_missing(tmp_path, monkeypatch):
-    """Returns None when no battery directories exist at all."""
-    monkeypatch.setattr(
-        battery, "SYSFS_BASES",
-        [str(tmp_path / "BAT0"), str(tmp_path / "BAT1")],
-    )
+    """Returns None when power_supply directory is empty."""
+    _mock_power_supply_root(monkeypatch, tmp_path)
     assert battery.find_battery_path() is None
+
+
+# ─── find_battery_path — dynamic enumeration ──────────────────────────────────
+
+
+def _mock_power_supply_root(monkeypatch, tmp_path):
+    """Monkeypatch Path.iterdir on /sys/class/power_supply to return items from tmp_path."""
+    real_iterdir = Path.iterdir
+
+    def fake_iterdir(self):
+        if self.name == "power_supply":
+            return list(tmp_path.iterdir())
+        return real_iterdir(self)
+
+    monkeypatch.setattr(Path, "iterdir", fake_iterdir)
+
+
+def test_find_battery_path_dynamic_bat0_found(tmp_path, monkeypatch):
+    """Finds BAT0 when it has type=Battery and threshold file."""
+    bat0 = tmp_path / "BAT0"
+    bat0.mkdir()
+    (bat0 / "type").write_text("Battery")
+    (bat0 / "charge_control_end_threshold").write_text("80")
+    _mock_power_supply_root(monkeypatch, tmp_path)
+    assert battery.find_battery_path() == bat0
+
+
+def test_find_battery_path_filters_non_battery_type(tmp_path, monkeypatch):
+    """Skips entries whose type file does not read Battery."""
+    mains = tmp_path / "AC_ADAPTER"
+    mains.mkdir()
+    (mains / "type").write_text("Mains")
+    (mains / "charge_control_end_threshold").write_text("90")  # would match if not filtered
+    bat0 = tmp_path / "BAT0"
+    bat0.mkdir()
+    (bat0 / "type").write_text("Battery")
+    (bat0 / "charge_control_end_threshold").write_text("80")
+    _mock_power_supply_root(monkeypatch, tmp_path)
+    result = battery.find_battery_path()
+    assert result == bat0
+
+
+def test_find_battery_path_skips_no_type_file(tmp_path, monkeypatch):
+    """Skips entries without a type file."""
+    unknown = tmp_path / "UNKNOWN"
+    unknown.mkdir()
+    (unknown / "charge_control_end_threshold").write_text("70")
+    bat0 = tmp_path / "BAT0"
+    bat0.mkdir()
+    (bat0 / "type").write_text("Battery")
+    (bat0 / "charge_control_end_threshold").write_text("80")
+    _mock_power_supply_root(monkeypatch, tmp_path)
+    assert battery.find_battery_path() == bat0
+
+
+def test_find_battery_path_skips_no_threshold_file(tmp_path, monkeypatch):
+    """Skips entries that have type Battery but lack threshold file."""
+    cat1 = tmp_path / "BAT1"
+    cat1.mkdir()
+    (cat1 / "type").write_text("Battery")
+    cat0 = tmp_path / "BAT0"
+    cat0.mkdir()
+    (cat0 / "type").write_text("Battery")
+    (cat0 / "charge_control_end_threshold").write_text("80")
+    _mock_power_supply_root(monkeypatch, tmp_path)
+    assert battery.find_battery_path() == cat0
+
+
+def test_find_battery_path_multi_battery_first_wins(tmp_path, monkeypatch):
+    """When multiple batteries qualify, returns the first one found."""
+    bat0 = tmp_path / "BAT0"
+    bat0.mkdir()
+    (bat0 / "type").write_text("Battery")
+    (bat0 / "charge_control_end_threshold").write_text("60")
+    bat1 = tmp_path / "BAT1"
+    bat1.mkdir()
+    (bat1 / "type").write_text("Battery")
+    (bat1 / "charge_control_end_threshold").write_text("80")
+    _mock_power_supply_root(monkeypatch, tmp_path)
+    assert battery.find_battery_path() == bat0
+
+
+def test_find_battery_path_no_matching_battery(tmp_path, monkeypatch):
+    """Returns None when no battery has both type and threshold."""
+    bat0 = tmp_path / "BAT0"
+    bat0.mkdir()
+    (bat0 / "type").write_text("Battery")
+    # No threshold file
+    _mock_power_supply_root(monkeypatch, tmp_path)
+    assert battery.find_battery_path() is None
+
+
+def test_find_battery_path_empty_directory(tmp_path, monkeypatch):
+    """Returns None when power_supply directory is empty."""
+    _mock_power_supply_root(monkeypatch, tmp_path)
+    assert battery.find_battery_path() is None
+
+
+def test_find_battery_path_mixed_devices(tmp_path, monkeypatch):
+    """Properly filters through Mains, UPS, and finds Battery."""
+    ac = tmp_path / "AC_ADAPTER"
+    ac.mkdir()
+    (ac / "type").write_text("Mains")
+    ups = tmp_path / "UPS"
+    ups.mkdir()
+    (ups / "type").write_text("UPS")
+    (ups / "charge_control_end_threshold").write_text("90")
+    bat0 = tmp_path / "BAT0"
+    bat0.mkdir()
+    (bat0 / "type").write_text("Battery")
+    (bat0 / "charge_control_end_threshold").write_text("80")
+    _mock_power_supply_root(monkeypatch, tmp_path)
+    result = battery.find_battery_path()
+    assert result == bat0
 
 
 # ─── read_sysfs ────────────────────────────────────────────────────────────────
