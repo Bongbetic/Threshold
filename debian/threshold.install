@@ -1,0 +1,10 @@
+usr/bin/threshold
+usr/lib/udev/rules.d/99-msi-battery.rules
+usr/share/applications/com.bongbetic.threshold.desktop
+usr/share/com.bongbetic.threshold/threshold.gresource
+usr/share/com.bongbetic.threshold/threshold/*.py
+usr/share/com.bongbetic.threshold/style.css
+usr/share/glib-2.0/schemas/com.bongbetic.threshold.gschema.xml
+usr/share/icons/hicolor/scalable/apps/com.bongbetic.threshold.svg
+usr/share/icons/hicolor/symbolic/apps/com.bongbetic.threshold-symbolic.svg
+usr/share/metainfo/com.bongbetic.threshold.metainfo.xml

@@ -1,4 +1,4 @@
 i18n.gettext(
-    'batteryguard',
+    'threshold',
     preset: 'glib',
 )

@@ -4,6 +4,6 @@ def test_placeholder():
 
 
 def test_import():
-    """Verify the batteryguard package is importable."""
-    from batteryguard.application import BatteryGuardApplication
-    assert BatteryGuardApplication is not None
+    """Verify the threshold package is importable."""
+    from threshold.application import ThresholdApplication
+    assert ThresholdApplication is not None

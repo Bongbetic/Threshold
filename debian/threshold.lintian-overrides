@@ -1,8 +1,8 @@
 # Generic power_supply ATTR match — no hardware-specific modalias exists.
-msi-batteryguard: appstream-metadata-missing-modalias-provide
+threshold: appstream-metadata-missing-modalias-provide
 
 # Unofficial package; no Debian ITP / bug to close on initial upload.
-msi-batteryguard: initial-upload-closes-no-bugs
+threshold: initial-upload-closes-no-bugs
 
 # CLI is a thin launcher for the GUI; no man page in this release.
-msi-batteryguard: no-manual-page
+threshold: no-manual-page

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Threshold
+Comment=Battery charge threshold controller for Linux laptops
+Icon=com.bongbetic.threshold
+StartupNotify=true
+Exec=threshold
+Categories=GTK;GNOME;System;Utility;
+Keywords=battery;charge;threshold;laptop;

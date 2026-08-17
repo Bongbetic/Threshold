@@ -1,8 +1,8 @@
 data/ui/window.blp
-data/com.bongbetic.batteryguard.desktop
-data/com.bongbetic.batteryguard.gschema.xml
-src/batteryguard/main.py
-src/batteryguard/application.py
-src/batteryguard/window.py
-src/batteryguard/config.py
-src/batteryguard/battery.py
+data/com.bongbetic.threshold.desktop
+data/com.bongbetic.threshold.gschema.xml
+src/threshold/main.py
+src/threshold/application.py
+src/threshold/window.py
+src/threshold/config.py
+src/threshold/battery.py

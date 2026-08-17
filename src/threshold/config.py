@@ -6,11 +6,11 @@ gi.require_version('Gio', '2.0')
 
 from gi.repository import Gio  # noqa: E402
 
-SCHEMA_ID = 'com.bongbetic.batteryguard'
+SCHEMA_ID = 'com.bongbetic.threshold'
 
 
 class Config:
-    """Typed wrapper around Gio.Settings for the batteryguard schema.
+    """Typed wrapper around Gio.Settings for the threshold schema.
 
     Usage::
 

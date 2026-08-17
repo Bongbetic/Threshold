@@ -10,25 +10,25 @@ gi.require_version('Notify', '0.7')
 
 from gi.repository import Gio, Adw, Notify  # noqa: E402
 
-from batteryguard.resources import register_resources  # noqa: E402
+from threshold.resources import register_resources  # noqa: E402
 
 if not register_resources():
     print(
-        'error: batteryguard.gresource not found. '
-        'Build with Meson or set BATTERYGUARD_PKGDATADIR / MESON_BUILD_ROOT.',
+        'error: threshold.gresource not found. '
+        'Build with Meson or set THRESHOLD_PKGDATADIR / MESON_BUILD_ROOT.',
         file=sys.stderr,
     )
     sys.exit(1)
 
-from batteryguard.window import BatteryGuardWindow, load_css_from_resource  # noqa: E402
-from batteryguard.config import Config  # noqa: E402
+from threshold.window import ThresholdWindow, load_css_from_resource  # noqa: E402
+from threshold.config import Config  # noqa: E402
 
 
-class BatteryGuardApplication(Adw.Application):
+class ThresholdApplication(Adw.Application):
 
     def __init__(self):
         super().__init__(
-            application_id='com.bongbetic.batteryguard',
+            application_id='com.bongbetic.threshold',
             flags=Gio.ApplicationFlags.DEFAULT_FLAGS,
         )
         self._config = Config()
@@ -36,12 +36,12 @@ class BatteryGuardApplication(Adw.Application):
     def do_startup(self):
         Adw.Application.do_startup(self)
         load_css_from_resource()
-        Notify.init('com.bongbetic.batteryguard')
+        Notify.init('com.bongbetic.threshold')
 
     def do_activate(self):
         win = self.props.active_window
         if not win:
-            win = BatteryGuardWindow(application=self, config=self._config)
+            win = ThresholdWindow(application=self, config=self._config)
             if self._config.get_maximized():
                 win.maximize()
             else:

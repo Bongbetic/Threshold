@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-  <schema path="/com/bongbetic/batteryguard/" id="com.bongbetic.batteryguard">
+  <schema path="/com/bongbetic/threshold/" id="com.bongbetic.threshold">
     <key name="dark-mode" type="b">
       <default>false</default>
       <summary>Dark mode</summary>

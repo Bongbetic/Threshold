@@ -1,4 +1,4 @@
-app_id = 'com.bongbetic.batteryguard'
+app_id = 'com.bongbetic.threshold'
 
 # Blueprint .blp → .ui compilation
 blueprint_compiler = find_program('blueprint-compiler', required: false)
@@ -17,7 +17,7 @@ endif
 
 # GResource bundle
 app_resources = gnome.compile_resources(
-    'batteryguard',
+    'threshold',
     'resources/resources.gresource.xml',
     source_dir: [meson.current_build_dir(), meson.current_source_dir() / 'ui', meson.current_source_dir()],
     dependencies: [window_ui],

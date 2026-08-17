@@ -11,8 +11,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-METAINFO = ROOT / "data" / "com.bongbetic.batteryguard.metainfo.xml"
-APP_ID = "com.bongbetic.batteryguard"
+METAINFO = ROOT / "data" / "com.bongbetic.threshold.metainfo.xml"
+APP_ID = "com.bongbetic.threshold"
 REPO_URL = "https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX"
 SCREENSHOT_PREFIX = f"{REPO_URL}/raw/main/data/screenshots/"
 
@@ -28,7 +28,7 @@ def test_metainfo_file_exists():
 def test_metainfo_identifies_app():
     root = _root()
     assert root.findtext("id") == APP_ID
-    assert root.findtext("name") == "MSI BatteryGuard"
+    assert root.findtext("name") == "Threshold"
     assert root.findtext("summary")
     assert root.find("description") is not None
 
