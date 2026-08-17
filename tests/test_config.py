@@ -1,7 +1,7 @@
 """Tests for the GSettings wrapper (config.py)."""
 
 import pytest
-from batteryguard.config import Config
+from threshold.config import Config
 
 
 class FakeSettings:

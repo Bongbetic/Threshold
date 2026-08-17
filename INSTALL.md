@@ -1,4 +1,4 @@
-# MSI BatteryGuard – Installation Guide
+# Threshold – Installation Guide
 
 ## Target Hardware
 
@@ -22,7 +22,7 @@ supported.
    [Releases page](https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX/releases)
    and download the latest release's two `.deb` files:
 
-   - `msi-batteryguard_*.deb` — the GTK4 app
+   - `threshold_*.deb` — the GTK4 app
    - `msi-ec-dkms_*.deb` — the `msi-ec` kernel module (DKMS)
 
 2. Install both. The module package must go first so it is available when the
@@ -30,7 +30,7 @@ supported.
 
    ```bash
    sudo apt install ./msi-ec-dkms_0.13-1_amd64.deb
-   sudo apt install ./msi-batteryguard_1.1.0-1_all.deb
+   sudo apt install ./threshold_1.2.0-1_all.deb
    ```
 
    During the `msi-ec-dkms` install, DKMS builds the module for the running
@@ -50,18 +50,18 @@ supported.
    sudo udevadm trigger
    ```
 
-4. Launch from the app menu (**MSI BatteryGuard**) or:
+4. Launch from the app menu (**Threshold**) or:
 
    ```bash
-   msi-batteryguard
+   threshold
    ```
 
 ### What gets installed
 
 | Component | Location |
 |---|---|
-| Launcher | `/usr/bin/msi-batteryguard` |
-| Python package + GResource | `/usr/share/com.bongbetic.batteryguard/` |
+| Launcher | `/usr/bin/threshold` |
+| Python package + GResource | `/usr/share/com.bongbetic.threshold/` |
 | Desktop entry | `/usr/share/applications/` |
 | AppStream metainfo | `/usr/share/metainfo/` |
 | GSettings schema | `/usr/share/glib-2.0/schemas/` |
@@ -150,7 +150,7 @@ dpkg-buildpackage -us -uc -b
 
 The `.deb` files land in the parent directory:
 
-- `../msi-batteryguard_1.1.0-1_all.deb`
+- `../threshold_1.2.0-1_all.deb`
 - `../msi-ec-dkms_0.13-1_amd64.deb`
 
 ---

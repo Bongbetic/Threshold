@@ -14,7 +14,7 @@ from gi.repository import Gio  # noqa: E402
 
 
 def register_resources() -> bool:
-    """Locate and register ``batteryguard.gresource``.
+    """Locate and register ``threshold.gresource``.
 
     Returns True if a resource bundle was found and registered.
     """
@@ -24,22 +24,22 @@ def register_resources() -> bool:
     candidates = [
         # Installed: near the launcher under share/<app_id>/
         pathlib.Path(sys.argv[0]).resolve().parent
-        / '..' / 'share' / 'com.bongbetic.batteryguard'
-        / 'batteryguard.gresource',
+        / '..' / 'share' / 'com.bongbetic.threshold'
+        / 'threshold.gresource',
     ]
 
     meson_build = os.environ.get('MESON_BUILD_ROOT')
     if meson_build:
         candidates.append(
-            pathlib.Path(meson_build) / 'data' / 'batteryguard.gresource'
+            pathlib.Path(meson_build) / 'data' / 'threshold.gresource'
         )
 
-    pkgdatadir = os.environ.get('BATTERYGUARD_PKGDATADIR')
+    pkgdatadir = os.environ.get('THRESHOLD_PKGDATADIR')
     if pkgdatadir:
-        candidates.append(pathlib.Path(pkgdatadir) / 'batteryguard.gresource')
+        candidates.append(pathlib.Path(pkgdatadir) / 'threshold.gresource')
 
-    candidates.append(project_root / 'builddir' / 'data' / 'batteryguard.gresource')
-    candidates.extend(project_root.glob('obj-*/data/batteryguard.gresource'))
+    candidates.append(project_root / 'builddir' / 'data' / 'threshold.gresource')
+    candidates.extend(project_root.glob('obj-*/data/threshold.gresource'))
 
     for path in candidates:
         resolved = path.resolve()

@@ -1,4 +1,4 @@
-"""BatteryGuard main window — wires battery logic, GSettings, and UI together."""
+"""Threshold main window — wires battery logic, GSettings, and UI together."""
 
 from gettext import gettext as _
 from pathlib import Path
@@ -12,13 +12,13 @@ gi.require_version('Notify', '0.7')
 
 from gi.repository import GLib, Gtk, Adw, Gdk, Notify  # noqa: E402
 
-from batteryguard.battery import (  # noqa: E402
+from threshold.battery import (  # noqa: E402
     find_battery_path,
     read_charge_percent,
     read_sysfs,
     write_threshold,
 )
-from batteryguard.config import Config  # noqa: E402
+from threshold.config import Config  # noqa: E402
 
 
 try:
@@ -31,23 +31,23 @@ except (ValueError, ImportError):
 
 
 AUTOSTART_DIR = Path.home() / '.config' / 'autostart'
-AUTOSTART_FILE = AUTOSTART_DIR / 'com.bongbetic.batteryguard.desktop'
+AUTOSTART_FILE = AUTOSTART_DIR / 'com.bongbetic.threshold.desktop'
 
 DESKTOP_ENTRY_TEMPLATE = """\
 [Desktop Entry]
 Type=Application
-Name=MSI BatteryGuard
-Comment=Battery charge threshold controller for MSI laptops
-Icon=com.bongbetic.batteryguard
+Name=Threshold
+Comment=Battery charge threshold controller for Linux laptops
+Icon=com.bongbetic.threshold
 StartupNotify=true
-Exec=msi-batteryguard
+Exec=threshold
 Categories=GTK;GNOME;System;Utility;
 """
 
 
-@Gtk.Template(resource_path='/com/bongbetic/batteryguard/window.ui')
-class BatteryGuardWindow(Adw.ApplicationWindow):
-    __gtype_name__ = 'BatteryGuardWindow'
+@Gtk.Template(resource_path='/com/bongbetic/threshold/window.ui')
+class ThresholdWindow(Adw.ApplicationWindow):
+    __gtype_name__ = 'ThresholdWindow'
 
     current_charge_label: Gtk.Label = Gtk.Template.Child()
     current_status_label: Gtk.Label = Gtk.Template.Child()
@@ -355,12 +355,12 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         from gi.repository import Gio
 
         self._indicator = AppIndicator.Indicator.new(
-            'com.bongbetic.batteryguard',
-            'com.bongbetic.batteryguard',
+            'com.bongbetic.threshold',
+            'com.bongbetic.threshold',
             AppIndicator.IndicatorCategory.APPLICATION_STATUS,
         )
         self._indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
-        self._indicator.set_title(_('MSI BatteryGuard'))
+        self._indicator.set_title(_('Threshold'))
 
         actions = Gio.SimpleActionGroup.new()
         show_action = Gio.SimpleAction.new('show', None)
@@ -372,7 +372,7 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         actions.add_action(quit_action)
 
         menu = Gio.Menu.new()
-        menu.append(_('Show BatteryGuard'), 'indicator.show')
+        menu.append(_('Show Threshold'), 'indicator.show')
         menu.append(_('Quit'), 'indicator.quit')
 
         self._indicator.set_menu(menu)
@@ -416,7 +416,7 @@ class BatteryGuardWindow(Adw.ApplicationWindow):
         """Show a desktop notification via libnotify."""
         try:
             notification = Notify.Notification.new(
-                f'BatteryGuard \u2014 {title}',
+                f'Threshold \u2014 {title}',
                 body,
             )
             if is_error:
@@ -442,7 +442,7 @@ def load_css_from_resource():
     if display is None:
         return
     provider = Gtk.CssProvider()
-    provider.load_from_resource('/com/bongbetic/batteryguard/style.css')
+    provider.load_from_resource('/com/bongbetic/threshold/style.css')
     Gtk.StyleContext.add_provider_for_display(
         display,
         provider,

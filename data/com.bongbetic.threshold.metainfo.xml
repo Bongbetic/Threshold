@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.bongbetic.batteryguard</id>
+  <id>com.bongbetic.threshold</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <project_group>Bongbetic</project_group>
-  <name>MSI BatteryGuard</name>
-  <summary>Battery charge threshold controller for MSI laptops</summary>
+  <name>Threshold</name>
+  <summary>Battery charge threshold controller for Linux laptops</summary>
   <description>
     <p>
-      MSI BatteryGuard provides a graphical interface for setting the
-      battery charge threshold on MSI laptops. The charge limit is written
+      Threshold provides a graphical interface for setting the
+      battery charge threshold on Linux laptops. The charge limit is written
       directly to the EC microcontroller via the msi-ec kernel module and
       persists across reboots.
     </p>
@@ -20,7 +20,7 @@
   </categories>
   <url type="homepage">https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX</url>
   <url type="bugtracker">https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX/issues</url>
-  <launchable type="desktop-id">com.bongbetic.batteryguard.desktop</launchable>
+  <launchable type="desktop-id">com.bongbetic.threshold.desktop</launchable>
   <developer id="com.bongbetic">
     <name>Bongbetic</name>
   </developer>
@@ -35,6 +35,11 @@
   </screenshots>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.2.0" date="2026-08-15">
+      <description>
+        <p>Rename project to Threshold; generalise from MSI-only branding.</p>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-08-01">
       <description>
         <p>Add msi-ec-dkms package and GitHub Releases publishing.</p>

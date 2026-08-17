@@ -1,4 +1,4 @@
-# MSI BatteryGuard
+# Threshold
 
 A GTK4 + libadwaita desktop app for controlling the battery charge threshold on
 **MSI Thin A15 B7UCX** (and other MSI laptops supported by `msi-ec`).
@@ -16,14 +16,14 @@ Grab the latest release from the
 **[Releases](https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX/releases)**
 page and download **both** `.deb` files:
 
-- `msi-batteryguard_1.1.0-1_all.deb` — the app
+- `threshold_1.2.0-1_all.deb` — the app
 - `msi-ec-dkms_0.13-1_amd64.deb` — the kernel module (built via DKMS)
 
 Then install them with apt:
 
 ```bash
 sudo apt install ./msi-ec-dkms_0.13-1_amd64.deb
-sudo apt install ./msi-batteryguard_1.1.0-1_all.deb
+sudo apt install ./threshold_1.2.0-1_all.deb
 ```
 
 The `msi-ec-dkms` package builds and loads the `msi-ec` kernel module for the
@@ -38,7 +38,7 @@ adding):
 sudo usermod -aG plugdev $USER
 ```
 
-Launch from the app menu (**MSI BatteryGuard**) or run `msi-batteryguard`.
+Launch from the app menu (**Threshold**) or run `threshold`.
 
 > **Ubuntu versions:** builds are tested on 24.04 LTS and 26.04 LTS. The app
 > package is architecture-independent (`all`); the kernel module package is

@@ -1,4 +1,11 @@
-msi-batteryguard (1.1.0-1) noble; urgency=medium
+threshold (1.2.0-1) trixie; urgency=medium
+
+  * Rename project from msi-batteryguard to threshold.
+  * Generalise app_id from com.bongbetic.batteryguard to com.bongbetic.threshold.
+
+ -- Soubarna <Soubarna@live.in>  Sat, 15 Aug 2026 12:00:00 +0530
+
+threshold (1.1.0-1) noble; urgency=medium
 
   * Add msi-ec-dkms package (vendored msi-ec 0.13) so the kernel module
     installs automatically with the app.

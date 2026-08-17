@@ -6,7 +6,7 @@ export DH_VERBOSE = 1
 	dh $@ --buildsystem=meson --with python3
 
 override_dh_python3:
-	dh_python3 usr/share/com.bongbetic.batteryguard
+	dh_python3 usr/share/com.bongbetic.threshold
 
 override_dh_dkms:
 	dh_dkms -p msi-ec-dkms

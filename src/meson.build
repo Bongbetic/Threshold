@@ -1,29 +1,29 @@
-pkgdatadir = get_option('prefix') / get_option('datadir') / 'com.bongbetic.batteryguard'
+pkgdatadir = get_option('prefix') / get_option('datadir') / 'com.bongbetic.threshold'
 
 python_sources = [
-    'batteryguard/__init__.py',
-    'batteryguard/battery.py',
-    'batteryguard/config.py',
-    'batteryguard/main.py',
-    'batteryguard/application.py',
-    'batteryguard/window.py',
-    'batteryguard/resources.py',
+    'threshold/__init__.py',
+    'threshold/battery.py',
+    'threshold/config.py',
+    'threshold/main.py',
+    'threshold/application.py',
+    'threshold/window.py',
+    'threshold/resources.py',
 ]
 
 install_data(
     python_sources,
-    install_dir: pkgdatadir / 'batteryguard',
+    install_dir: pkgdatadir / 'threshold',
 )
 
 script_conf = configuration_data()
-script_conf.set('app_id', 'com.bongbetic.batteryguard')
+script_conf.set('app_id', 'com.bongbetic.threshold')
 script_conf.set('pkgdatadir', pkgdatadir)
 script_conf.set('localedir', get_option('prefix') / get_option('localedir'))
 script_conf.set('python', find_program('python3').full_path())
 
 configure_file(
     input: 'launcher.in',
-    output: 'msi-batteryguard',
+    output: 'threshold',
     configuration: script_conf,
     install: true,
     install_dir: get_option('bindir'),

@@ -4,7 +4,7 @@ import stat
 import subprocess
 from pathlib import Path
 
-from batteryguard import battery
+from threshold import battery
 
 
 # ─── find_battery_path ─────────────────────────────────────────────────────────

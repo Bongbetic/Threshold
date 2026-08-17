@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-APP_ID = "com.bongbetic.batteryguard"
+APP_ID = "com.bongbetic.threshold"
 
 
 def _build_root() -> Path:
@@ -52,7 +52,7 @@ def _meson() -> str:
 def _install_to_destdir() -> Path:
     build = _build_root()
     _assert_builddir_matches_repo(build)
-    destdir = Path(tempfile.mkdtemp(prefix="batteryguard-destdir-"))
+    destdir = Path(tempfile.mkdtemp(prefix="threshold-destdir-"))
     # Allow rebuild so Blueprint/UI changes are picked up; stale --no-rebuild
     # fails hard after source-tree moves.
     result = subprocess.run(
@@ -132,9 +132,9 @@ def test_udev_rule_installed_under_lib(destdir: Path):
 
 
 def test_gresource_installed(destdir: Path):
-    candidates = list(destdir.glob(f"**/{APP_ID}/batteryguard.gresource"))
+    candidates = list(destdir.glob(f"**/{APP_ID}/threshold.gresource"))
     assert candidates and candidates[0].is_file(), (
-        f"missing batteryguard.gresource under {destdir}"
+        f"missing threshold.gresource under {destdir}"
     )
 
 
@@ -151,9 +151,9 @@ def test_desktop_file_installed(destdir: Path):
 
 
 def test_launcher_installed(destdir: Path):
-    found = _under_prefix(destdir, "bin", "msi-batteryguard")
+    found = _under_prefix(destdir, "bin", "threshold")
     assert found and found[0].is_file(), (
-        f"missing msi-batteryguard launcher under {destdir}"
+        f"missing threshold launcher under {destdir}"
     )
 
 

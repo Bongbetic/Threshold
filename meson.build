@@ -1,6 +1,6 @@
 project(
-    'batteryguard',
-    version: '1.1.0',
+    'threshold',
+    version: '1.2.0',
     meson_version: '>= 1.0.0',
     license: 'GPL-3.0-or-later',
     default_options: [
@@ -11,7 +11,7 @@ project(
 gnome = import('gnome')
 i18n = import('i18n')
 
-app_id = 'com.bongbetic.batteryguard'
+app_id = 'com.bongbetic.threshold'
 
 prefix = get_option('prefix')
 bindir = prefix / get_option('bindir')

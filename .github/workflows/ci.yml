@@ -50,17 +50,17 @@ jobs:
       - name: Coverage (battery.py ≥ 80%)
         run: |
           PYTHONPATH=src python3 -m pytest tests/test_battery.py tests/test_window_ui.py -q \
-            --cov=batteryguard.battery \
+            --cov=threshold.battery \
             --cov-fail-under=80 \
             --cov-report=term-missing
 
       - name: Lint
-        run: flake8 src/batteryguard tests
+        run: flake8 src/threshold tests
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: batteryguard-build-${{ matrix.os }}
+          name: threshold-build-${{ matrix.os }}
           path: builddir/
           retention-days: 7
 
@@ -85,7 +85,7 @@ jobs:
         run: |
           dpkg-buildpackage -us -uc -b
           mkdir -p artifacts
-          cp ../msi-batteryguard_*.deb ../msi-ec-dkms_*.deb artifacts/
+          cp ../threshold_*.deb ../msi-ec-dkms_*.deb artifacts/
 
       - name: Lintian
         run: lintian artifacts/*.deb
@@ -93,7 +93,7 @@ jobs:
       - name: Upload .deb artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: msi-batteryguard-deb-${{ matrix.os }}
+          name: threshold-deb-${{ matrix.os }}
           path: artifacts/*.deb
           retention-days: 14
           if-no-files-found: error

@@ -1,4 +1,4 @@
-Source: msi-batteryguard
+Source: threshold
 Section: utils
 Priority: optional
 Maintainer: Soubarna <Soubarna@live.in>
@@ -26,7 +26,7 @@ Vcs-Browser: https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX
 Vcs-Git: https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX.git
 Rules-Requires-Root: no
 
-Package: msi-batteryguard
+Package: threshold
 Architecture: all
 Depends: ${python3:Depends},
          ${misc:Depends},
@@ -36,9 +36,9 @@ Depends: ${python3:Depends},
          gir1.2-notify-0.7
 Recommends: msi-ec-dkms,
             gir1.2-ayatanaappindicatorglib-2.0
-Description: Battery charge threshold controller for MSI laptops
- MSI BatteryGuard provides a GTK4 graphical interface for setting the
- battery charge threshold on MSI laptops. The charge limit is written
+Description: Battery charge threshold controller for Linux laptops
+ Threshold provides a GTK4 graphical interface for setting the
+ battery charge threshold on Linux laptops. The charge limit is written
  directly to the EC microcontroller via the msi-ec kernel module and
  persists across reboots.
  .
@@ -55,7 +55,7 @@ Description: MSI Embedded Controller kernel module (DKMS)
  .
  The module registers itself with the Linux power supply subsystem and
  exposes charge_control_start_threshold and charge_control_end_threshold
- under /sys/class/power_supply/BAT*, which msi-batteryguard writes to.
+ under /sys/class/power_supply/BAT*, which threshold writes to.
  .
  Supports EC firmware 16RKIMS1.111 (MSI Thin A15 B7UCX) and other MSI
  laptops supported by upstream msi-ec.
