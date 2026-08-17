@@ -1,3 +1,7 @@
+## Skill policy
+
+Use Superpowers skills only when user explicitly requests a specific Superpowers skill. Otherwise, follow repository instructions and direct implementation workflow.
+
 ## Agent skills
 
 ### Issue tracker
