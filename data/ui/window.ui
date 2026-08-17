@@ -7,8 +7,8 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
 <interface>
   <requires lib="gtk" version="4.0"/>
   <template class="ThresholdWindow" parent="AdwApplicationWindow">
-    <property name="default-width">800</property>
-    <property name="default-height">600</property>
+    <property name="default-width">950</property>
+    <property name="default-height">620</property>
     <property name="width-request">400</property>
     <property name="height-request">400</property>
     <property name="title" translatable="yes">Threshold</property>
@@ -29,7 +29,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
             <property name="vexpand">true</property>
             <child>
               <object class="AdwClamp">
-                <property name="maximum-size">600</property>
+                <property name="maximum-size">900</property>
                 <child>
                   <object class="GtkBox">
                     <property name="orientation">1</property>

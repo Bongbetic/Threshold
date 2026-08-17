@@ -2,8 +2,8 @@ using Gtk 4.0;
 using Adw 1;
 
 template $ThresholdWindow: Adw.ApplicationWindow {
-  default-width: 800;
-  default-height: 600;
+  default-width: 950;
+  default-height: 620;
   width-request: 400;
   height-request: 400;
   title: _("Threshold");
@@ -21,7 +21,7 @@ template $ThresholdWindow: Adw.ApplicationWindow {
       vexpand: true;
 
       Adw.Clamp {
-        maximum-size: 600;
+        maximum-size: 900;
 
         Gtk.Box {
           orientation: vertical;
