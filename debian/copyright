@@ -11,6 +11,17 @@ Files: debian/*
 Copyright: 2026 Soubarna <Soubarna@live.in>
 License: GPL-3+
 
+Files: msi-ec-src/*
+Comment: Vendored upstream msi-ec kernel module (snapshot 050d4394, version
+ 0.13; source https://github.com/BeardOverflow/msi-ec). The DKMS layout
+ requires this upstream source tree to be self-contained under
+ /usr/src/msi-ec-0.13/ so the module can be compiled, which is why the
+ module's LICENSE and README ship there, outside /usr/share/doc (benign
+ lintian notes, not an error). The authoritative SPDX tag in msi-ec.c is
+ GPL-2.0-or-later.
+Copyright: BeardOverflow/msi-ec contributors
+License: GPL-2+
+
 License: GPL-3+
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -27,3 +38,12 @@ License: GPL-3+
  .
  On Debian systems, the complete text of the GNU General Public
  License version 3 can be found in `/usr/share/common-licenses/GPL-3`.
+
+License: GPL-2+
+ The complete text of the GNU General Public License version 2 ("or any
+ later version", per the SPDX tag in the vendored msi-ec sources) can be
+ found in `/usr/share/common-licenses/GPL-2`, and is also shipped with the
+ installed module at `/usr/src/msi-ec-0.13/LICENSE`.
+ .
+ On Debian systems, the complete text of the GNU General Public
+ License version 2 can be found in `/usr/share/common-licenses/GPL-2`.
