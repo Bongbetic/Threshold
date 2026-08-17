@@ -154,14 +154,17 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self.battery_name_label.set_label(self._battery_path.name)
 
     def _show_error_state(self):
-        """Display error state when no battery path is found."""
+        """Display error state when no threshold-capable battery is found."""
         self.current_charge_label.set_label('--')
-        self.current_status_label.set_label(_('msi-ec not loaded'))
+        self.current_status_label.set_label(_('--'))
         self.active_threshold_label.set_label('--')
         self.charge_scale.set_sensitive(False)
         self.apply_button.set_sensitive(False)
         self.restore_button.set_sensitive(False)
-        self._set_status(_('msi-ec kernel module not detected'), is_error=True)
+        self._set_status(
+            _('No charge-threshold-capable battery detected'),
+            is_error=True,
+        )
 
     def _start_polling(self):
         """Start 5-second polling for battery charge refresh."""
