@@ -32,5 +32,10 @@
       <summary>Charge threshold</summary>
       <description>Battery charge limit as a percentage (20–100).</description>
     </key>
+    <key name="migration-done" type="b">
+      <default>false</default>
+      <summary>Schema migration completed</summary>
+      <description>Internal flag — true after the batteryguard → threshold migration has run.</description>
+    </key>
   </schema>
 </schemalist>
