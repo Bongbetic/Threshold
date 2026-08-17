@@ -12,12 +12,12 @@
       <description>Whether to launch the application automatically at login.</description>
     </key>
     <key name="window-width" type="i">
-      <default>800</default>
+      <default>950</default>
       <summary>Window width</summary>
       <description>Default window width in pixels.</description>
     </key>
     <key name="window-height" type="i">
-      <default>600</default>
+      <default>620</default>
       <summary>Window height</summary>
       <description>Default window height in pixels.</description>
     </key>
