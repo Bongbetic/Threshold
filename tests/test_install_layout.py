@@ -157,6 +157,15 @@ def test_launcher_installed(destdir: Path):
     )
 
 
+def test_debian_package_installs_compatibility_schema():
+    install_file = ROOT / "debian" / "threshold.install"
+    text = install_file.read_text(encoding="utf-8")
+    assert (
+        "usr/share/glib-2.0/schemas/"
+        "com.bongbetic.batteryguard.gschema.xml" in text
+    )
+
+
 def test_source_icons_and_udev_live_under_data():
     assert (
         ROOT
