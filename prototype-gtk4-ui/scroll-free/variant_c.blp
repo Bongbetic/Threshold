@@ -1,0 +1,184 @@
+// Variant C — Compact single-page
+// Window 750x550. No Adw.Clamp. Tight spacing (8px).
+// Cards with minimal padding. Settings as Adw.SwitchRow.
+// Dense layout — everything visible without scroll at 720p.
+using Gtk 4.0;
+using Adw 1;
+
+template $BatteryGuardWindow: Adw.ApplicationWindow {
+  default-width: 750;
+  default-height: 550;
+  width-request: 550;
+  height-request: 420;
+  title: _("Threshold");
+
+  Gtk.Box {
+    orientation: vertical;
+
+    Adw.HeaderBar {
+      title-widget: Adw.WindowTitle {
+        title: _("Threshold");
+      };
+    }
+
+    Gtk.Box {
+      orientation: vertical;
+      spacing: 8;
+      margin-top: 12;
+      margin-bottom: 12;
+      margin-start: 16;
+      margin-end: 16;
+      vexpand: true;
+
+      // Status cards — horizontal pair
+      Gtk.Box {
+        orientation: horizontal;
+        homogeneous: true;
+        spacing: 8;
+
+        Gtk.Box {
+          orientation: vertical;
+          styles ["card"]
+          spacing: 2;
+
+          Gtk.Label {
+            label: _("Current Charge");
+            styles ["dim-label", "caption"]
+            xalign: 0.0;
+          }
+          Gtk.Label current_charge_label {
+            label: "72%";
+            styles ["title-2"]
+          }
+          Gtk.Label current_status_label {
+            label: _("⚡ Charging");
+            styles ["dim-label", "caption"]
+            xalign: 0.0;
+          }
+        }
+
+        Gtk.Box {
+          orientation: vertical;
+          styles ["card"]
+          spacing: 2;
+
+          Gtk.Label {
+            label: _("Active Threshold");
+            styles ["dim-label", "caption"]
+            xalign: 0.0;
+          }
+          Gtk.Label active_threshold_label {
+            label: "80%";
+            styles ["title-2"]
+          }
+          Gtk.Label battery_name_label {
+            label: _("BAT1");
+            styles ["dim-label", "caption"]
+            xalign: 0.0;
+          }
+        }
+      }
+
+      // Threshold control — slider + value + buttons in one card
+      Gtk.Box {
+        orientation: vertical;
+        styles ["card"]
+        spacing: 8;
+
+        Gtk.Box {
+          orientation: horizontal;
+          spacing: 8;
+          valign: center;
+
+          Gtk.Label {
+            label: _("Charge Limit");
+            styles ["heading"]
+            hexpand: true;
+            xalign: 0.0;
+          }
+          Gtk.Label charge_value_label {
+            label: "80%";
+            styles ["title-2"]
+          }
+        }
+
+        Gtk.Box {
+          orientation: horizontal;
+          spacing: 8;
+
+          Gtk.Label {
+            label: "20";
+            styles ["dim-label", "caption"]
+          }
+          Gtk.Scale charge_scale {
+            adjustment: Gtk.Adjustment {
+              lower: 20;
+              upper: 100;
+              value: 80;
+            };
+            draw-value: false;
+            hexpand: true;
+          }
+          Gtk.Label {
+            label: "100";
+            styles ["dim-label", "caption"]
+          }
+        }
+
+        Gtk.Label {
+          label: _("Recommended: 60–80% daily · 100% for travel");
+          styles ["dim-label", "caption"]
+          halign: center;
+        }
+
+        Gtk.Box {
+          orientation: horizontal;
+          homogeneous: true;
+          spacing: 8;
+
+          Gtk.Button apply_button {
+            label: _("Apply Threshold");
+            styles ["suggested-action", "pill"]
+          }
+          Gtk.Button restore_button {
+            label: _("Restore to 100%");
+          }
+        }
+      }
+
+      // Settings — flat switch rows
+      Adw.PreferencesGroup {
+        Adw.SwitchRow dark_mode_switch {
+          title: _("Dark Mode");
+        }
+        Adw.SwitchRow launch_switch {
+          title: _("Launch at login");
+        }
+      }
+
+      // Spacer to push status bar down
+      Gtk.Box {
+        vexpand: true;
+      }
+
+      // Status bar
+      Gtk.Separator {}
+
+      Gtk.Box {
+        orientation: horizontal;
+        spacing: 6;
+
+        Gtk.Label live_dot {
+          label: "○";
+          styles ["dim-label", "caption"]
+        }
+        Gtk.Label status_bar {
+          label: _("Ready");
+          styles ["dim-label", "caption"]
+          hexpand: true;
+          xalign: 0.0;
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Threshold — Industrial Grid UI -->
+<interface>
+  <object class="GtkBox" id="root">
+    <property name="orientation">vertical</property>
+    <property name="css-classes">threshold-window</property>
+
+    <!-- Header -->
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">horizontal</property>
+        <property name="css-classes">industrial-header</property>
+        <property name="spacing">0</property>
+        <property name="margin-start">22</property>
+        <property name="margin-end">22</property>
+        <!-- Left: menu + title -->
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">26</property>
+            <property name="valign">center</property>
+            <property name="halign">start</property>
+            <child>
+              <object class="GtkButton">
+                <property name="icon-name">open-menu-symbolic</property>
+                <property name="css-classes">header-menu-btn</property>
+                <property name="tooltip-text" translatable="yes">Menu</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="label" translatable="yes">Threshold</property>
+                <property name="css-classes">header-title</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <!-- Center spacer (left) -->
+        <child>
+          <object class="GtkBox">
+            <property name="hexpand">True</property>
+            <property name="halign">fill</property>
+          </object>
+        </child>
+        <!-- Center: nav tabs -->
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="halign">center</property>
+            <property name="valign">center</property>
+            <property name="spacing">0</property>
+            <child>
+              <object class="GtkToggleButton" id="nav_overview">
+                <property name="label" translatable="yes">Overview</property>
+                <property name="css-classes">nav-item</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton" id="nav_threshold">
+                <property name="label" translatable="yes">Threshold</property>
+                <property name="active">True</property>
+                <property name="group">nav_overview</property>
+                <style>
+  <class name="nav-item"/>
+  <class name="nav-item-active"/>
+</style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton" id="nav_settings">
+                <property name="label" translatable="yes">Settings</property>
+                <property name="group">nav_overview</property>
+                <property name="css-classes">nav-item</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkToggleButton" id="nav_about">
+                <property name="label" translatable="yes">About</property>
+                <property name="group">nav_overview</property>
+                <property name="css-classes">nav-item</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <!-- Right spacer (mirrors left, keeps nav centered) -->
+        <child>
+          <object class="GtkBox">
+            <property name="hexpand">True</property>
+            <property name="halign">fill</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <!-- Main content -->
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">8</property>
+        <property name="margin-top">10</property>
+        <property name="margin-bottom">10</property>
+        <property name="margin-start">18</property>
+        <property name="margin-end">18</property>
+
+            <!-- Top Status Grid: 3 columns -->
+            <child>
+              <object class="GtkGrid">
+                <property name="column-spacing">8</property>
+                <property name="row-spacing">8</property>
+                <property name="column-homogeneous">True</property>
+
+                <!-- Battery Status Panel -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="css-classes">panel</property>
+                    <property name="hexpand">True</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Battery Status</property>
+                        <property name="css-classes">panel-title</property>
+                        <property name="xalign">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">0</property>
+                        <property name="valign">center</property>
+                        <!-- Left readout -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">6</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">72%</property>
+                                <property name="css-classes">instrument-value-accent</property>
+                                <property name="xalign">0</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="spacing">12</property>
+                                <child>
+                                  <object class="GtkImage">
+                                    <property name="icon-name">battery-good-charging-symbolic</property>
+                                    <property name="css-classes">charging-icon</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Charging</property>
+                                    <property name="css-classes">charging-label</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <!-- Vertical divider -->
+                        <child>
+                          <object class="GtkSeparator">
+                            <property name="orientation">vertical</property>
+                            <property name="css-classes">v-divider</property>
+                            <property name="margin-start">12</property>
+                            <property name="margin-end">12</property>
+                            <property name="valign">fill</property>
+                            <property name="vexpand">True</property>
+                          </object>
+                        </child>
+                        <!-- Right diagnostics -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">6</property>
+                            <property name="halign">end</property>
+                            <property name="hexpand">True</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="spacing">8</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Power Source:</property>
+                                    <property name="css-classes">metadata-caption</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">AC Adapter</property>
+                                    <property name="css-classes">metadata-caption-value</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="spacing">8</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Health:</property>
+                                    <property name="css-classes">metadata-caption</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Good</property>
+                                    <property name="css-classes">metadata-caption-value</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="spacing">8</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Temperature:</property>
+                                    <property name="css-classes">metadata-caption</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">34°C</property>
+                                    <property name="css-classes">metadata-caption-value</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+
+                <!-- Active Threshold Panel -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="css-classes">panel</property>
+                    <property name="hexpand">True</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Active Threshold</property>
+                        <property name="css-classes">panel-title</property>
+                        <property name="xalign">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">80%</property>
+                        <property name="css-classes">instrument-value-accent</property>
+                        <property name="xalign">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="margin-top">12</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">BAT1</property>
+                            <property name="css-classes">metadata-label</property>
+                            <property name="xalign">0</property>
+                            <property name="hexpand">True</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="halign">end</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Last changed</property>
+                                <property name="css-classes">metadata-caption</property>
+                                <property name="xalign">1</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Today, 10:24 AM</property>
+                                <property name="css-classes">metadata-caption-value</property>
+                                <property name="xalign">1</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+
+                <!-- Threshold Mode Panel -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="css-classes">panel</property>
+                    <property name="hexpand">True</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Threshold Mode</property>
+                        <property name="css-classes">panel-title</property>
+                        <property name="xalign">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <property name="homogeneous">True</property>
+                        <child>
+                          <object class="GtkToggleButton" id="mode_auto">
+                            <property name="label" translatable="yes">✏ Automatic</property>
+                            <style>
+  <class name="mode-btn"/>
+  <class name="mode-btn-active"/>
+</style>
+                            <property name="active">True</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkToggleButton" id="mode_manual">
+                            <property name="label" translatable="yes">🔒 Manual</property>
+                            <property name="group">mode_auto</property>
+                            <property name="css-classes">mode-btn</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- Charge Limit Panel (spans all columns) -->
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="css-classes">panel</property>
+                <property name="spacing">8</property>
+                <!-- Header row: title + value -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Charge Limit</property>
+                        <property name="css-classes">panel-title</property>
+                        <property name="xalign">0</property>
+                        <property name="hexpand">True</property>
+                        <property name="margin-bottom">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">80%</property>
+                        <property name="css-classes">instrument-value-sm</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <!-- Slider -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">12</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">20%</property>
+                        <property name="css-classes">slider-label</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkScale">
+                        <property name="css-classes">threshold-slider</property>
+                        <property name="adjustment">
+                          <object class="GtkAdjustment">
+                            <property name="lower">20</property>
+                            <property name="upper">100</property>
+                            <property name="value">80</property>
+                          </object>
+                        </property>
+                        <property name="draw-value">False</property>
+                        <property name="hexpand">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">100%</property>
+                        <property name="css-classes">slider-label</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <!-- Recommendation -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label" translatable="yes">Recommended: 60–80% daily  •  100% for travel</property>
+                    <property name="css-classes">recommendation-text</property>
+                    <property name="xalign">0</property>
+                    <property name="margin-bottom">2</property>
+                  </object>
+                </child>
+                <!-- Preset tiles: 5 equal -->
+                <child>
+                  <object class="GtkGrid">
+                    <property name="column-spacing">6</property>
+                    <property name="column-homogeneous">True</property>
+                    <!-- 60% -->
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">4</property>
+                        <property name="hexpand">True</property>
+                        <property name="css-classes">preset-tile</property>
+                        <property name="halign">fill</property>
+                        <property name="valign">center</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">60%</property>
+                            <property name="css-classes">preset-value</property>
+                            <property name="xalign">0.5</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Daily Use</property>
+                            <property name="css-classes">preset-subtitle</property>
+                            <property name="xalign">0.5</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <!-- 70% -->
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">4</property>
+                        <property name="hexpand">True</property>
+                        <property name="css-classes">preset-tile</property>
+                        <property name="valign">center</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">70%</property>
+                            <property name="css-classes">preset-value</property>
+                            <property name="xalign">0.5</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Balanced</property>
+                            <property name="css-classes">preset-subtitle</property>
+                            <property name="xalign">0.5</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <!-- 80% selected -->
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">4</property>
+                        <property name="hexpand">True</property>
+                        <style>
+  <class name="preset-tile"/>
+  <class name="preset-tile-selected"/>
+</style>
+                        <property name="valign">center</property>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">80%</property>
+                                <style>
+  <class name="preset-value"/>
+  <class name="preset-value-selected"/>
+</style>
+                                <property name="xalign">0.5</property>
+                                <property name="hexpand">True</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">✓</property>
+                                <property name="css-classes">preset-check</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Recommended</property>
+                            <style>
+  <class name="preset-subtitle"/>
+  <class name="preset-subtitle-selected"/>
+</style>
+                            <property name="xalign">0.5</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <!-- 90% -->
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">4</property>
+                        <property name="hexpand">True</property>
+                        <property name="css-classes">preset-tile</property>
+                        <property name="valign">center</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">90%</property>
+                            <property name="css-classes">preset-value</property>
+                            <property name="xalign">0.5</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Extended</property>
+                            <property name="css-classes">preset-subtitle</property>
+                            <property name="xalign">0.5</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <!-- 100% -->
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">4</property>
+                        <property name="hexpand">True</property>
+                        <property name="css-classes">preset-tile</property>
+                        <property name="valign">center</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">100%</property>
+                            <property name="css-classes">preset-value</property>
+                            <property name="xalign">0.5</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Travel</property>
+                            <property name="css-classes">preset-subtitle</property>
+                            <property name="xalign">0.5</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <!-- Action buttons -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">4</property>
+                    <property name="margin-top">2</property>
+                    <child>
+                      <object class="GtkButton">
+                        <property name="label" translatable="yes">Apply Threshold</property>
+                        <property name="css-classes">primary-action</property>
+                        <property name="hexpand">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton">
+                        <property name="label" translatable="yes">Restore to 100%</property>
+                        <property name="css-classes">secondary-action</property>
+                        <property name="hexpand">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- Lower Settings Grid: 3 columns -->
+            <child>
+              <object class="GtkGrid">
+                <property name="column-spacing">8</property>
+                <property name="column-homogeneous">True</property>
+
+                <!-- General Panel -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="css-classes">panel</property>
+                    <property name="hexpand">True</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">General</property>
+                        <property name="css-classes">panel-title</property>
+                        <property name="xalign">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">0</property>
+                        <!-- Dark Mode -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="css-classes">settings-row</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Dark Mode</property>
+                                    <property name="css-classes">settings-row-title</property>
+                                    <property name="xalign">0</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSwitch">
+                                    <property name="active">True</property>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Follow system preference</property>
+                                <property name="css-classes">settings-row-desc</property>
+                                <property name="xalign">0</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <!-- Launch at login -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="css-classes">settings-row</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Launch at login</property>
+                                    <property name="css-classes">settings-row-title</property>
+                                    <property name="xalign">0</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSwitch">
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Start minimized in background</property>
+                                <property name="css-classes">settings-row-desc</property>
+                                <property name="xalign">0</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <!-- Minimize to tray -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="css-classes">settings-row</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Minimize to tray</property>
+                                    <property name="css-classes">settings-row-title</property>
+                                    <property name="xalign">0</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSwitch">
+                                    <property name="active">True</property>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Keep app in system tray</property>
+                                <property name="css-classes">settings-row-desc</property>
+                                <property name="xalign">0</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <!-- Show notifications -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Show notifications</property>
+                                    <property name="css-classes">settings-row-title</property>
+                                    <property name="xalign">0</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSwitch">
+                                    <property name="active">True</property>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Notify on threshold changes</property>
+                                <property name="css-classes">settings-row-desc</property>
+                                <property name="xalign">0</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+
+                <!-- Charging Behavior Panel -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="css-classes">panel</property>
+                    <property name="hexpand">True</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Charging Behavior</property>
+                        <property name="css-classes">panel-title</property>
+                        <property name="xalign">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">0</property>
+                        <!-- Resume charging below (nested frame) -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <style>
+  <class name="settings-row"/>
+  <class name="nested-setting"/>
+</style>
+                            <property name="margin-bottom">8</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">vertical</property>
+                                <property name="hexpand">True</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Resume charging below</property>
+                                    <property name="css-classes">settings-row-title</property>
+                                    <property name="xalign">0</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Start charging when below limit</property>
+                                    <property name="css-classes">settings-row-desc</property>
+                                    <property name="xalign">0</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">75%</property>
+                                <property name="css-classes">metadata-value</property>
+                                <property name="valign">center</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="icon-name">go-next-symbolic</property>
+                                <property name="valign">center</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <!-- Full charge reminder -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="css-classes">settings-row</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Full charge reminder</property>
+                                    <property name="css-classes">settings-row-title</property>
+                                    <property name="xalign">0</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSwitch">
+                                    <property name="active">True</property>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Notify when reaching 100%</property>
+                                <property name="css-classes">settings-row-desc</property>
+                                <property name="xalign">0</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <!-- Stop charging at limit -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="css-classes">settings-row</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Stop charging at limit</property>
+                                    <property name="css-classes">settings-row-title</property>
+                                    <property name="xalign">0</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSwitch">
+                                    <property name="active">True</property>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Prevent overcharging</property>
+                                <property name="css-classes">settings-row-desc</property>
+                                <property name="xalign">0</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <!-- Charge hysteresis (nested frame) -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <style>
+  <class name="settings-row"/>
+  <class name="nested-setting"/>
+</style>
+                            <property name="margin-top">8</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">vertical</property>
+                                <property name="hexpand">True</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Charge hysteresis</property>
+                                    <property name="css-classes">settings-row-title</property>
+                                    <property name="xalign">0</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Avoid rapid charging toggles</property>
+                                    <property name="css-classes">settings-row-desc</property>
+                                    <property name="xalign">0</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">5%</property>
+                                <property name="css-classes">metadata-value</property>
+                                <property name="valign">center</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkImage">
+                                <property name="icon-name">go-next-symbolic</property>
+                                <property name="valign">center</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+
+                <!-- Appearance Panel -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="css-classes">panel</property>
+                    <property name="hexpand">True</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Appearance</property>
+                        <property name="css-classes">panel-title</property>
+                        <property name="xalign">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">0</property>
+                        <!-- Accent Color -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="css-classes">settings-row</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">vertical</property>
+                                <property name="hexpand">True</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Accent Color</property>
+                                    <property name="css-classes">settings-row-title</property>
+                                    <property name="xalign">0</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Orange</property>
+                                    <property name="css-classes">settings-row-desc</property>
+                                    <property name="xalign">0</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="spacing">6</property>
+                                <property name="valign">center</property>
+                                <property name="margin-start">8</property>
+                                <property name="margin-end">4</property>
+                                <property name="margin-top">2</property>
+                                <property name="margin-bottom">2</property>
+                                <property name="css-classes">accent-swatch-row</property>
+                                <child>
+                                  <object class="GtkToggleButton" id="swatch_orange">
+                                    <property name="active">True</property>
+                                    <property name="width-request">24</property>
+                                    <property name="height-request">24</property>
+                                    <style>
+  <class name="accent-swatch"/>
+  <class name="swatch-orange"/>
+</style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkToggleButton">
+                                    <property name="group">swatch_orange</property>
+                                    <property name="width-request">24</property>
+                                    <property name="height-request">24</property>
+                                    <style>
+  <class name="accent-swatch"/>
+  <class name="swatch-blue"/>
+</style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkToggleButton">
+                                    <property name="group">swatch_orange</property>
+                                    <property name="width-request">24</property>
+                                    <property name="height-request">24</property>
+                                    <style>
+  <class name="accent-swatch"/>
+  <class name="swatch-green"/>
+</style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkToggleButton">
+                                    <property name="group">swatch_orange</property>
+                                    <property name="width-request">24</property>
+                                    <property name="height-request">24</property>
+                                    <style>
+  <class name="accent-swatch"/>
+  <class name="swatch-purple"/>
+</style>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkToggleButton">
+                                    <property name="group">swatch_orange</property>
+                                    <property name="width-request">24</property>
+                                    <property name="height-request">24</property>
+                                    <style>
+  <class name="accent-swatch"/>
+  <class name="swatch-red"/>
+</style>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <!-- Compact Mode -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="css-classes">settings-row</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Compact Mode</property>
+                                    <property name="css-classes">settings-row-title</property>
+                                    <property name="xalign">0</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSwitch">
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Reduce spacing and padding</property>
+                                <property name="css-classes">settings-row-desc</property>
+                                <property name="xalign">0</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <!-- Show percentage in title -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Show percentage in title</property>
+                                    <property name="css-classes">settings-row-title</property>
+                                    <property name="xalign">0</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSwitch">
+                                    <property name="active">True</property>
+                                    <property name="valign">center</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">Display battery % in window title</property>
+                                <property name="css-classes">settings-row-desc</property>
+                                <property name="xalign">0</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- Footer -->
+        <child>
+          <object class="GtkBox">
+        <property name="orientation">horizontal</property>
+        <property name="css-classes">footer-bar</property>
+        <property name="spacing">0</property>
+        <property name="margin-start">18</property>
+        <property name="margin-end">18</property>
+        <property name="valign">end</property>
+        <!-- Left metadata -->
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">24</property>
+            <property name="valign">center</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="label" translatable="yes">Battery: &lt;b&gt;BAT1&lt;/b&gt;</property>
+                <property name="use-markup">True</property>
+                <property name="css-classes">footer-label</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="label" translatable="yes">Cycle Count: &lt;b&gt;156&lt;/b&gt;</property>
+                <property name="use-markup">True</property>
+                <property name="css-classes">footer-label</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="label" translatable="yes">Design Capacity: &lt;b&gt;54.0 Wh&lt;/b&gt;</property>
+                <property name="use-markup">True</property>
+                <property name="css-classes">footer-label</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <!-- Spacer -->
+        <child>
+          <object class="GtkBox">
+            <property name="hexpand">True</property>
+          </object>
+        </child>
+        <!-- Profile controls -->
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">8</property>
+            <property name="valign">center</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="label" translatable="yes">Profile</property>
+                <property name="css-classes">footer-label</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkDropDown">
+                <property name="selected">0</property>
+                <property name="css-classes">profile-dropdown</property>
+                <property name="model">
+                  <object class="GtkStringList">
+                    <items>
+                      <item translatable="yes">Daily</item>
+                      <item translatable="yes">Travel</item>
+                      <item translatable="yes">Storage</item>
+                    </items>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton">
+                <property name="icon-name">document-save-symbolic</property>
+                <property name="tooltip-text" translatable="yes">Save profile</property>
+                <property name="css-classes">save-btn</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

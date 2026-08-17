@@ -1,0 +1,209 @@
+// Variant B — Tabbed (Adw.ViewStack + Adw.ViewSwitcher)
+// Window 700x480. Two tabs: Battery and Settings.
+// Each tab fits easily at 720p. No ScrolledWindow needed.
+using Gtk 4.0;
+using Adw 1;
+
+template $BatteryGuardWindow: Adw.ApplicationWindow {
+  default-width: 700;
+  default-height: 480;
+  width-request: 500;
+  height-request: 400;
+  title: _("Threshold");
+
+  Gtk.Box {
+    orientation: vertical;
+
+    Adw.HeaderBar {
+      title-widget: Adw.WindowTitle {
+        title: _("Threshold");
+      };
+    }
+
+    Adw.ViewStack {
+      name: "main_stack";
+      vexpand: true;
+
+      // === Battery tab ===
+      Adw.ViewStackPage {
+        name: "battery";
+        title: _("Battery");
+        icon-name: "battery-good-symbolic";
+
+        Gtk.Box {
+          orientation: vertical;
+          spacing: 16;
+          margin-top: 24;
+          margin-bottom: 24;
+          margin-start: 24;
+          margin-end: 24;
+          valign: center;
+
+          Gtk.Box {
+            orientation: horizontal;
+            homogeneous: true;
+            spacing: 12;
+
+            Gtk.Box {
+              orientation: vertical;
+              styles ["card"]
+              spacing: 4;
+
+              Gtk.Label {
+                label: _("Current Charge");
+                styles ["dim-label"]
+                xalign: 0.0;
+              }
+              Gtk.Label current_charge_label {
+                label: "72%";
+                styles ["title-1"]
+              }
+              Gtk.Label current_status_label {
+                label: _("⚡ Charging");
+                styles ["dim-label"]
+                xalign: 0.0;
+              }
+            }
+
+            Gtk.Box {
+              orientation: vertical;
+              styles ["card"]
+              spacing: 4;
+
+              Gtk.Label {
+                label: _("Active Threshold");
+                styles ["dim-label"]
+                xalign: 0.0;
+              }
+              Gtk.Label active_threshold_label {
+                label: "80%";
+                styles ["title-1"]
+              }
+              Gtk.Label battery_name_label {
+                label: _("BAT1");
+                styles ["dim-label"]
+                xalign: 0.0;
+              }
+            }
+          }
+
+          Gtk.Box {
+            orientation: vertical;
+            styles ["card"]
+            spacing: 12;
+
+            Gtk.Label {
+              label: _("Charge Limit");
+              styles ["heading"]
+            }
+
+            Gtk.Box {
+              orientation: horizontal;
+              spacing: 12;
+
+              Gtk.Label {
+                label: "20";
+                styles ["dim-label"]
+              }
+              Gtk.Scale charge_scale {
+                adjustment: Gtk.Adjustment {
+                  lower: 20;
+                  upper: 100;
+                  value: 80;
+                };
+                draw-value: false;
+                hexpand: true;
+              }
+              Gtk.Label {
+                label: "100";
+                styles ["dim-label"]
+              }
+            }
+
+            Gtk.Label charge_value_label {
+              label: "80%";
+              styles ["title-1"]
+              halign: center;
+            }
+
+            Gtk.Label {
+              label: _("Recommended: 60–80% daily · 100% for travel");
+              styles ["dim-label", "caption"]
+              halign: center;
+            }
+          }
+
+          Gtk.Box {
+            orientation: horizontal;
+            homogeneous: true;
+            spacing: 8;
+
+            Gtk.Button apply_button {
+              label: _("Apply Threshold");
+              styles ["suggested-action", "pill"]
+            }
+            Gtk.Button restore_button {
+              label: _("Restore to 100%");
+            }
+          }
+        }
+      }
+
+      // === Settings tab ===
+      Adw.ViewStackPage {
+        name: "settings";
+        title: _("Settings");
+        icon-name: "preferences-system-symbolic";
+
+        Gtk.Box {
+          orientation: vertical;
+          spacing: 16;
+          margin-top: 24;
+          margin-bottom: 24;
+          margin-start: 24;
+          margin-end: 24;
+
+          Adw.PreferencesGroup {
+            title: _("Appearance");
+
+            Adw.SwitchRow dark_mode_switch {
+              title: _("Dark Mode");
+            }
+          }
+
+          Adw.PreferencesGroup {
+            title: _("Startup");
+
+            Adw.SwitchRow launch_switch {
+              title: _("Launch at login");
+            }
+          }
+        }
+      }
+    }
+
+    Adw.ViewSwitcherBar {
+      stack: "main_stack";
+    }
+
+    Gtk.Box {
+      orientation: horizontal;
+      spacing: 6;
+      margin-start: 12;
+      margin-end: 12;
+      margin-bottom: 4;
+      margin-top: 4;
+
+      Gtk.Label live_dot {
+        label: "○";
+        styles ["dim-label", "caption"]
+      }
+      Gtk.Label status_bar {
+        label: _("Ready");
+        styles ["dim-label", "caption"]
+        hexpand: true;
+        xalign: 0.0;
+      }
+    }
+  }
+}

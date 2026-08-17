@@ -1,0 +1,174 @@
+// Variant A — Single-page expanded
+// Window 800x680. No Adw.Clamp. ScrolledWindow as safety net.
+// All content in one vertical flow with standard spacing.
+using Gtk 4.0;
+using Adw 1;
+
+template $BatteryGuardWindow: Adw.ApplicationWindow {
+  default-width: 800;
+  default-height: 680;
+  width-request: 600;
+  height-request: 500;
+  title: _("Threshold");
+
+  Gtk.Box {
+    orientation: vertical;
+
+    Adw.HeaderBar {
+      title-widget: Adw.WindowTitle {
+        title: _("Threshold");
+      };
+    }
+
+    Gtk.ScrolledWindow {
+      vexpand: true;
+
+      Gtk.Box {
+        orientation: vertical;
+        spacing: 16;
+        margin-top: 24;
+        margin-bottom: 24;
+        margin-start: 24;
+        margin-end: 24;
+
+        Gtk.FlowBox {
+          max-children-per-line: 2;
+          min-children-per-line: 1;
+          homogeneous: true;
+          row-spacing: 12;
+          column-spacing: 12;
+
+          Gtk.Box {
+            orientation: vertical;
+            styles ["card"]
+            spacing: 4;
+
+            Gtk.Label {
+              label: _("Current Charge");
+              styles ["dim-label"]
+              xalign: 0.0;
+            }
+            Gtk.Label current_charge_label {
+              label: "72%";
+              styles ["title-1"]
+            }
+            Gtk.Label current_status_label {
+              label: _("⚡ Charging");
+              styles ["dim-label"]
+              xalign: 0.0;
+            }
+          }
+
+          Gtk.Box {
+            orientation: vertical;
+            styles ["card"]
+            spacing: 4;
+
+            Gtk.Label {
+              label: _("Active Threshold");
+              styles ["dim-label"]
+              xalign: 0.0;
+            }
+            Gtk.Label active_threshold_label {
+              label: "80%";
+              styles ["title-1"]
+            }
+            Gtk.Label battery_name_label {
+              label: _("BAT1");
+              styles ["dim-label"]
+              xalign: 0.0;
+            }
+          }
+        }
+
+        Gtk.Box {
+          orientation: vertical;
+          styles ["card"]
+          spacing: 12;
+
+          Gtk.Label {
+            label: _("Charge Limit");
+            styles ["heading"]
+          }
+
+          Gtk.Box {
+            orientation: horizontal;
+            spacing: 12;
+
+            Gtk.Label {
+              label: "20";
+              styles ["dim-label"]
+            }
+            Gtk.Scale charge_scale {
+              adjustment: Gtk.Adjustment {
+                lower: 20;
+                upper: 100;
+                value: 80;
+              };
+              draw-value: false;
+              hexpand: true;
+            }
+            Gtk.Label {
+              label: "100";
+              styles ["dim-label"]
+            }
+          }
+
+          Gtk.Label charge_value_label {
+            label: "80%";
+            styles ["title-1"]
+            halign: center;
+          }
+        }
+
+        Gtk.Label {
+          label: _("Recommended: 60–80% daily · 100% for travel");
+          styles ["dim-label", "caption"]
+          halign: center;
+        }
+
+        Gtk.Box {
+          orientation: horizontal;
+          homogeneous: true;
+          spacing: 8;
+
+          Gtk.Button apply_button {
+            label: _("Apply Threshold");
+            styles ["suggested-action", "pill"]
+          }
+          Gtk.Button restore_button {
+            label: _("Restore to 100%");
+          }
+        }
+
+        Adw.ExpanderRow {
+          title: _("Settings");
+
+          Adw.SwitchRow dark_mode_switch {
+            title: _("Dark Mode");
+          }
+          Adw.SwitchRow launch_switch {
+            title: _("Launch at login");
+          }
+        }
+
+        Gtk.Box {
+          orientation: horizontal;
+          spacing: 6;
+          margin-top: 4;
+
+          Gtk.Label live_dot {
+            label: "○";
+            styles ["dim-label", "caption"]
+          }
+          Gtk.Label status_bar {
+            label: _("Ready");
+            styles ["dim-label", "caption"]
+            hexpand: true;
+            xalign: 0.0;
+          }
+        }
+      }
+    }
+  }
+}
