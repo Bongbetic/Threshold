@@ -7,6 +7,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
+SOURCE_FORMAT = ROOT / "debian" / "source" / "format"
+WATCH_FILE = ROOT / "debian" / "watch"
+
+
+def test_debian_source_metadata_uses_quilt_and_github_watch():
+    assert SOURCE_FORMAT.read_text(encoding="utf-8").strip() == "3.0 (quilt)"
+    watch = WATCH_FILE.read_text(encoding="utf-8")
+    assert watch.splitlines() == [
+        "Version: 5",
+        "Template: GitHub",
+        "Owner: Bongbetic",
+        "Project: MSI-batteryguard-for-Thin-A15-B7UCX",
+    ]
 
 
 def test_ci_keeps_ubuntu_matrix_and_adds_debian_13_container():

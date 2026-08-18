@@ -1,5 +1,5 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: msi-batteryguard
+Upstream-Name: threshold
 Upstream-Contact: Soubarna <Soubarna@live.in>
 Source: https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX
 
