@@ -3,6 +3,7 @@ threshold (1.2.0-1) trixie; urgency=medium
   * Rename project from msi-batteryguard to threshold.
   * Generalise app_id from com.bongbetic.batteryguard to
     com.bongbetic.threshold.
+  * Use quilt source format and GitHub watch metadata.
 
  -- Soubarna <Soubarna@live.in>  Sat, 15 Aug 2026 12:00:00 +0530
 
