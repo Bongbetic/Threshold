@@ -12,12 +12,12 @@ from unittest.mock import patch
 
 
 class _FakeValue:
-    """Minimal GVariant-like wrapper so get_user_value() returns something."""
+    """Minimal GVariant-like wrapper mirroring GLib.Variant.unpack()."""
 
     def __init__(self, value):
         self._value = value
 
-    def get_value(self):
+    def unpack(self):
         return self._value
 
 
@@ -115,6 +115,24 @@ class TestMigrate:
         from threshold.migration import migrate
 
         assert migrate(old, new) is False
+
+    def test_clamps_out_of_range_threshold(self):
+        old = FakeSettings(user_values={'charge-threshold': 150})
+        new = FakeSettings()
+
+        from threshold.migration import migrate
+
+        assert migrate(old, new) is True
+        assert new.get_int('charge-threshold') == 100
+
+    def test_clamps_below_range_threshold(self):
+        old = FakeSettings(user_values={'charge-threshold': 5})
+        new = FakeSettings()
+
+        from threshold.migration import migrate
+
+        assert migrate(old, new) is True
+        assert new.get_int('charge-threshold') == 20
 
 
 # ---------------------------------------------------------------------------
