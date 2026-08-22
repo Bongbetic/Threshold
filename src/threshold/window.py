@@ -30,7 +30,7 @@ except (ValueError, ImportError):
     HAS_TRAY = False
 
 
-AUTOSTART_DIR = Path.home() / '.config' / 'autostart'
+AUTOSTART_DIR = Path(GLib.get_user_config_dir()) / 'autostart'
 AUTOSTART_FILE = AUTOSTART_DIR / 'com.bongbetic.threshold.desktop'
 
 DESKTOP_ENTRY_TEMPLATE = """\
@@ -69,7 +69,9 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self._battery_path = find_battery_path()
         self._polling_id = None
         self._reset_dot_id = None
+        self._pending_idle_id = None
         self._writing = False
+        self._closed = False
         self._indicator = None
         self._charge_pct = 0
         self._geometry_debounce_id = None
@@ -171,19 +173,30 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self._polling_id = GLib.timeout_add_seconds(5, self._poll_tick)
 
     def _stop_polling(self):
-        """Remove polling and live-dot timeout sources."""
-        if self._polling_id is not None:
-            GLib.source_remove(self._polling_id)
-            self._polling_id = None
-        if self._reset_dot_id is not None:
-            GLib.source_remove(self._reset_dot_id)
-            self._reset_dot_id = None
-        if self._geometry_debounce_id is not None:
-            GLib.source_remove(self._geometry_debounce_id)
-            self._geometry_debounce_id = None
+        """Remove polling, live-dot, geometry and pending-write sources."""
+        for attr in (
+            self._polling_id,
+            self._reset_dot_id,
+            self._pending_idle_id,
+            self._geometry_debounce_id,
+        ):
+            if attr is not None:
+                GLib.source_remove(attr)
+
+        self._polling_id = None
+        self._reset_dot_id = None
+        self._pending_idle_id = None
+        self._geometry_debounce_id = None
 
     def _poll_tick(self):
         """Called every 5 seconds — refresh battery data and animate dot."""
+        if self._battery_path is None:
+            # msi-ec may have loaded after launch — retry discovery.
+            self._battery_path = find_battery_path()
+            if self._battery_path is not None:
+                self.charge_scale.set_sensitive(True)
+                self.apply_button.set_sensitive(True)
+                self.restore_button.set_sensitive(True)
         self._refresh_battery_data()
         self._update_tray_label()
         self.live_dot.set_label('●')
@@ -198,6 +211,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
         return GLib.SOURCE_REMOVE
 
     def _on_destroy(self, *_args):
+        self._closed = True
         self._stop_polling()
         self._cleanup_tray()
 
@@ -219,11 +233,17 @@ class ThresholdWindow(Adw.ApplicationWindow):
 
         def worker():
             result = write_threshold(bat_path, value)
-            GLib.idle_add(self._finish_apply, button, value, result)
+            if not self._closed:
+                self._pending_idle_id = GLib.idle_add(
+                    self._finish_apply, button, value, result
+                )
 
         threading.Thread(target=worker, daemon=True).start()
 
     def _finish_apply(self, button, value, result):
+        self._pending_idle_id = None
+        if self._closed:
+            return GLib.SOURCE_REMOVE
         success, message = result
         if success:
             self._config.set_charge_threshold(value)
@@ -268,11 +288,17 @@ class ThresholdWindow(Adw.ApplicationWindow):
 
         def worker():
             result = write_threshold(bat_path, 100)
-            GLib.idle_add(self._finish_restore, button, result)
+            if not self._closed:
+                self._pending_idle_id = GLib.idle_add(
+                    self._finish_restore, button, result
+                )
 
         threading.Thread(target=worker, daemon=True).start()
 
     def _finish_restore(self, button, result):
+        self._pending_idle_id = None
+        if self._closed:
+            return GLib.SOURCE_REMOVE
         success, message = result
         if success:
             self.charge_scale.set_value(100)

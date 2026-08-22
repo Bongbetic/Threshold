@@ -17,12 +17,12 @@ Grab the latest release from the
 page and download **both** `.deb` files:
 
 - `threshold_1.2.0-1_all.deb` — the app
-- `msi-ec-dkms_0.13-1_amd64.deb` — the kernel module (built via DKMS)
+- `msi-ec-dkms_1.2.0-1_amd64.deb` — the kernel module (built via DKMS)
 
 Then install them with apt:
 
 ```bash
-sudo apt install ./msi-ec-dkms_0.13-1_amd64.deb
+sudo apt install ./msi-ec-dkms_1.2.0-1_amd64.deb
 sudo apt install ./threshold_1.2.0-1_all.deb
 ```
 

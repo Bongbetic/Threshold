@@ -29,7 +29,7 @@ supported.
    app package configures:
 
    ```bash
-   sudo apt install ./msi-ec-dkms_0.13-1_amd64.deb
+   sudo apt install ./msi-ec-dkms_1.2.0-1_amd64.deb
    sudo apt install ./threshold_1.2.0-1_all.deb
    ```
 
@@ -151,7 +151,7 @@ dpkg-buildpackage -us -uc -b
 The `.deb` files land in the parent directory:
 
 - `../threshold_1.2.0-1_all.deb`
-- `../msi-ec-dkms_0.13-1_amd64.deb`
+- `../msi-ec-dkms_1.2.0-1_amd64.deb`
 
 ---
 

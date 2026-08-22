@@ -6,6 +6,7 @@ python_sources = [
     'threshold/config.py',
     'threshold/main.py',
     'threshold/application.py',
+    'threshold/migration.py',
     'threshold/window.py',
     'threshold/resources.py',
 ]

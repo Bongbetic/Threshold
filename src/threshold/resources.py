@@ -13,11 +13,19 @@ gi.require_version('Gio', '2.0')
 from gi.repository import Gio  # noqa: E402
 
 
+_registered = False
+
+
 def register_resources() -> bool:
     """Locate and register ``threshold.gresource``.
 
-    Returns True if a resource bundle was found and registered.
+    Returns True if a resource bundle was found and registered (or was
+    already registered by an earlier call).
     """
+    global _registered
+    if _registered:
+        return True
+
     src_root = pathlib.Path(__file__).resolve().parent.parent  # src/
     project_root = src_root.parent
 
@@ -46,5 +54,6 @@ def register_resources() -> bool:
         if resolved.exists():
             resource = Gio.Resource.load(str(resolved))
             Gio.resources_register(resource)
+            _registered = True
             return True
     return False

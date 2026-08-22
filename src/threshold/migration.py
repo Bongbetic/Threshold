@@ -22,13 +22,13 @@ _OLD_SCHEMA_ID = 'com.bongbetic.batteryguard'
 _NEW_SCHEMA_ID = 'com.bongbetic.threshold'
 
 _KEYS = [
-    # (gsettings key, gtype getter, gtype setter)
-    ('dark-mode', 'get_boolean', 'set_boolean'),
-    ('autostart', 'get_boolean', 'set_boolean'),
-    ('window-width', 'get_int', 'set_int'),
-    ('window-height', 'get_int', 'set_int'),
-    ('maximized', 'get_boolean', 'set_boolean'),
-    ('charge-threshold', 'get_int', 'set_int'),
+    # (gsettings key, gtype setter)
+    ('dark-mode', 'set_boolean'),
+    ('autostart', 'set_boolean'),
+    ('window-width', 'set_int'),
+    ('window-height', 'set_int'),
+    ('maximized', 'set_boolean'),
+    ('charge-threshold', 'set_int'),
 ]
 
 MIGRATION_DONE_KEY = 'migration-done'
@@ -48,19 +48,23 @@ def migrate(old_settings: Gio.Settings, new_settings: Gio.Settings) -> bool:
     Returns True if any key was actually migrated.
     """
     migrated = False
-    for key, getter, setter in _KEYS:
+    for key, setter in _KEYS:
         old_val = old_settings.get_user_value(key)
         if old_val is not None:
-            getattr(new_settings, setter)(key, old_val.get_value())
+            value = old_val.unpack()
+            if key == 'charge-threshold':
+                value = max(20, min(100, int(value)))
+            getattr(new_settings, setter)(key, value)
             migrated = True
     return migrated
 
 
 def migrate_if_needed() -> bool:
-    """Run schema migration if it has not already been performed.
+    """Ensure the batteryguard → threshold migration gate is settled.
 
-    Returns True if migration happened (or had already happened).
-    Returns False when the old schema is absent — i.e. fresh install.
+    Returns True when nothing needs to happen (fresh install, already
+    migrated, or migration just performed). The return value is not
+    "data was copied" — use :func:`migrate` directly for that.
     """
     if not _schema_is_installed(_OLD_SCHEMA_ID):
         # No old schema → fresh install, nothing to migrate.
