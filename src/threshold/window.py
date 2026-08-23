@@ -1,5 +1,6 @@
 """Threshold main window — wires battery logic, GSettings, and UI together."""
 
+from datetime import datetime
 from gettext import gettext as _
 from pathlib import Path
 import threading
@@ -14,10 +15,15 @@ from gi.repository import GLib, Gtk, Adw, Gdk, Notify  # noqa: E402
 
 from threshold.battery import (  # noqa: E402
     ControlMode,
+    battery_health_percent,
     detect_control_mode,
     evaluate_alarm,
     find_battery_path,
+    health_grade,
+    read_capacity_wh,
     read_charge_percent,
+    read_cycle_count,
+    read_power_source,
     read_sysfs,
     write_threshold,
 )
@@ -60,6 +66,22 @@ _CHARGING_SUFFIX = {
     'Not charging': '',
 }
 
+_PRESET_WIDGETS = {
+    60: 'preset_60',
+    70: 'preset_70',
+    80: 'preset_80',
+    90: 'preset_90',
+    100: 'preset_100',
+}
+
+_ACCENT_WIDGETS = {
+    'orange': 'swatch_orange',
+    'blue': 'swatch_blue',
+    'green': 'swatch_green',
+    'purple': 'swatch_purple',
+    'red': 'swatch_red',
+}
+
 
 def _battery_icon_name(pct: int, status: str | None) -> str:
     """Return a freedesktop battery icon name for the given charge level."""
@@ -77,6 +99,17 @@ def _battery_icon_name(pct: int, status: str | None) -> str:
     return f'battery-{level}{suffix}'
 
 
+def _format_last_changed(timestamp: int) -> str:
+    """Format a unix timestamp as 'Today, HH:MM' or a date."""
+    if timestamp <= 0:
+        return _('—')
+    dt = datetime.fromtimestamp(timestamp)
+    today = datetime.now().date()
+    if dt.date() == today:
+        return _('Today, {time}').format(time=dt.strftime('%H:%M'))
+    return dt.strftime('%Y-%m-%d %H:%M')
+
+
 @Gtk.Template(resource_path='/com/bongbetic/threshold/window.ui')
 class ThresholdWindow(Adw.ApplicationWindow):
     __gtype_name__ = 'ThresholdWindow'
@@ -86,12 +119,33 @@ class ThresholdWindow(Adw.ApplicationWindow):
     active_threshold_label: Gtk.Label = Gtk.Template.Child()
     battery_name_label: Gtk.Label = Gtk.Template.Child()
     mode_label: Gtk.Label = Gtk.Template.Child()
+    power_source_label: Gtk.Label = Gtk.Template.Child()
+    health_label: Gtk.Label = Gtk.Template.Child()
+    last_changed_label: Gtk.Label = Gtk.Template.Child()
     charge_scale: Gtk.Scale = Gtk.Template.Child()
     charge_value_label: Gtk.Label = Gtk.Template.Child()
     apply_button: Gtk.Button = Gtk.Template.Child()
     restore_button: Gtk.Button = Gtk.Template.Child()
-    dark_mode_switch: Adw.SwitchRow = Gtk.Template.Child()
-    launch_switch: Adw.SwitchRow = Gtk.Template.Child()
+    dark_mode_switch: Gtk.Switch = Gtk.Template.Child()
+    launch_switch: Gtk.Switch = Gtk.Template.Child()
+    tray_switch: Gtk.Switch = Gtk.Template.Child()
+    notifications_switch: Gtk.Switch = Gtk.Template.Child()
+    compact_switch: Gtk.Switch = Gtk.Template.Child()
+    title_percentage_switch: Gtk.Switch = Gtk.Template.Child()
+    cycle_count_label: Gtk.Label = Gtk.Template.Child()
+    design_capacity_label: Gtk.Label = Gtk.Template.Child()
+    full_capacity_label: Gtk.Label = Gtk.Template.Child()
+    health_pct_label: Gtk.Label = Gtk.Template.Child()
+    preset_60: Gtk.ToggleButton = Gtk.Template.Child()
+    preset_70: Gtk.ToggleButton = Gtk.Template.Child()
+    preset_80: Gtk.ToggleButton = Gtk.Template.Child()
+    preset_90: Gtk.ToggleButton = Gtk.Template.Child()
+    preset_100: Gtk.ToggleButton = Gtk.Template.Child()
+    swatch_orange: Gtk.ToggleButton = Gtk.Template.Child()
+    swatch_blue: Gtk.ToggleButton = Gtk.Template.Child()
+    swatch_green: Gtk.ToggleButton = Gtk.Template.Child()
+    swatch_purple: Gtk.ToggleButton = Gtk.Template.Child()
+    swatch_red: Gtk.ToggleButton = Gtk.Template.Child()
     live_dot: Gtk.Label = Gtk.Template.Child()
     status_bar: Gtk.Label = Gtk.Template.Child()
 
@@ -106,10 +160,24 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self._pending_idle_id = None
         self._writing = False
         self._closed = False
-        self._indicator = None
+        self._tray = None
         self._charge_pct = 0
         self._geometry_debounce_id = None
         self._suppress_launch_toggle = False
+        self._preset_widgets = {
+            value: getattr(self, _PRESET_WIDGETS[value])
+            for value in _PRESET_WIDGETS
+        }
+        self._swatch_widgets = {
+            name: getattr(self, _ACCENT_WIDGETS[name])
+            for name in _ACCENT_WIDGETS
+        }
+
+        # Build exclusive radio groups in code (avoids GTK4 set_group assertion)
+        for widget in list(self._preset_widgets.values())[1:]:
+            widget.set_group(self.preset_60)
+        for widget in list(self._swatch_widgets.values())[1:]:
+            widget.set_group(self.swatch_orange)
 
         # Alarm state for notification-only fallback
         self._alarm_armed = False
@@ -120,6 +188,16 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self.restore_button.connect('clicked', self._on_restore)
         self.dark_mode_switch.connect('notify::active', self._on_dark_mode_toggled)
         self.launch_switch.connect('notify::active', self._on_launch_toggled)
+        self.tray_switch.connect('notify::active', self._on_tray_toggled)
+        self.notifications_switch.connect('notify::active', self._on_notifications_toggled)
+        self.compact_switch.connect('notify::active', self._on_compact_toggled)
+        self.title_percentage_switch.connect(
+            'notify::active', self._on_title_percentage_toggled
+        )
+        for value, widget in self._preset_widgets.items():
+            widget.connect('toggled', self._on_preset_toggled, value)
+        for name, widget in self._swatch_widgets.items():
+            widget.connect('toggled', self._on_swatch_toggled, name)
         self.connect('notify::default-width', self._on_default_size_changed)
         self.connect('notify::default-height', self._on_default_size_changed)
         self.connect('notify::maximized', self._on_maximized_changed)
@@ -127,10 +205,16 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self.connect('destroy', self._on_destroy)
 
         self._load_settings()
+        self._sync_dark_class()
         self._refresh_battery_data()
         self._update_mode_label()
         self._setup_tray()
         self._start_polling()
+
+        # Keep the .app-dark class in sync when the system theme changes
+        Adw.StyleManager.get_default().connect(
+            'notify::dark', lambda *_a: self._sync_dark_class()
+        )
 
     def _load_settings(self):
         """Restore preferences from GSettings into the UI."""
@@ -145,6 +229,19 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self.launch_switch.set_active(autostart)
         self._suppress_launch_toggle = False
 
+        self.tray_switch.set_active(self._config.get_minimize_to_tray())
+        self.notifications_switch.set_active(self._config.get_show_notifications())
+
+        accent = self._config.get_accent_color()
+        self._set_accent(accent)
+
+        compact = self._config.get_compact_mode()
+        self.compact_switch.set_active(compact)
+        self._apply_compact(compact)
+
+        title_pct = self._config.get_title_percentage()
+        self.title_percentage_switch.set_active(title_pct)
+
         threshold = self._config.get_charge_threshold()
         if self._battery_path is not None and self._has_threshold_control():
             ec = read_sysfs(self._battery_path / 'charge_control_end_threshold')
@@ -155,6 +252,11 @@ class ThresholdWindow(Adw.ApplicationWindow):
                     pass
         self.charge_scale.set_value(threshold)
         self.charge_value_label.set_label(f'{threshold}%')
+        self._sync_presets(threshold)
+
+        self.last_changed_label.set_label(
+            _format_last_changed(self._config.get_last_applied_time())
+        )
 
         if self._control_mode is ControlMode.NOTIFY_ONLY:
             self._alarm_armed = threshold < 100
@@ -170,6 +272,40 @@ class ThresholdWindow(Adw.ApplicationWindow):
             Adw.ColorScheme.FORCE_DARK if force_dark
             else Adw.ColorScheme.DEFAULT
         )
+
+    def _sync_dark_class(self):
+        """Sync the .app-dark window class with the effective scheme."""
+        dark = Adw.StyleManager.get_default().props.dark
+        classes = self.get_css_classes()
+        base = [c for c in classes if c != 'app-dark']
+        if dark:
+            base.append('app-dark')
+        self.set_css_classes(base)
+
+    def _set_accent(self, name: str):
+        """Apply an accent scheme class to the window."""
+        if name not in _ACCENT_WIDGETS:
+            name = 'orange'
+        classes = self.get_css_classes()
+        base = [c for c in classes if not c.startswith('accent-')]
+        base.append(f'accent-{name}')
+        self.set_css_classes(base)
+        for accent_name, widget in self._swatch_widgets.items():
+            widget.set_active(accent_name == name)
+
+    def _apply_compact(self, active: bool):
+        """Toggle the .compact class on the window."""
+        classes = self.get_css_classes()
+        if active and 'compact' not in classes:
+            classes.append('compact')
+        elif not active and 'compact' in classes:
+            classes.remove('compact')
+        self.set_css_classes(classes)
+
+    def _sync_presets(self, value: int):
+        """Mark the preset tile matching ``value`` as selected."""
+        for preset_value, widget in self._preset_widgets.items():
+            widget.set_active(preset_value == value)
 
     def _refresh_battery_data(self):
         """Read current battery data from sysfs and update the UI."""
@@ -187,8 +323,8 @@ class ThresholdWindow(Adw.ApplicationWindow):
 
         status = read_sysfs(self._battery_path / 'status')
         if status:
-            icon = '⚡' if status == 'Charging' else '🔋'
-            self.current_status_label.set_label(f'{icon} {status}')
+            self.current_status_label.set_label(status)
+            self._update_battery_icon(status)
 
         threshold = read_sysfs(
             self._battery_path / 'charge_control_end_threshold'
@@ -202,12 +338,55 @@ class ThresholdWindow(Adw.ApplicationWindow):
             self.active_threshold_label.set_label('--%')
 
         self.battery_name_label.set_label(self._battery_path.name)
+        self.power_source_label.set_label(read_power_source())
+
+        health_pct = battery_health_percent(self._battery_path)
+        self.health_label.set_label(health_grade(health_pct))
+        self.health_pct_label.set_label(
+            f'{health_pct}%' if health_pct is not None else _('—')
+        )
+
+        cycles = read_cycle_count(self._battery_path)
+        self.cycle_count_label.set_label(
+            str(cycles) if cycles is not None else _('—')
+        )
+
+        capacity = read_capacity_wh(self._battery_path)
+        if capacity is not None:
+            full_wh, design_wh = capacity
+            self.full_capacity_label.set_label(f'{full_wh:.1f} Wh')
+            self.design_capacity_label.set_label(f'{design_wh:.1f} Wh')
+        else:
+            self.full_capacity_label.set_label(_('—'))
+            self.design_capacity_label.set_label(_('—'))
+
+        self._update_title()
+
+    def _update_battery_icon(self, status: str):
+        """Refresh the battery status card icon to match charge + status."""
+        icon = _battery_icon_name(self._charge_pct, status)
+        image = self.current_status_label.get_prev_sibling()
+        if image is not None and isinstance(image, Gtk.Image):
+            image.set_from_icon_name(icon)
+
+    def _update_title(self):
+        """Show battery % in the window title when enabled."""
+        if self._config.get_title_percentage():
+            self.set_title(_('Threshold — {pct}%').format(pct=self._charge_pct))
+        else:
+            self.set_title(_('Threshold'))
 
     def _show_error_state(self):
         """Display error state when no threshold-capable battery is found."""
-        self.current_charge_label.set_label('--')
-        self.current_status_label.set_label(_('--'))
-        self.active_threshold_label.set_label('--')
+        self.current_charge_label.set_label('--%')
+        self.current_status_label.set_label(_('—'))
+        self.active_threshold_label.set_label('--%')
+        self.power_source_label.set_label(_('—'))
+        self.health_label.set_label(_('—'))
+        self.cycle_count_label.set_label(_('—'))
+        self.design_capacity_label.set_label(_('—'))
+        self.full_capacity_label.set_label(_('—'))
+        self.health_pct_label.set_label(_('—'))
         self.charge_scale.set_sensitive(False)
         self.apply_button.set_sensitive(False)
         self.restore_button.set_sensitive(False)
@@ -315,6 +494,35 @@ class ThresholdWindow(Adw.ApplicationWindow):
     def _on_scale_changed(self, scale):
         value = int(scale.get_value())
         self.charge_value_label.set_label(f'{value}%')
+        self._sync_presets(value)
+
+    def _on_preset_toggled(self, button, value):
+        if not button.get_active():
+            return
+        self.charge_scale.set_value(value)
+        self.charge_value_label.set_label(f'{value}%')
+        self._sync_presets(value)
+
+    def _on_swatch_toggled(self, button, name):
+        if not button.get_active():
+            return
+        self._set_accent(name)
+        self._config.set_accent_color(name)
+
+    def _on_tray_toggled(self, switch, _param):
+        self._config.set_minimize_to_tray(switch.get_active())
+
+    def _on_notifications_toggled(self, switch, _param):
+        self._config.set_show_notifications(switch.get_active())
+
+    def _on_compact_toggled(self, switch, _param):
+        active = switch.get_active()
+        self._apply_compact(active)
+        self._config.set_compact_mode(active)
+
+    def _on_title_percentage_toggled(self, switch, _param):
+        self._config.set_title_percentage(switch.get_active())
+        self._update_title()
 
     def _on_apply(self, button):
         if self._battery_path is None or self._writing:
@@ -348,10 +556,15 @@ class ThresholdWindow(Adw.ApplicationWindow):
         success, message = result
         if success:
             self._config.set_charge_threshold(value)
+            self._config.set_last_applied_time(int(datetime.now().timestamp()))
+            self.last_changed_label.set_label(
+                _format_last_changed(self._config.get_last_applied_time())
+            )
             if self._has_threshold_control():
                 self.active_threshold_label.set_label(f'{value}%')
             else:
                 self.active_threshold_label.set_label(f'{value}% (alarm)')
+            self._sync_presets(value)
             self._alarm_armed = value < 100
             self._alarm_fired = False
             self._set_status(
@@ -422,7 +635,12 @@ class ThresholdWindow(Adw.ApplicationWindow):
         if success:
             self.charge_scale.set_value(100)
             self.charge_value_label.set_label('100%')
+            self._sync_presets(100)
             self._config.set_charge_threshold(100)
+            self._config.set_last_applied_time(int(datetime.now().timestamp()))
+            self.last_changed_label.set_label(
+                _format_last_changed(self._config.get_last_applied_time())
+            )
             if self._has_threshold_control():
                 self.active_threshold_label.set_label('100%')
             else:
@@ -458,6 +676,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
         active = switch.get_active()
         self._apply_color_scheme(active)
         self._config.set_dark_mode(active)
+        self._sync_dark_class()
 
     def _on_launch_toggled(self, switch, _param):
         if self._suppress_launch_toggle:
@@ -562,13 +781,19 @@ class ThresholdWindow(Adw.ApplicationWindow):
     def _on_close_request(self, *_args):
         """Close-to-tray: hide window instead of destroying."""
         self._save_geometry()
-        if HAS_TRAY and getattr(self, '_tray', None) is not None:
+        if (
+            self._config.get_minimize_to_tray()
+            and HAS_TRAY
+            and getattr(self, '_tray', None) is not None
+        ):
             self.set_visible(False)
             return True
         return False
 
     def _show_notification(self, title: str, body: str, is_error: bool = False):
-        """Show a desktop notification via libnotify."""
+        """Show a desktop notification via libnotify (if enabled)."""
+        if not self._config.get_show_notifications():
+            return
         try:
             notification = Notify.Notification.new(
                 f'Threshold \u2014 {title}',

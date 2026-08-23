@@ -39,6 +39,54 @@ class Config:
     def set_autostart(self, value: bool) -> None:
         self._settings.set_boolean('autostart', value)
 
+    # ── minimize-to-tray ───────────────────────────────────────────────────────
+
+    def get_minimize_to_tray(self) -> bool:
+        return self._settings.get_boolean('minimize-to-tray')
+
+    def set_minimize_to_tray(self, value: bool) -> None:
+        self._settings.set_boolean('minimize-to-tray', value)
+
+    # ── show-notifications ─────────────────────────────────────────────────────
+
+    def get_show_notifications(self) -> bool:
+        return self._settings.get_boolean('show-notifications')
+
+    def set_show_notifications(self, value: bool) -> None:
+        self._settings.set_boolean('show-notifications', value)
+
+    # ── accent-color ───────────────────────────────────────────────────────────
+
+    def get_accent_color(self) -> str:
+        return self._settings.get_string('accent-color')
+
+    def set_accent_color(self, value: str) -> None:
+        self._settings.set_string('accent-color', value)
+
+    # ── compact-mode ───────────────────────────────────────────────────────────
+
+    def get_compact_mode(self) -> bool:
+        return self._settings.get_boolean('compact-mode')
+
+    def set_compact_mode(self, value: bool) -> None:
+        self._settings.set_boolean('compact-mode', value)
+
+    # ── title-percentage ───────────────────────────────────────────────────────
+
+    def get_title_percentage(self) -> bool:
+        return self._settings.get_boolean('title-percentage')
+
+    def set_title_percentage(self, value: bool) -> None:
+        self._settings.set_boolean('title-percentage', value)
+
+    # ── last-applied-time ──────────────────────────────────────────────────────
+
+    def get_last_applied_time(self) -> int:
+        return self._settings.get_int64('last-applied-time')
+
+    def set_last_applied_time(self, value: int) -> None:
+        self._settings.set_int64('last-applied-time', value)
+
     # ── window-width ───────────────────────────────────────────────────────────
 
     def get_window_width(self) -> int:

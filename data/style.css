@@ -1,42 +1,537 @@
-/* BatteryGuard GTK4 styles */
+/* Threshold — Industrial Grid UI styles
+ *
+ * Dark charcoal surfaces, thin borders, orange instrument readouts.
+ * Light tokens are the base; `.app-dark` on the window overrides to the
+ * canonical dark palette. Accent schemes swap the accent via
+ * `.accent-orange|blue|green|purple|red` on the window root.
+ */
 
-.card {
-  background: @card_bg_color;
-  border-radius: 12px;
-  padding: 16px;
-  margin: 0;
+/* ── Window & background ─────────────────────────────────────────────── */
+
+.threshold-window {
+  background: #F3F3F3;
+  color: #1D1D1D;
 }
 
-.card label.title-1 {
-  font-size: 32px;
-  font-weight: bold;
+.threshold-window.app-dark {
+  background: #171717;
+  color: #F4F4F4;
 }
 
-.accent {
-  color: @accent_color;
+/* ── Panels ──────────────────────────────────────────────────────────── */
+
+.threshold-window .panel {
+  background: #FFFFFF;
+  border: 1px solid #D6D6D6;
+  border-radius: 8px;
+  padding: 14px 16px;
 }
 
-.caption {
-  font-size: 12px;
-  opacity: 0.8;
+.threshold-window .panel-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1D1D1D;
 }
 
-/* Status bar colors */
-.status-bar label.success {
-  color: @success_color;
+.threshold-window.app-dark .panel {
+  background: #222222;
+  border: 1px solid #3A3A3A;
 }
 
-.status-bar label.error {
-  color: @error_color;
+.threshold-window.app-dark .panel-title {
+  color: #F3F3F3;
 }
 
-.status-bar label {
-  color: @insensitive_fg_color;
+/* ── Instrument readouts ─────────────────────────────────────────────── */
+
+.threshold-window .instrument-value-accent {
+  font-size: 40px;
+  font-weight: 400;
+  font-feature-settings: "tnum";
+  color: #E86700;
 }
 
-/* Dark mode overrides — adwaita handles most of this, but keep for completeness */
-@media (prefers-color-scheme: dark) {
-  .card {
-    background: @card_bg_color;
-  }
+.threshold-window .instrument-value-sm {
+  font-size: 26px;
+  font-weight: 400;
+  font-feature-settings: "tnum";
+  color: #E86700;
 }
+
+.threshold-window.app-dark .instrument-value-accent,
+.threshold-window.app-dark .instrument-value-sm {
+  color: #FF7800;
+}
+
+/* ── Metadata / captions ─────────────────────────────────────────────── */
+
+.threshold-window .metadata-label {
+  font-size: 14px;
+  color: #7A7A7A;
+}
+
+.threshold-window .metadata-value {
+  font-size: 15px;
+  color: #1D1D1D;
+  font-feature-settings: "tnum";
+}
+
+.threshold-window .metadata-caption {
+  font-size: 13px;
+  color: #8D8D8D;
+}
+
+.threshold-window .metadata-caption-value {
+  font-size: 14px;
+  color: #1D1D1D;
+}
+
+.threshold-window.app-dark .metadata-label,
+.threshold-window.app-dark .metadata-caption {
+  color: #8D8D8D;
+}
+
+.threshold-window.app-dark .metadata-value,
+.threshold-window.app-dark .metadata-caption-value {
+  color: #EEEEEE;
+}
+
+/* ── Charging status ─────────────────────────────────────────────────── */
+
+.threshold-window .charging-icon {
+  color: #5D5D5D;
+}
+
+.threshold-window .charging-label {
+  font-size: 15px;
+  color: #5D5D5D;
+}
+
+.threshold-window.app-dark .charging-icon,
+.threshold-window.app-dark .charging-label {
+  color: #B7B7B7;
+}
+
+/* ── Vertical divider ────────────────────────────────────────────────── */
+
+.threshold-window .v-divider {
+  background: #D6D6D6;
+  min-width: 1px;
+}
+
+.threshold-window.app-dark .v-divider {
+  background: #414141;
+}
+
+/* ── Slider ──────────────────────────────────────────────────────────── */
+
+.threshold-window .threshold-slider {
+  min-height: 24px;
+}
+
+.threshold-window .threshold-slider trough {
+  background: #D6D6D6;
+  border-radius: 3px;
+  min-height: 6px;
+}
+
+.threshold-window .threshold-slider highlight {
+  background: #E86700;
+  border-radius: 3px;
+  min-height: 6px;
+}
+
+.threshold-window .threshold-slider slider {
+  background: #F1F1F1;
+  border: 1px solid #C8C8C8;
+  border-radius: 50%;
+  min-width: 20px;
+  min-height: 20px;
+}
+
+.threshold-window.app-dark .threshold-slider trough {
+  background: #4A4A4A;
+}
+
+.threshold-window.app-dark .threshold-slider highlight {
+  background: #FF7800;
+}
+
+.threshold-window.app-dark .threshold-slider slider {
+  background: #F1F1F1;
+  border: 1px solid #D5D5D5;
+}
+
+.threshold-window .slider-label {
+  font-size: 14px;
+  color: #7A7A7A;
+}
+
+.threshold-window .recommendation-text {
+  font-size: 14px;
+  color: #7A7A7A;
+}
+
+.threshold-window.app-dark .slider-label,
+.threshold-window.app-dark .recommendation-text {
+  color: #A4A4A4;
+}
+
+/* ── Preset tiles ────────────────────────────────────────────────────── */
+
+.threshold-window .preset-tile {
+  background: #F0F0F0;
+  border: 1px solid #D6D6D6;
+  border-radius: 7px;
+  min-height: 56px;
+  padding: 4px 8px;
+}
+
+.threshold-window .preset-tile:hover {
+  background: #E8E8E8;
+}
+
+.threshold-window .preset-tile:checked {
+  background: rgba(232, 103, 0, 0.10);
+  border: 1px solid #E86700;
+}
+
+.threshold-window .preset-value {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1D1D1D;
+}
+
+.threshold-window .preset-subtitle {
+  font-size: 13px;
+  color: #7A7A7A;
+}
+
+.threshold-window .preset-tile:checked .preset-value,
+.threshold-window .preset-tile:checked .preset-subtitle {
+  color: #E86700;
+}
+
+.threshold-window.app-dark .preset-tile {
+  background: #272727;
+  border: 1px solid #414141;
+}
+
+.threshold-window.app-dark .preset-tile:hover {
+  background: #303030;
+}
+
+.threshold-window.app-dark .preset-tile:checked {
+  background: rgba(255, 120, 0, 0.12);
+  border: 1px solid #FF7800;
+}
+
+.threshold-window.app-dark .preset-value {
+  color: #F4F4F4;
+}
+
+.threshold-window.app-dark .preset-subtitle {
+  color: #9C9C9C;
+}
+
+.threshold-window.app-dark .preset-tile:checked .preset-value,
+.threshold-window.app-dark .preset-tile:checked .preset-subtitle {
+  color: #FF7800;
+}
+
+/* ── Action buttons ──────────────────────────────────────────────────── */
+
+.threshold-window .primary-action {
+  background: #E86700;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 7px;
+  min-height: 42px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.threshold-window .primary-action:hover {
+  background: #D75F00;
+}
+
+.threshold-window .primary-action:active {
+  background: #C25500;
+}
+
+.threshold-window .primary-action:disabled {
+  background: #C8C8C8;
+  color: #FFFFFF;
+}
+
+.threshold-window .secondary-action {
+  background: #E8E8E8;
+  color: #1D1D1D;
+  border: none;
+  border-radius: 7px;
+  min-height: 42px;
+  font-size: 15px;
+}
+
+.threshold-window .secondary-action:hover {
+  background: #DDDDDD;
+}
+
+.threshold-window.app-dark .primary-action {
+  background: #FF7800;
+}
+
+.threshold-window.app-dark .primary-action:hover {
+  background: #FF8B1A;
+}
+
+.threshold-window.app-dark .primary-action:active {
+  background: #E96D00;
+}
+
+.threshold-window.app-dark .primary-action:disabled {
+  background: #4A4A4A;
+  color: #B7B7B7;
+}
+
+.threshold-window.app-dark .secondary-action {
+  background: #353535;
+  color: #F1F1F1;
+}
+
+.threshold-window.app-dark .secondary-action:hover {
+  background: #3D3D3D;
+}
+
+/* ── Settings rows ───────────────────────────────────────────────────── */
+
+.threshold-window .settings-row {
+  padding: 8px 0;
+  border-bottom: 1px solid #D6D6D6;
+}
+
+.threshold-window .settings-row:last-child {
+  border-bottom: none;
+}
+
+.threshold-window .settings-row-title {
+  font-size: 15px;
+  color: #1D1D1D;
+}
+
+.threshold-window .settings-row-desc {
+  font-size: 13px;
+  color: #7A7A7A;
+}
+
+.threshold-window.app-dark .settings-row {
+  border-bottom: 1px solid #3A3A3A;
+}
+
+.threshold-window.app-dark .settings-row-title {
+  color: #F1F1F1;
+}
+
+.threshold-window.app-dark .settings-row-desc {
+  color: #8F8F8F;
+}
+
+/* ── Accent swatches ─────────────────────────────────────────────────── */
+
+.threshold-window .accent-swatch {
+  border-radius: 9999px;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  margin: 0 3px;
+  border: 2px solid transparent;
+  background: none;
+  background-clip: padding-box;
+  box-shadow: none;
+}
+
+.threshold-window .accent-swatch:checked {
+  border: 2px solid #E86700;
+}
+
+.threshold-window .swatch-orange { background: #FF7800; }
+.threshold-window .swatch-blue   { background: #4A91F2; }
+.threshold-window .swatch-green  { background: #32D74B; }
+.threshold-window .swatch-purple { background: #A44BF4; }
+.threshold-window .swatch-red    { background: #F04444; }
+
+/* ── Footer status bar ───────────────────────────────────────────────── */
+
+.threshold-window .footer-bar {
+  background: #EAEAEA;
+  border: 1px solid #D6D6D6;
+  border-radius: 8px;
+  padding: 8px 14px;
+}
+
+.threshold-window.app-dark .footer-bar {
+  background: #1B1B1B;
+  border: 1px solid #323232;
+}
+
+.threshold-window .footer-bar label.success {
+  color: #2E7D32;
+}
+
+.threshold-window .footer-bar label.error {
+  color: #C62828;
+}
+
+.threshold-window.app-dark .footer-bar label.success {
+  color: #57C271;
+}
+
+.threshold-window.app-dark .footer-bar label.error {
+  color: #EF5B5B;
+}
+
+/* ── Compact mode ────────────────────────────────────────────────────── */
+
+.threshold-window.compact .panel {
+  padding: 10px 12px;
+}
+
+.threshold-window.compact .panel-title {
+  font-size: 16px;
+}
+
+.threshold-window.compact .instrument-value-accent {
+  font-size: 34px;
+}
+
+.threshold-window.compact .instrument-value-sm {
+  font-size: 22px;
+}
+
+.threshold-window.compact .settings-row {
+  padding: 5px 0;
+}
+
+.threshold-window.compact .preset-tile {
+  min-height: 46px;
+}
+
+/* ── Accent schemes (window root class) ──────────────────────────────── */
+
+.threshold-window.accent-blue .instrument-value-accent,
+.threshold-window.accent-blue .instrument-value-sm,
+.threshold-window.accent-blue .preset-tile:checked .preset-value,
+.threshold-window.accent-blue .preset-tile:checked .preset-subtitle {
+  color: #4A91F2;
+}
+
+.threshold-window.accent-blue .preset-tile:checked {
+  border: 1px solid #4A91F2;
+  background: rgba(74, 145, 242, 0.10);
+}
+
+.threshold-window.accent-blue .primary-action {
+  background: #3D7BE0;
+}
+
+.threshold-window.accent-blue .primary-action:hover {
+  background: #356FCE;
+}
+
+.threshold-window.accent-blue .threshold-slider highlight {
+  background: #4A91F2;
+}
+
+.threshold-window.accent-blue .accent-swatch:checked {
+  border: 2px solid #4A91F2;
+}
+
+.threshold-window.accent-green .instrument-value-accent,
+.threshold-window.accent-green .instrument-value-sm,
+.threshold-window.accent-green .preset-tile:checked .preset-value,
+.threshold-window.accent-green .preset-tile:checked .preset-subtitle {
+  color: #2DAF47;
+}
+
+.threshold-window.accent-green .preset-tile:checked {
+  border: 1px solid #32D74B;
+  background: rgba(50, 215, 75, 0.10);
+}
+
+.threshold-window.accent-green .primary-action {
+  background: #2DAF47;
+}
+
+.threshold-window.accent-green .primary-action:hover {
+  background: #279C3F;
+}
+
+.threshold-window.accent-green .threshold-slider highlight {
+  background: #32D74B;
+}
+
+.threshold-window.accent-green .accent-swatch:checked {
+  border: 2px solid #32D74B;
+}
+
+.threshold-window.accent-purple .instrument-value-accent,
+.threshold-window.accent-purple .instrument-value-sm,
+.threshold-window.accent-purple .preset-tile:checked .preset-value,
+.threshold-window.accent-purple .preset-tile:checked .preset-subtitle {
+  color: #A44BF4;
+}
+
+.threshold-window.accent-purple .preset-tile:checked {
+  border: 1px solid #A44BF4;
+  background: rgba(164, 75, 244, 0.10);
+}
+
+.threshold-window.accent-purple .primary-action {
+  background: #9339E0;
+}
+
+.threshold-window.accent-purple .primary-action:hover {
+  background: #862FCE;
+}
+
+.threshold-window.accent-purple .threshold-slider highlight {
+  background: #A44BF4;
+}
+
+.threshold-window.accent-purple .accent-swatch:checked {
+  border: 2px solid #A44BF4;
+}
+
+.threshold-window.accent-red .instrument-value-accent,
+.threshold-window.accent-red .instrument-value-sm,
+.threshold-window.accent-red .preset-tile:checked .preset-value,
+.threshold-window.accent-red .preset-tile:checked .preset-subtitle {
+  color: #F04444;
+}
+
+.threshold-window.accent-red .preset-tile:checked {
+  border: 1px solid #F04444;
+  background: rgba(240, 68, 68, 0.10);
+}
+
+.threshold-window.accent-red .primary-action {
+  background: #DC3B3B;
+}
+
+.threshold-window.accent-red .primary-action:hover {
+  background: #C93434;
+}
+
+.threshold-window.accent-red .threshold-slider highlight {
+  background: #F04444;
+}
+
+.threshold-window.accent-red .accent-swatch:checked {
+  border: 2px solid #F04444;
+}
+
+/* Accent applied to swatch ring in dark mode uses the bright accent */
+.threshold-window.app-dark.accent-blue .accent-swatch:checked { border: 2px solid #4A91F2; }
+.threshold-window.app-dark.accent-green .accent-swatch:checked { border: 2px solid #32D74B; }
+.threshold-window.app-dark.accent-purple .accent-swatch:checked { border: 2px solid #A44BF4; }
+.threshold-window.app-dark.accent-red .accent-swatch:checked { border: 2px solid #F04444; }

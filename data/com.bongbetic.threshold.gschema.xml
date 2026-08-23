@@ -2,7 +2,7 @@
 <schemalist>
   <schema path="/com/bongbetic/threshold/" id="com.bongbetic.threshold">
     <key name="dark-mode" type="b">
-      <default>false</default>
+      <default>true</default>
       <summary>Dark mode</summary>
       <description>Whether to use dark color scheme.</description>
     </key>
@@ -11,13 +11,50 @@
       <summary>Launch at login</summary>
       <description>Whether to launch the application automatically at login.</description>
     </key>
+    <key name="minimize-to-tray" type="b">
+      <default>true</default>
+      <summary>Minimize to tray</summary>
+      <description>Keep the application in the system tray when the window is closed.</description>
+    </key>
+    <key name="show-notifications" type="b">
+      <default>true</default>
+      <summary>Show notifications</summary>
+      <description>Notify on threshold changes and alarms.</description>
+    </key>
+    <key name="accent-color" type="s">
+      <default>'orange'</default>
+      <choices>
+        <choice value="orange"/>
+        <choice value="blue"/>
+        <choice value="green"/>
+        <choice value="purple"/>
+        <choice value="red"/>
+      </choices>
+      <summary>Accent color</summary>
+      <description>UI accent color scheme (orange, blue, green, purple, red).</description>
+    </key>
+    <key name="compact-mode" type="b">
+      <default>false</default>
+      <summary>Compact mode</summary>
+      <description>Reduce spacing and padding.</description>
+    </key>
+    <key name="title-percentage" type="b">
+      <default>false</default>
+      <summary>Show percentage in title</summary>
+      <description>Display battery percentage in the window title.</description>
+    </key>
+    <key name="last-applied-time" type="x">
+      <default>0</default>
+      <summary>Last applied threshold timestamp</summary>
+      <description>Unix timestamp of the last successful threshold apply.</description>
+    </key>
     <key name="window-width" type="i">
-      <default>950</default>
+      <default>1100</default>
       <summary>Window width</summary>
       <description>Default window width in pixels.</description>
     </key>
     <key name="window-height" type="i">
-      <default>620</default>
+      <default>820</default>
       <summary>Window height</summary>
       <description>Default window height in pixels.</description>
     </key>
