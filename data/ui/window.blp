@@ -2,10 +2,10 @@ using Gtk 4.0;
 using Adw 1;
 
 template $ThresholdWindow: Adw.ApplicationWindow {
-  default-width: 680;
-  default-height: 420;
-  width-request: 680;
-  height-request: 420;
+  default-width: 760;
+  default-height: 365;
+  width-request: 760;
+  height-request: 365;
   title: _("Threshold");
   css-classes: ["threshold-window", "accent-orange"];
 
@@ -19,7 +19,7 @@ template $ThresholdWindow: Adw.ApplicationWindow {
     }
 
     Adw.Clamp {
-      maximum-size: 900;
+      maximum-size: 760;
 
       Gtk.Box {
         orientation: vertical;
@@ -29,7 +29,7 @@ template $ThresholdWindow: Adw.ApplicationWindow {
         margin-start: 5;
         margin-end: 5;
 
-        // ── Top status grid: 3 columns ─────────────────────────────
+        // ── Top status grid: 3 compact instrument strips ─────────────
         Gtk.Grid {
           column-spacing: 3;
           row-spacing: 3;
@@ -37,98 +37,55 @@ template $ThresholdWindow: Adw.ApplicationWindow {
 
           // Battery Status
           Gtk.Box {
-            orientation: vertical;
+            orientation: horizontal;
             styles ["panel"]
             hexpand: true;
+            spacing: 4;
+            valign: center;
 
             Gtk.Label {
-              label: _("Battery Status");
+              label: _("Battery");
               styles ["panel-title"]
               xalign: 0.0;
             }
 
-            Gtk.Box {
-              orientation: horizontal;
-              valign: center;
-              margin-top: 2;
+            Gtk.Label current_charge_label {
+              label: "--%";
+              styles ["instrument-value-accent"]
+              xalign: 0.0;
+            }
 
-              Gtk.Box {
-                orientation: vertical;
-                spacing: 2;
+            Gtk.Image {
+              icon-name: "battery-good-symbolic";
+              styles ["charging-icon"]
+            }
+            Gtk.Label current_status_label {
+              label: _("—");
+              styles ["charging-label"]
+              hexpand: true;
+              xalign: 0.0;
+            }
 
-                Gtk.Label current_charge_label {
-                  label: "--%";
-                  styles ["instrument-value-accent"]
-                  xalign: 0.0;
-                }
-
-                Gtk.Box {
-                  orientation: horizontal;
-                  spacing: 3;
-
-                  Gtk.Image {
-                    icon-name: "battery-good-symbolic";
-                    styles ["charging-icon"]
-                  }
-                  Gtk.Label current_status_label {
-                    label: _("—");
-                    styles ["charging-label"]
-                  }
-                }
-              }
-
-              Gtk.Separator {
-                orientation: vertical;
-                styles ["v-divider"]
-                margin-start: 7;
-                margin-end: 7;
-                valign: fill;
-                vexpand: true;
-              }
-
-              Gtk.Box {
-                orientation: vertical;
-                spacing: 2;
-                halign: end;
-                hexpand: true;
-
-                Gtk.Box {
-                  orientation: horizontal;
-                  spacing: 3;
-                  Gtk.Label {
-                    label: _("Power Source:");
-                    styles ["metadata-caption"]
-                  }
-                  Gtk.Label power_source_label {
-                    label: _("—");
-                    styles ["metadata-caption-value"]
-                  }
-                }
-
-                Gtk.Box {
-                  orientation: horizontal;
-                  spacing: 3;
-                  Gtk.Label {
-                    label: _("Health:");
-                    styles ["metadata-caption"]
-                  }
-                  Gtk.Label health_label {
-                    label: _("—");
-                    styles ["metadata-caption-value"]
-                  }
-                }
-              }
+            Gtk.Label power_source_label {
+              label: _("—");
+              styles ["metadata-caption-value"]
+            }
+            Gtk.Label health_label {
+              label: _("—");
+              styles ["metadata-caption-value"]
             }
           }
 
           // Active Threshold
           Gtk.Box {
-            orientation: vertical;
+            orientation: horizontal;
             styles ["panel"]
             hexpand: true;
+            spacing: 4;
+            valign: center;
 
             Gtk.Label {
-              label: _("Active Threshold");
+              label: _("Threshold");
               styles ["panel-title"]
               xalign: 0.0;
             }
@@ -137,46 +94,32 @@ template $ThresholdWindow: Adw.ApplicationWindow {
               label: "--%";
               styles ["instrument-value-accent"]
               xalign: 0.0;
-              margin-top: 2;
             }
 
-            Gtk.Box {
-              orientation: horizontal;
-              margin-top: 3;
+            Gtk.Label battery_name_label {
+              label: _("—");
+              styles ["metadata-label"]
+              hexpand: true;
+              xalign: 0.0;
+            }
 
-              Gtk.Label battery_name_label {
-                label: _("—");
-                styles ["metadata-label"]
-                xalign: 0.0;
-                hexpand: true;
-              }
-
-              Gtk.Box {
-                orientation: vertical;
-                halign: end;
-
-                Gtk.Label {
-                  label: _("Last changed");
-                  styles ["metadata-caption"]
-                  xalign: 1.0;
-                }
-                Gtk.Label last_changed_label {
-                  label: _("—");
-                  styles ["metadata-caption-value"]
-                  xalign: 1.0;
-                }
-              }
+            Gtk.Label last_changed_label {
+              label: _("—");
+              styles ["metadata-caption-value"]
+              xalign: 1.0;
             }
           }
 
           // Control Mode
           Gtk.Box {
-            orientation: vertical;
+            orientation: horizontal;
             styles ["panel"]
             hexpand: true;
+            spacing: 4;
+            valign: center;
 
             Gtk.Label {
-              label: _("Control Mode");
+              label: _("Mode");
               styles ["panel-title"]
               xalign: 0.0;
             }
@@ -185,14 +128,7 @@ template $ThresholdWindow: Adw.ApplicationWindow {
               label: _("—");
               styles ["instrument-value-sm"]
               xalign: 0.0;
-              margin-top: 2;
-            }
-
-            Gtk.Label {
-              label: _("How the threshold is applied to hardware");
-              styles ["metadata-caption"]
-              xalign: 0.0;
-              margin-top: 1;
+              hexpand: true;
             }
           }
         }

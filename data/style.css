@@ -138,7 +138,8 @@
 /* ── Slider ──────────────────────────────────────────────────────────── */
 
 .threshold-window .threshold-slider {
-  min-height: 12px;
+  min-height: 10px;
+  padding: 0;
 }
 
 .threshold-window .threshold-slider trough {
@@ -157,8 +158,8 @@
   background: #F1F1F1;
   border: 1px solid #C8C8C8;
   border-radius: 50%;
-  min-width: 11px;
-  min-height: 11px;
+  min-width: 9px;
+  min-height: 9px;
 }
 
 .threshold-window.app-dark .threshold-slider trough {
@@ -195,8 +196,8 @@
   background: #F0F0F0;
   border: 1px solid #D6D6D6;
   border-radius: 5px;
-  min-height: 22px;
-  padding: 1px 3px;
+  min-height: 18px;
+  padding: 0 3px;
 }
 
 .threshold-window .preset-tile:hover {
@@ -258,7 +259,8 @@
   color: #FFFFFF;
   border: none;
   border-radius: 5px;
-  min-height: 20px;
+  min-height: 18px;
+  padding: 0 4px;
   font-size: 9px;
   font-weight: 600;
 }
@@ -281,7 +283,8 @@
   color: #1D1D1D;
   border: none;
   border-radius: 5px;
-  min-height: 20px;
+  min-height: 18px;
+  padding: 0 4px;
   font-size: 9px;
 }
 
@@ -332,8 +335,11 @@
 }
 
 .threshold-window .settings-row-desc {
-  font-size: 9px;
-  color: #7A7A7A;
+  font-size: 0px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  color: transparent;
 }
 
 .threshold-window.app-dark .settings-row {
@@ -345,7 +351,19 @@
 }
 
 .threshold-window.app-dark .settings-row-desc {
-  color: #8F8F8F;
+  color: transparent;
+}
+
+/* ── Compact switches ────────────────────────────────────────────────── */
+
+.threshold-window switch {
+  min-width: 34px;
+  min-height: 18px;
+}
+
+.threshold-window switch slider {
+  min-width: 14px;
+  min-height: 14px;
 }
 
 /* ── Accent swatches ─────────────────────────────────────────────────── */
