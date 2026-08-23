@@ -3,6 +3,7 @@
 from datetime import datetime
 from gettext import gettext as _
 from pathlib import Path
+import sys
 import threading
 
 import gi
@@ -204,6 +205,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self.connect('close-request', self._on_close_request)
         self.connect('destroy', self._on_destroy)
 
+        self.add_css_class('threshold-window')
         self.add_css_class('accent-orange')
 
         self._load_settings()
@@ -402,6 +404,15 @@ class ThresholdWindow(Adw.ApplicationWindow):
             self.mode_label.set_label('')
             return
         self.mode_label.set_label(_MODE_LABELS.get(self._control_mode, ''))
+        # V3 hardening: self-diagnosing hint when module loaded but EC rejected
+        if self._control_mode is ControlMode.NOTIFY_ONLY:
+            from pathlib import Path as _Pl
+            if _Pl("/sys/devices/platform/msi-ec").is_dir():
+                self._set_status(
+                    _("msi-ec loaded but not controlling battery — check EC firmware support"),
+                    is_error=True,
+                )
+                print("Threshold: msi-ec platform exists but mode is notify-only — check firmware whitelist", file=sys.stderr)
 
     def _start_polling(self):
         """Start 5-second polling for battery charge refresh."""
@@ -575,6 +586,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
                 actual = read_sysfs(bat_path / 'charge_control_end_threshold')
                 if actual is not None and int(actual) != value:
                     message = f'{message} (EC stored {actual}%)'
+                    print(f"Threshold: EC stored {actual}% differs from requested {value}%", file=sys.stderr)
             self._config.set_charge_threshold(value)
             self._config.set_last_applied_time(int(datetime.now().timestamp()))
             self.last_changed_label.set_label(
@@ -658,6 +670,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
                 actual = read_sysfs(bat_path / 'charge_control_end_threshold')
                 if actual is not None and int(actual) != 100:
                     message = f'{message} (EC stored {actual}%)'
+                    print(f"Threshold: EC stored {actual}% differs from requested 100%", file=sys.stderr)
             self.charge_scale.set_value(100)
             self.charge_value_label.set_label('100%')
             self._sync_presets(100)

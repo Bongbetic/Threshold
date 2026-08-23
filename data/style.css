@@ -4,37 +4,49 @@
  * Light tokens are the base; `.app-dark` on the window overrides to the
  * canonical dark palette. Accent schemes swap the accent via
  * `.accent-orange|blue|green|purple|red` on the window root.
+ *
+ * Scale: ~0.6× fonts / ~0.5× paddings vs 1.4.0 — default window 700×520
+ * scroll-free (no GtkScrolledWindow). Tokens at top for next scale tweak.
  */
 
-/* ── Window & background ─────────────────────────────────────────────── */
+/* ── Tokens ──────────────────────────────────────────────────────────── */
+/* Fonts floored at 9px for legibility; geometry ~½. */
+
+/* ── Window & background — industrial gridlines ─────────────────────── */
 
 .threshold-window {
-  background: #F3F3F3;
+  background-color: #F3F3F3;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 24px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 24px);
   color: #1D1D1D;
 }
 
 .threshold-window.app-dark {
-  background: #171717;
+  background-color: #171717;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 24px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 24px);
   color: #F4F4F4;
 }
 
 /* ── Panels ──────────────────────────────────────────────────────────── */
 
 .threshold-window .panel {
-  background: #FFFFFF;
+  background: rgba(255,255,255,.92);
   border: 1px solid #D6D6D6;
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: 6px;
+  padding: 4px 6px;
 }
 
 .threshold-window .panel-title {
-  font-size: 14px;
+  font-size: 9px;
   font-weight: 600;
   color: #1D1D1D;
 }
 
 .threshold-window.app-dark .panel {
-  background: #222222;
+  background: rgba(34,34,34,.92);
   border: 1px solid #3A3A3A;
 }
 
@@ -45,14 +57,14 @@
 /* ── Instrument readouts ─────────────────────────────────────────────── */
 
 .threshold-window .instrument-value-accent {
-  font-size: 28px;
+  font-size: 14px;
   font-weight: 400;
   font-feature-settings: "tnum";
   color: #E86700;
 }
 
 .threshold-window .instrument-value-sm {
-  font-size: 19px;
+  font-size: 10px;
   font-weight: 400;
   font-feature-settings: "tnum";
   color: #E86700;
@@ -66,23 +78,23 @@
 /* ── Metadata / captions ─────────────────────────────────────────────── */
 
 .threshold-window .metadata-label {
-  font-size: 13px;
+  font-size: 10px;
   color: #7A7A7A;
 }
 
 .threshold-window .metadata-value {
-  font-size: 13px;
+  font-size: 10px;
   color: #1D1D1D;
   font-feature-settings: "tnum";
 }
 
 .threshold-window .metadata-caption {
-  font-size: 12px;
+  font-size: 9px;
   color: #8D8D8D;
 }
 
 .threshold-window .metadata-caption-value {
-  font-size: 12px;
+  font-size: 9px;
   color: #1D1D1D;
 }
 
@@ -103,7 +115,7 @@
 }
 
 .threshold-window .charging-label {
-  font-size: 13px;
+  font-size: 10px;
   color: #5D5D5D;
 }
 
@@ -126,27 +138,27 @@
 /* ── Slider ──────────────────────────────────────────────────────────── */
 
 .threshold-window .threshold-slider {
-  min-height: 18px;
+  min-height: 12px;
 }
 
 .threshold-window .threshold-slider trough {
   background: #D6D6D6;
   border-radius: 3px;
-  min-height: 5px;
+  min-height: 3px;
 }
 
 .threshold-window .threshold-slider highlight {
   background: #E86700;
   border-radius: 3px;
-  min-height: 5px;
+  min-height: 3px;
 }
 
 .threshold-window .threshold-slider slider {
   background: #F1F1F1;
   border: 1px solid #C8C8C8;
   border-radius: 50%;
-  min-width: 15px;
-  min-height: 15px;
+  min-width: 11px;
+  min-height: 11px;
 }
 
 .threshold-window.app-dark .threshold-slider trough {
@@ -163,12 +175,12 @@
 }
 
 .threshold-window .slider-label {
-  font-size: 12px;
+  font-size: 9px;
   color: #7A7A7A;
 }
 
 .threshold-window .recommendation-text {
-  font-size: 12px;
+  font-size: 9px;
   color: #7A7A7A;
 }
 
@@ -182,9 +194,9 @@
 .threshold-window .preset-tile {
   background: #F0F0F0;
   border: 1px solid #D6D6D6;
-  border-radius: 6px;
-  min-height: 42px;
-  padding: 2px 6px;
+  border-radius: 5px;
+  min-height: 22px;
+  padding: 1px 3px;
 }
 
 .threshold-window .preset-tile:hover {
@@ -197,13 +209,13 @@
 }
 
 .threshold-window .preset-value {
-  font-size: 14px;
+  font-size: 10px;
   font-weight: 600;
   color: #1D1D1D;
 }
 
 .threshold-window .preset-subtitle {
-  font-size: 11px;
+  font-size: 9px;
   color: #7A7A7A;
 }
 
@@ -245,9 +257,9 @@
   background: #E86700;
   color: #FFFFFF;
   border: none;
-  border-radius: 6px;
-  min-height: 32px;
-  font-size: 13px;
+  border-radius: 5px;
+  min-height: 20px;
+  font-size: 9px;
   font-weight: 600;
 }
 
@@ -268,9 +280,9 @@
   background: #E8E8E8;
   color: #1D1D1D;
   border: none;
-  border-radius: 6px;
-  min-height: 32px;
-  font-size: 13px;
+  border-radius: 5px;
+  min-height: 20px;
+  font-size: 9px;
 }
 
 .threshold-window .secondary-action:hover {
@@ -306,7 +318,7 @@
 /* ── Settings rows ───────────────────────────────────────────────────── */
 
 .threshold-window .settings-row {
-  padding: 5px 0;
+  padding: 2px 0;
   border-bottom: 1px solid #D6D6D6;
 }
 
@@ -315,12 +327,12 @@
 }
 
 .threshold-window .settings-row-title {
-  font-size: 13px;
+  font-size: 10px;
   color: #1D1D1D;
 }
 
 .threshold-window .settings-row-desc {
-  font-size: 11px;
+  font-size: 9px;
   color: #7A7A7A;
 }
 
@@ -340,10 +352,10 @@
 
 .threshold-window .accent-swatch {
   border-radius: 9999px;
-  min-width: 20px;
-  min-height: 20px;
+  min-width: 16px;
+  min-height: 16px;
   padding: 0;
-  margin: 0 3px;
+  margin: 0 2px;
   border: 2px solid transparent;
   background: none;
   background-clip: padding-box;
@@ -365,8 +377,8 @@
 .threshold-window .footer-bar {
   background: #EAEAEA;
   border: 1px solid #D6D6D6;
-  border-radius: 8px;
-  padding: 5px 10px;
+  border-radius: 6px;
+  padding: 3px 5px;
 }
 
 .threshold-window.app-dark .footer-bar {
@@ -390,30 +402,30 @@
   color: #EF5B5B;
 }
 
-/* ── Compact mode ────────────────────────────────────────────────────── */
+/* ── Compact mode — further ~10% squeeze on top of new base ─────────── */
 
 .threshold-window.compact .panel {
-  padding: 8px 10px;
+  padding: 5px 6px;
 }
 
 .threshold-window.compact .panel-title {
-  font-size: 13px;
+  font-size: 9px;
 }
 
 .threshold-window.compact .instrument-value-accent {
-  font-size: 24px;
+  font-size: 15px;
 }
 
 .threshold-window.compact .instrument-value-sm {
-  font-size: 17px;
+  font-size: 11px;
 }
 
 .threshold-window.compact .settings-row {
-  padding: 3px 0;
+  padding: 2px 0;
 }
 
 .threshold-window.compact .preset-tile {
-  min-height: 36px;
+  min-height: 24px;
 }
 
 /* ── Accent schemes (window root class) ──────────────────────────────── */

@@ -2,11 +2,12 @@ using Gtk 4.0;
 using Adw 1;
 
 template $ThresholdWindow: Adw.ApplicationWindow {
-  default-width: 980;
-  default-height: 680;
-  width-request: 820;
-  height-request: 560;
+  default-width: 680;
+  default-height: 420;
+  width-request: 680;
+  height-request: 420;
   title: _("Threshold");
+  css-classes: ["threshold-window", "accent-orange"];
 
   Gtk.Box {
     orientation: vertical;
@@ -17,666 +18,662 @@ template $ThresholdWindow: Adw.ApplicationWindow {
       };
     }
 
-    Gtk.ScrolledWindow {
-      vexpand: true;
+    Adw.Clamp {
+      maximum-size: 900;
 
-      Adw.Clamp {
-        maximum-size: 1200;
+      Gtk.Box {
+        orientation: vertical;
+        spacing: 3;
+        margin-top: 3;
+        margin-bottom: 3;
+        margin-start: 5;
+        margin-end: 5;
 
-        Gtk.Box {
-          orientation: vertical;
-          spacing: 10;
-          margin-top: 10;
-          margin-bottom: 10;
-          margin-start: 12;
-          margin-end: 12;
+        // ── Top status grid: 3 columns ─────────────────────────────
+        Gtk.Grid {
+          column-spacing: 3;
+          row-spacing: 3;
+          column-homogeneous: true;
 
-          // ── Top status grid: 3 columns ─────────────────────────────
-          Gtk.Grid {
-            column-spacing: 10;
-            row-spacing: 10;
-            column-homogeneous: true;
-
-            // Battery Status
-            Gtk.Box {
-              orientation: vertical;
-              styles ["panel"]
-              hexpand: true;
-
-              Gtk.Label {
-                label: _("Battery Status");
-                styles ["panel-title"]
-                xalign: 0.0;
-              }
-
-              Gtk.Box {
-                orientation: horizontal;
-                valign: center;
-                margin-top: 4;
-
-                Gtk.Box {
-                  orientation: vertical;
-                  spacing: 4;
-
-                  Gtk.Label current_charge_label {
-                    label: "--%";
-                    styles ["instrument-value-accent"]
-                    xalign: 0.0;
-                  }
-
-                  Gtk.Box {
-                    orientation: horizontal;
-                    spacing: 8;
-
-                    Gtk.Image {
-                      icon-name: "battery-good-symbolic";
-                      styles ["charging-icon"]
-                    }
-                    Gtk.Label current_status_label {
-                      label: _("—");
-                      styles ["charging-label"]
-                    }
-                  }
-                }
-
-                Gtk.Separator {
-                  orientation: vertical;
-                  styles ["v-divider"]
-                  margin-start: 12;
-                  margin-end: 12;
-                  valign: fill;
-                  vexpand: true;
-                }
-
-                Gtk.Box {
-                  orientation: vertical;
-                  spacing: 4;
-                  halign: end;
-                  hexpand: true;
-
-                  Gtk.Box {
-                    orientation: horizontal;
-                    spacing: 8;
-                    Gtk.Label {
-                      label: _("Power Source:");
-                      styles ["metadata-caption"]
-                    }
-                    Gtk.Label power_source_label {
-                      label: _("—");
-                      styles ["metadata-caption-value"]
-                    }
-                  }
-
-                  Gtk.Box {
-                    orientation: horizontal;
-                    spacing: 8;
-                    Gtk.Label {
-                      label: _("Health:");
-                      styles ["metadata-caption"]
-                    }
-                    Gtk.Label health_label {
-                      label: _("—");
-                      styles ["metadata-caption-value"]
-                    }
-                  }
-                }
-              }
-            }
-
-            // Active Threshold
-            Gtk.Box {
-              orientation: vertical;
-              styles ["panel"]
-              hexpand: true;
-
-              Gtk.Label {
-                label: _("Active Threshold");
-                styles ["panel-title"]
-                xalign: 0.0;
-              }
-
-              Gtk.Label active_threshold_label {
-                label: "--%";
-                styles ["instrument-value-accent"]
-                xalign: 0.0;
-                margin-top: 4;
-              }
-
-              Gtk.Box {
-                orientation: horizontal;
-                margin-top: 6;
-
-                Gtk.Label battery_name_label {
-                  label: _("—");
-                  styles ["metadata-label"]
-                  xalign: 0.0;
-                  hexpand: true;
-                }
-
-                Gtk.Box {
-                  orientation: vertical;
-                  halign: end;
-
-                  Gtk.Label {
-                    label: _("Last changed");
-                    styles ["metadata-caption"]
-                    xalign: 1.0;
-                  }
-                  Gtk.Label last_changed_label {
-                    label: _("—");
-                    styles ["metadata-caption-value"]
-                    xalign: 1.0;
-                  }
-                }
-              }
-            }
-
-            // Control Mode
-            Gtk.Box {
-              orientation: vertical;
-              styles ["panel"]
-              hexpand: true;
-
-              Gtk.Label {
-                label: _("Control Mode");
-                styles ["panel-title"]
-                xalign: 0.0;
-              }
-
-              Gtk.Label mode_label {
-                label: _("—");
-                styles ["instrument-value-sm"]
-                xalign: 0.0;
-                margin-top: 4;
-              }
-
-              Gtk.Label {
-                label: _("How the threshold is applied to hardware");
-                styles ["metadata-caption"]
-                xalign: 0.0;
-                margin-top: 2;
-              }
-            }
-          }
-
-          // ── Charge Limit panel (full width) ─────────────────────────
+          // Battery Status
           Gtk.Box {
             orientation: vertical;
             styles ["panel"]
-            spacing: 8;
+            hexpand: true;
 
-            Gtk.Box {
-              orientation: horizontal;
-
-              Gtk.Label {
-                label: _("Charge Limit");
-                styles ["panel-title"]
-                xalign: 0.0;
-                hexpand: true;
-              }
-
-              Gtk.Label charge_value_label {
-                label: "80%";
-                styles ["instrument-value-sm"]
-              }
+            Gtk.Label {
+              label: _("Battery Status");
+              styles ["panel-title"]
+              xalign: 0.0;
             }
 
             Gtk.Box {
               orientation: horizontal;
-              spacing: 12;
+              valign: center;
+              margin-top: 2;
 
-              Gtk.Label {
-                label: "20%";
-                styles ["slider-label"]
+              Gtk.Box {
+                orientation: vertical;
+                spacing: 2;
+
+                Gtk.Label current_charge_label {
+                  label: "--%";
+                  styles ["instrument-value-accent"]
+                  xalign: 0.0;
+                }
+
+                Gtk.Box {
+                  orientation: horizontal;
+                  spacing: 3;
+
+                  Gtk.Image {
+                    icon-name: "battery-good-symbolic";
+                    styles ["charging-icon"]
+                  }
+                  Gtk.Label current_status_label {
+                    label: _("—");
+                    styles ["charging-label"]
+                  }
+                }
               }
-              Gtk.Scale charge_scale {
-                adjustment: Gtk.Adjustment {
-                  lower: 20;
-                  upper: 100;
-                  value: 80;
-                  step-increment: 1;
-                };
-                draw-value: false;
+
+              Gtk.Separator {
+                orientation: vertical;
+                styles ["v-divider"]
+                margin-start: 7;
+                margin-end: 7;
+                valign: fill;
+                vexpand: true;
+              }
+
+              Gtk.Box {
+                orientation: vertical;
+                spacing: 2;
+                halign: end;
                 hexpand: true;
-                styles ["threshold-slider"]
+
+                Gtk.Box {
+                  orientation: horizontal;
+                  spacing: 3;
+                  Gtk.Label {
+                    label: _("Power Source:");
+                    styles ["metadata-caption"]
+                  }
+                  Gtk.Label power_source_label {
+                    label: _("—");
+                    styles ["metadata-caption-value"]
+                  }
+                }
+
+                Gtk.Box {
+                  orientation: horizontal;
+                  spacing: 3;
+                  Gtk.Label {
+                    label: _("Health:");
+                    styles ["metadata-caption"]
+                  }
+                  Gtk.Label health_label {
+                    label: _("—");
+                    styles ["metadata-caption-value"]
+                  }
+                }
               }
-              Gtk.Label {
-                label: "100%";
-                styles ["slider-label"]
+            }
+          }
+
+          // Active Threshold
+          Gtk.Box {
+            orientation: vertical;
+            styles ["panel"]
+            hexpand: true;
+
+            Gtk.Label {
+              label: _("Active Threshold");
+              styles ["panel-title"]
+              xalign: 0.0;
+            }
+
+            Gtk.Label active_threshold_label {
+              label: "--%";
+              styles ["instrument-value-accent"]
+              xalign: 0.0;
+              margin-top: 2;
+            }
+
+            Gtk.Box {
+              orientation: horizontal;
+              margin-top: 3;
+
+              Gtk.Label battery_name_label {
+                label: _("—");
+                styles ["metadata-label"]
+                xalign: 0.0;
+                hexpand: true;
               }
+
+              Gtk.Box {
+                orientation: vertical;
+                halign: end;
+
+                Gtk.Label {
+                  label: _("Last changed");
+                  styles ["metadata-caption"]
+                  xalign: 1.0;
+                }
+                Gtk.Label last_changed_label {
+                  label: _("—");
+                  styles ["metadata-caption-value"]
+                  xalign: 1.0;
+                }
+              }
+            }
+          }
+
+          // Control Mode
+          Gtk.Box {
+            orientation: vertical;
+            styles ["panel"]
+            hexpand: true;
+
+            Gtk.Label {
+              label: _("Control Mode");
+              styles ["panel-title"]
+              xalign: 0.0;
+            }
+
+            Gtk.Label mode_label {
+              label: _("—");
+              styles ["instrument-value-sm"]
+              xalign: 0.0;
+              margin-top: 2;
             }
 
             Gtk.Label {
-              label: _("Recommended: 60–80% daily  •  100% for travel");
-              styles ["recommendation-text"]
+              label: _("How the threshold is applied to hardware");
+              styles ["metadata-caption"]
               xalign: 0.0;
-            }
-
-            // Preset tiles
-            Gtk.Box {
-              orientation: horizontal;
-              homogeneous: true;
-              spacing: 6;
-
-              Gtk.ToggleButton preset_60 {
-                styles ["preset-tile"]
-                child: Gtk.Box {
-                  orientation: vertical;
-                  spacing: 2;
-                  valign: center;
-                  Gtk.Label {
-                    label: "60%";
-                    styles ["preset-value"]
-                  }
-                  Gtk.Label {
-                    label: _("Daily Use");
-                    styles ["preset-subtitle"]
-                  }
-                };
-              }
-              Gtk.ToggleButton preset_70 {
-                styles ["preset-tile"]
-                child: Gtk.Box {
-                  orientation: vertical;
-                  spacing: 2;
-                  valign: center;
-                  Gtk.Label {
-                    label: "70%";
-                    styles ["preset-value"]
-                  }
-                  Gtk.Label {
-                    label: _("Balanced");
-                    styles ["preset-subtitle"]
-                  }
-                };
-              }
-              Gtk.ToggleButton preset_80 {
-                styles ["preset-tile"]
-                child: Gtk.Box {
-                  orientation: vertical;
-                  spacing: 2;
-                  valign: center;
-                  Gtk.Label {
-                    label: "80%";
-                    styles ["preset-value"]
-                  }
-                  Gtk.Label {
-                    label: _("Recommended");
-                    styles ["preset-subtitle"]
-                  }
-                };
-              }
-              Gtk.ToggleButton preset_90 {
-                styles ["preset-tile"]
-                child: Gtk.Box {
-                  orientation: vertical;
-                  spacing: 2;
-                  valign: center;
-                  Gtk.Label {
-                    label: "90%";
-                    styles ["preset-value"]
-                  }
-                  Gtk.Label {
-                    label: _("Extended");
-                    styles ["preset-subtitle"]
-                  }
-                };
-              }
-              Gtk.ToggleButton preset_100 {
-                styles ["preset-tile"]
-                child: Gtk.Box {
-                  orientation: vertical;
-                  spacing: 2;
-                  valign: center;
-                  Gtk.Label {
-                    label: "100%";
-                    styles ["preset-value"]
-                  }
-                  Gtk.Label {
-                    label: _("Travel");
-                    styles ["preset-subtitle"]
-                  }
-                };
-              }
-            }
-
-            Gtk.Box {
-              orientation: horizontal;
-              spacing: 8;
-              margin-top: 2;
-
-              Gtk.Button apply_button {
-                label: _("Apply Threshold");
-                styles ["primary-action"]
-                hexpand: true;
-              }
-              Gtk.Button restore_button {
-                label: _("Restore to 100%");
-                styles ["secondary-action"]
-                hexpand: true;
-              }
+              margin-top: 1;
             }
           }
+        }
 
-          // ── Lower settings grid: 3 columns ──────────────────────────
-          Gtk.Grid {
-            column-spacing: 10;
-            row-spacing: 10;
-            column-homogeneous: true;
+        // ── Charge Limit panel (full width) ─────────────────────────
+        Gtk.Box {
+          orientation: vertical;
+          styles ["panel"]
+          spacing: 2;
 
-            // General
-            Gtk.Box {
-              orientation: vertical;
-              styles ["panel"]
-              hexpand: true;
-
-              Gtk.Label {
-                label: _("General");
-                styles ["panel-title"]
-                xalign: 0.0;
-              }
-
-              Gtk.Box {
-                orientation: vertical;
-
-                Gtk.Box {
-                  orientation: vertical;
-                  styles ["settings-row"]
-                  Gtk.Box {
-                    orientation: horizontal;
-                    Gtk.Label {
-                      label: _("Dark Mode");
-                      styles ["settings-row-title"]
-                      xalign: 0.0;
-                      hexpand: true;
-                    }
-                    Gtk.Switch dark_mode_switch {
-                      valign: center;
-                    }
-                  }
-                  Gtk.Label {
-                    label: _("Use dark color scheme");
-                    styles ["settings-row-desc"]
-                    xalign: 0.0;
-                  }
-                }
-
-                Gtk.Box {
-                  orientation: vertical;
-                  styles ["settings-row"]
-                  Gtk.Box {
-                    orientation: horizontal;
-                    Gtk.Label {
-                      label: _("Launch at login");
-                      styles ["settings-row-title"]
-                      xalign: 0.0;
-                      hexpand: true;
-                    }
-                    Gtk.Switch launch_switch {
-                      valign: center;
-                    }
-                  }
-                  Gtk.Label {
-                    label: _("Start minimized in background");
-                    styles ["settings-row-desc"]
-                    xalign: 0.0;
-                  }
-                }
-
-                Gtk.Box {
-                  orientation: vertical;
-                  styles ["settings-row"]
-                  Gtk.Box {
-                    orientation: horizontal;
-                    Gtk.Label {
-                      label: _("Minimize to tray");
-                      styles ["settings-row-title"]
-                      xalign: 0.0;
-                      hexpand: true;
-                    }
-                    Gtk.Switch tray_switch {
-                      valign: center;
-                      active: true;
-                    }
-                  }
-                  Gtk.Label {
-                    label: _("Keep app in system tray when closed");
-                    styles ["settings-row-desc"]
-                    xalign: 0.0;
-                  }
-                }
-
-                Gtk.Box {
-                  orientation: vertical;
-                  Gtk.Box {
-                    orientation: horizontal;
-                    Gtk.Label {
-                      label: _("Show notifications");
-                      styles ["settings-row-title"]
-                      xalign: 0.0;
-                      hexpand: true;
-                    }
-                    Gtk.Switch notifications_switch {
-                      valign: center;
-                      active: true;
-                    }
-                  }
-                  Gtk.Label {
-                    label: _("Notify on threshold changes");
-                    styles ["settings-row-desc"]
-                    xalign: 0.0;
-                  }
-                }
-              }
-            }
-
-            // Appearance
-            Gtk.Box {
-              orientation: vertical;
-              styles ["panel"]
-              hexpand: true;
-
-              Gtk.Label {
-                label: _("Appearance");
-                styles ["panel-title"]
-                xalign: 0.0;
-              }
-
-              Gtk.Box {
-                orientation: vertical;
-
-                Gtk.Box {
-                  orientation: horizontal;
-                  styles ["settings-row"]
-
-                  Gtk.Box {
-                    orientation: vertical;
-                    hexpand: true;
-                    Gtk.Label {
-                      label: _("Accent Color");
-                      styles ["settings-row-title"]
-                      xalign: 0.0;
-                    }
-                    Gtk.Label {
-                      label: _("Active state and readouts");
-                      styles ["settings-row-desc"]
-                      xalign: 0.0;
-                    }
-                  }
-
-                  Gtk.Box {
-                    orientation: horizontal;
-                    spacing: 6;
-                    valign: center;
-                    styles ["accent-swatch-row"]
-
-                    Gtk.ToggleButton swatch_orange {
-                      active: true;
-                      width-request: 20;
-                      height-request: 20;
-                      styles ["accent-swatch", "swatch-orange"]
-                    }
-                    Gtk.ToggleButton swatch_blue {
-                      width-request: 20;
-                      height-request: 20;
-                      styles ["accent-swatch", "swatch-blue"]
-                    }
-                    Gtk.ToggleButton swatch_green {
-                      width-request: 20;
-                      height-request: 20;
-                      styles ["accent-swatch", "swatch-green"]
-                    }
-                    Gtk.ToggleButton swatch_purple {
-                      width-request: 20;
-                      height-request: 20;
-                      styles ["accent-swatch", "swatch-purple"]
-                    }
-                    Gtk.ToggleButton swatch_red {
-                      width-request: 20;
-                      height-request: 20;
-                      styles ["accent-swatch", "swatch-red"]
-                    }
-                  }
-                }
-
-                Gtk.Box {
-                  orientation: vertical;
-                  styles ["settings-row"]
-                  Gtk.Box {
-                    orientation: horizontal;
-                    Gtk.Label {
-                      label: _("Compact Mode");
-                      styles ["settings-row-title"]
-                      xalign: 0.0;
-                      hexpand: true;
-                    }
-                    Gtk.Switch compact_switch {
-                      valign: center;
-                    }
-                  }
-                  Gtk.Label {
-                    label: _("Reduce spacing and padding");
-                    styles ["settings-row-desc"]
-                    xalign: 0.0;
-                  }
-                }
-
-                Gtk.Box {
-                  orientation: vertical;
-                  Gtk.Box {
-                    orientation: horizontal;
-                    Gtk.Label {
-                      label: _("Show percentage in title");
-                      styles ["settings-row-title"]
-                      xalign: 0.0;
-                      hexpand: true;
-                    }
-                    Gtk.Switch title_percentage_switch {
-                      valign: center;
-                    }
-                  }
-                  Gtk.Label {
-                    label: _("Display battery % in window title");
-                    styles ["settings-row-desc"]
-                    xalign: 0.0;
-                  }
-                }
-              }
-            }
-
-            // Diagnostics
-            Gtk.Box {
-              orientation: vertical;
-              styles ["panel"]
-              hexpand: true;
-
-              Gtk.Label {
-                label: _("Diagnostics");
-                styles ["panel-title"]
-                xalign: 0.0;
-              }
-
-              Gtk.Box {
-                orientation: vertical;
-
-                Gtk.Box {
-                  orientation: horizontal;
-                  styles ["settings-row"]
-                  Gtk.Label {
-                    label: _("Cycle Count");
-                    styles ["settings-row-title"]
-                    xalign: 0.0;
-                    hexpand: true;
-                  }
-                  Gtk.Label cycle_count_label {
-                    label: _("—");
-                    styles ["metadata-value"]
-                  }
-                }
-
-                Gtk.Box {
-                  orientation: horizontal;
-                  styles ["settings-row"]
-                  Gtk.Label {
-                    label: _("Design Capacity");
-                    styles ["settings-row-title"]
-                    xalign: 0.0;
-                    hexpand: true;
-                  }
-                  Gtk.Label design_capacity_label {
-                    label: _("—");
-                    styles ["metadata-value"]
-                  }
-                }
-
-                Gtk.Box {
-                  orientation: horizontal;
-                  styles ["settings-row"]
-                  Gtk.Label {
-                    label: _("Full Capacity");
-                    styles ["settings-row-title"]
-                    xalign: 0.0;
-                    hexpand: true;
-                  }
-                  Gtk.Label full_capacity_label {
-                    label: _("—");
-                    styles ["metadata-value"]
-                  }
-                }
-
-                Gtk.Box {
-                  orientation: horizontal;
-                  Gtk.Label {
-                    label: _("Health");
-                    styles ["settings-row-title"]
-                    xalign: 0.0;
-                    hexpand: true;
-                  }
-                  Gtk.Label health_pct_label {
-                    label: _("—");
-                    styles ["metadata-value"]
-                  }
-                }
-              }
-            }
-          }
-
-          // ── Footer status bar ────────────────────────────────────────
           Gtk.Box {
             orientation: horizontal;
-            spacing: 8;
-            styles ["footer-bar"]
 
-            Gtk.Label live_dot {
-              label: "○";
-              styles ["dim-label", "caption"]
-            }
-            Gtk.Label status_bar {
-              label: _("Ready");
-              styles ["dim-label", "caption"]
+            Gtk.Label {
+              label: _("Charge Limit");
+              styles ["panel-title"]
+              xalign: 0.0;
               hexpand: true;
+            }
+
+            Gtk.Label charge_value_label {
+              label: "80%";
+              styles ["instrument-value-sm"]
+            }
+          }
+
+          Gtk.Box {
+            orientation: horizontal;
+            spacing: 4;
+
+            Gtk.Label {
+              label: "20%";
+              styles ["slider-label"]
+            }
+            Gtk.Scale charge_scale {
+              adjustment: Gtk.Adjustment {
+                lower: 20;
+                upper: 100;
+                value: 80;
+                step-increment: 1;
+              };
+              draw-value: false;
+              hexpand: true;
+              styles ["threshold-slider"]
+            }
+            Gtk.Label {
+              label: "100%";
+              styles ["slider-label"]
+            }
+          }
+
+          Gtk.Label {
+            label: _("Recommended: 60–80% daily  •  100% for travel");
+            styles ["recommendation-text"]
+            xalign: 0.0;
+          }
+
+          // Preset tiles
+          Gtk.Box {
+            orientation: horizontal;
+            homogeneous: true;
+            spacing: 3;
+
+            Gtk.ToggleButton preset_60 {
+              styles ["preset-tile"]
+              child: Gtk.Box {
+                orientation: vertical;
+                spacing: 1;
+                valign: center;
+                Gtk.Label {
+                  label: "60%";
+                  styles ["preset-value"]
+                }
+                Gtk.Label {
+                  label: _("Daily Use");
+                  styles ["preset-subtitle"]
+                }
+              };
+            }
+            Gtk.ToggleButton preset_70 {
+              styles ["preset-tile"]
+              child: Gtk.Box {
+                orientation: vertical;
+                spacing: 1;
+                valign: center;
+                Gtk.Label {
+                  label: "70%";
+                  styles ["preset-value"]
+                }
+                Gtk.Label {
+                  label: _("Balanced");
+                  styles ["preset-subtitle"]
+                }
+              };
+            }
+            Gtk.ToggleButton preset_80 {
+              styles ["preset-tile"]
+              child: Gtk.Box {
+                orientation: vertical;
+                spacing: 1;
+                valign: center;
+                Gtk.Label {
+                  label: "80%";
+                  styles ["preset-value"]
+                }
+                Gtk.Label {
+                  label: _("Recommended");
+                  styles ["preset-subtitle"]
+                }
+              };
+            }
+            Gtk.ToggleButton preset_90 {
+              styles ["preset-tile"]
+              child: Gtk.Box {
+                orientation: vertical;
+                spacing: 1;
+                valign: center;
+                Gtk.Label {
+                  label: "90%";
+                  styles ["preset-value"]
+                }
+                Gtk.Label {
+                  label: _("Extended");
+                  styles ["preset-subtitle"]
+                }
+              };
+            }
+            Gtk.ToggleButton preset_100 {
+              styles ["preset-tile"]
+              child: Gtk.Box {
+                orientation: vertical;
+                spacing: 1;
+                valign: center;
+                Gtk.Label {
+                  label: "100%";
+                  styles ["preset-value"]
+                }
+                Gtk.Label {
+                  label: _("Travel");
+                  styles ["preset-subtitle"]
+                }
+              };
+            }
+          }
+
+          Gtk.Box {
+            orientation: horizontal;
+            spacing: 3;
+            margin-top: 1;
+
+            Gtk.Button apply_button {
+              label: _("Apply Threshold");
+              styles ["primary-action"]
+              hexpand: true;
+            }
+            Gtk.Button restore_button {
+              label: _("Restore to 100%");
+              styles ["secondary-action"]
+              hexpand: true;
+            }
+          }
+        }
+
+        // ── Lower settings grid: 3 columns ──────────────────────────
+        Gtk.Grid {
+          column-spacing: 3;
+          row-spacing: 3;
+          column-homogeneous: true;
+
+          // General
+          Gtk.Box {
+            orientation: vertical;
+            styles ["panel"]
+            hexpand: true;
+
+            Gtk.Label {
+              label: _("General");
+              styles ["panel-title"]
               xalign: 0.0;
             }
+
+            Gtk.Box {
+              orientation: vertical;
+
+              Gtk.Box {
+                orientation: vertical;
+                styles ["settings-row"]
+                Gtk.Box {
+                  orientation: horizontal;
+                  Gtk.Label {
+                    label: _("Dark Mode");
+                    styles ["settings-row-title"]
+                    xalign: 0.0;
+                    hexpand: true;
+                  }
+                  Gtk.Switch dark_mode_switch {
+                    valign: center;
+                  }
+                }
+                Gtk.Label {
+                  label: _("Use dark color scheme");
+                  styles ["settings-row-desc"]
+                  xalign: 0.0;
+                }
+              }
+
+              Gtk.Box {
+                orientation: vertical;
+                styles ["settings-row"]
+                Gtk.Box {
+                  orientation: horizontal;
+                  Gtk.Label {
+                    label: _("Launch at login");
+                    styles ["settings-row-title"]
+                    xalign: 0.0;
+                    hexpand: true;
+                  }
+                  Gtk.Switch launch_switch {
+                    valign: center;
+                  }
+                }
+                Gtk.Label {
+                  label: _("Start minimized in background");
+                  styles ["settings-row-desc"]
+                  xalign: 0.0;
+                }
+              }
+
+              Gtk.Box {
+                orientation: vertical;
+                styles ["settings-row"]
+                Gtk.Box {
+                  orientation: horizontal;
+                  Gtk.Label {
+                    label: _("Minimize to tray");
+                    styles ["settings-row-title"]
+                    xalign: 0.0;
+                    hexpand: true;
+                  }
+                  Gtk.Switch tray_switch {
+                    valign: center;
+                    active: true;
+                  }
+                }
+                Gtk.Label {
+                  label: _("Keep app in system tray when closed");
+                  styles ["settings-row-desc"]
+                  xalign: 0.0;
+                }
+              }
+
+              Gtk.Box {
+                orientation: vertical;
+                Gtk.Box {
+                  orientation: horizontal;
+                  Gtk.Label {
+                    label: _("Show notifications");
+                    styles ["settings-row-title"]
+                    xalign: 0.0;
+                    hexpand: true;
+                  }
+                  Gtk.Switch notifications_switch {
+                    valign: center;
+                    active: true;
+                  }
+                }
+                Gtk.Label {
+                  label: _("Notify on threshold changes");
+                  styles ["settings-row-desc"]
+                  xalign: 0.0;
+                }
+              }
+            }
+          }
+
+          // Appearance
+          Gtk.Box {
+            orientation: vertical;
+            styles ["panel"]
+            hexpand: true;
+
+            Gtk.Label {
+              label: _("Appearance");
+              styles ["panel-title"]
+              xalign: 0.0;
+            }
+
+            Gtk.Box {
+              orientation: vertical;
+
+              Gtk.Box {
+                orientation: horizontal;
+                styles ["settings-row"]
+
+                Gtk.Box {
+                  orientation: vertical;
+                  hexpand: true;
+                  Gtk.Label {
+                    label: _("Accent Color");
+                    styles ["settings-row-title"]
+                    xalign: 0.0;
+                  }
+                  Gtk.Label {
+                    label: _("Active state and readouts");
+                    styles ["settings-row-desc"]
+                    xalign: 0.0;
+                  }
+                }
+
+                Gtk.Box {
+                  orientation: horizontal;
+                  spacing: 3;
+                  valign: center;
+                  styles ["accent-swatch-row"]
+
+                  Gtk.ToggleButton swatch_orange {
+                    active: true;
+                    width-request: 16;
+                    height-request: 16;
+                    styles ["accent-swatch", "swatch-orange"]
+                  }
+                  Gtk.ToggleButton swatch_blue {
+                    width-request: 16;
+                    height-request: 16;
+                    styles ["accent-swatch", "swatch-blue"]
+                  }
+                  Gtk.ToggleButton swatch_green {
+                    width-request: 16;
+                    height-request: 16;
+                    styles ["accent-swatch", "swatch-green"]
+                  }
+                  Gtk.ToggleButton swatch_purple {
+                    width-request: 16;
+                    height-request: 16;
+                    styles ["accent-swatch", "swatch-purple"]
+                  }
+                  Gtk.ToggleButton swatch_red {
+                    width-request: 16;
+                    height-request: 16;
+                    styles ["accent-swatch", "swatch-red"]
+                  }
+                }
+              }
+
+              Gtk.Box {
+                orientation: vertical;
+                styles ["settings-row"]
+                Gtk.Box {
+                  orientation: horizontal;
+                  Gtk.Label {
+                    label: _("Compact Mode");
+                    styles ["settings-row-title"]
+                    xalign: 0.0;
+                    hexpand: true;
+                  }
+                  Gtk.Switch compact_switch {
+                    valign: center;
+                  }
+                }
+                Gtk.Label {
+                  label: _("Reduce spacing and padding");
+                  styles ["settings-row-desc"]
+                  xalign: 0.0;
+                }
+              }
+
+              Gtk.Box {
+                orientation: vertical;
+                Gtk.Box {
+                  orientation: horizontal;
+                  Gtk.Label {
+                    label: _("Show percentage in title");
+                    styles ["settings-row-title"]
+                    xalign: 0.0;
+                    hexpand: true;
+                  }
+                  Gtk.Switch title_percentage_switch {
+                    valign: center;
+                  }
+                }
+                Gtk.Label {
+                  label: _("Display battery % in window title");
+                  styles ["settings-row-desc"]
+                  xalign: 0.0;
+                }
+              }
+            }
+          }
+
+          // Diagnostics
+          Gtk.Box {
+            orientation: vertical;
+            styles ["panel"]
+            hexpand: true;
+
+            Gtk.Label {
+              label: _("Diagnostics");
+              styles ["panel-title"]
+              xalign: 0.0;
+            }
+
+            Gtk.Box {
+              orientation: vertical;
+
+              Gtk.Box {
+                orientation: horizontal;
+                styles ["settings-row"]
+                Gtk.Label {
+                  label: _("Cycle Count");
+                  styles ["settings-row-title"]
+                  xalign: 0.0;
+                  hexpand: true;
+                }
+                Gtk.Label cycle_count_label {
+                  label: _("—");
+                  styles ["metadata-value"]
+                }
+              }
+
+              Gtk.Box {
+                orientation: horizontal;
+                styles ["settings-row"]
+                Gtk.Label {
+                  label: _("Design Capacity");
+                  styles ["settings-row-title"]
+                  xalign: 0.0;
+                  hexpand: true;
+                }
+                Gtk.Label design_capacity_label {
+                  label: _("—");
+                  styles ["metadata-value"]
+                }
+              }
+
+              Gtk.Box {
+                orientation: horizontal;
+                styles ["settings-row"]
+                Gtk.Label {
+                  label: _("Full Capacity");
+                  styles ["settings-row-title"]
+                  xalign: 0.0;
+                  hexpand: true;
+                }
+                Gtk.Label full_capacity_label {
+                  label: _("—");
+                  styles ["metadata-value"]
+                }
+              }
+
+              Gtk.Box {
+                orientation: horizontal;
+                Gtk.Label {
+                  label: _("Health");
+                  styles ["settings-row-title"]
+                  xalign: 0.0;
+                  hexpand: true;
+                }
+                Gtk.Label health_pct_label {
+                  label: _("—");
+                  styles ["metadata-value"]
+                }
+              }
+            }
+          }
+        }
+
+        // ── Footer status bar ────────────────────────────────────────
+        Gtk.Box {
+          orientation: horizontal;
+          spacing: 3;
+          styles ["footer-bar"]
+
+          Gtk.Label live_dot {
+            label: "○";
+            styles ["dim-label", "caption"]
+          }
+          Gtk.Label status_bar {
+            label: _("Ready");
+            styles ["dim-label", "caption"]
+            hexpand: true;
+            xalign: 0.0;
           }
         }
       }
