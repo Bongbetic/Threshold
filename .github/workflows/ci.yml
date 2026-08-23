@@ -30,11 +30,11 @@ jobs:
             python3-pytest \
             python3-pytest-cov \
             flake8 \
-            blueprint-compiler \
             appstream \
             libgtk-4-dev \
             libadwaita-1-dev \
             gir1.2-notify-0.7
+          pipx install blueprint-compiler
 
       - name: Configure
         run: meson setup builddir
@@ -77,7 +77,10 @@ jobs:
           sudo apt-get install -y dpkg-dev lintian
 
       - name: Install build dependencies
-        run: sudo apt-get build-dep -y .
+        run: |
+          sudo apt-get install -y blueprint-compiler
+          sudo apt-get build-dep -y .
+          pipx install blueprint-compiler
 
       - name: Build .debs
         run: |
@@ -121,7 +124,6 @@ jobs:
             python3-pytest \
             python3-pytest-cov \
             flake8 \
-            blueprint-compiler \
             appstream \
             libgtk-4-dev \
             libadwaita-1-dev \
@@ -133,6 +135,7 @@ jobs:
             dh-python \
             dkms \
             lintian
+          pipx install blueprint-compiler
 
       - name: Prepare non-root build user
         run: |
