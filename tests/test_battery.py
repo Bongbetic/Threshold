@@ -436,3 +436,120 @@ def test_evaluate_alarm_no_status(tmp_path):
 
 def test_evaluate_alarm_below_threshold(tmp_path):
     assert battery.evaluate_alarm(79, "Charging", 80, fired=False) is False
+
+
+# ─── read_cycle_count ────────────────────────────────────────────────────────
+
+
+def test_read_cycle_count(tmp_path):
+    (tmp_path / "cycle_count").write_text("156\n")
+    assert battery.read_cycle_count(tmp_path) == 156
+
+
+def test_read_cycle_count_missing(tmp_path):
+    assert battery.read_cycle_count(tmp_path) is None
+
+
+def test_read_cycle_count_invalid(tmp_path):
+    (tmp_path / "cycle_count").write_text("n/a\n")
+    assert battery.read_cycle_count(tmp_path) is None
+
+
+# ─── read_capacity_wh ────────────────────────────────────────────────────────
+
+
+def test_read_capacity_wh_energy(tmp_path):
+    (tmp_path / "energy_full").write_text("54000000\n")
+    (tmp_path / "energy_full_design").write_text("54000000\n")
+    full, design = battery.read_capacity_wh(tmp_path)
+    assert full == 54.0
+    assert design == 54.0
+
+
+def test_read_capacity_wh_charge_fallback(tmp_path):
+    (tmp_path / "charge_full").write_text("4000000\n")
+    (tmp_path / "charge_full_design").write_text("4400000\n")
+    full, design = battery.read_capacity_wh(tmp_path)
+    assert full == 4.0
+    assert design == 4.4
+
+
+def test_read_capacity_wh_prefers_energy(tmp_path):
+    (tmp_path / "energy_full").write_text("50000000\n")
+    (tmp_path / "energy_full_design").write_text("50000000\n")
+    (tmp_path / "charge_full").write_text("4000000\n")
+    (tmp_path / "charge_full_design").write_text("4400000\n")
+    full, design = battery.read_capacity_wh(tmp_path)
+    assert full == 50.0
+    assert design == 50.0
+
+
+def test_read_capacity_wh_missing(tmp_path):
+    assert battery.read_capacity_wh(tmp_path) is None
+
+
+def test_read_capacity_wh_zero_ignored(tmp_path):
+    (tmp_path / "energy_full").write_text("0\n")
+    (tmp_path / "energy_full_design").write_text("0\n")
+    assert battery.read_capacity_wh(tmp_path) is None
+
+
+# ─── battery_health_percent ───────────────────────────────────────────────────
+
+
+def test_battery_health_percent(tmp_path):
+    (tmp_path / "energy_full").write_text("48000000\n")
+    (tmp_path / "energy_full_design").write_text("54000000\n")
+    assert battery.battery_health_percent(tmp_path) == 89
+
+
+def test_battery_health_percent_missing(tmp_path):
+    assert battery.battery_health_percent(tmp_path) is None
+
+
+# ─── health_grade ─────────────────────────────────────────────────────────────
+
+
+def test_health_grade_good():
+    assert battery.health_grade(85) == battery.HEALTH_GOOD
+
+
+def test_health_grade_fair():
+    assert battery.health_grade(70) == battery.HEALTH_FAIR
+
+
+def test_health_grade_poor():
+    assert battery.health_grade(50) == battery.HEALTH_POOR
+
+
+def test_health_grade_unknown():
+    assert battery.health_grade(None) == "—"
+
+
+# ─── read_power_source ───────────────────────────────────────────────────────
+
+
+def test_read_power_source_ac_online(tmp_path, monkeypatch):
+    mains = tmp_path / "AC_ADAPTER"
+    mains.mkdir()
+    (mains / "type").write_text("Mains")
+    (mains / "online").write_text("1")
+    bat = tmp_path / "BAT0"
+    bat.mkdir()
+    (bat / "type").write_text("Battery")
+    _mock_power_supply_root(monkeypatch, tmp_path)
+    assert battery.read_power_source() == battery.POWER_SOURCE_AC
+
+
+def test_read_power_source_ac_offline(tmp_path, monkeypatch):
+    mains = tmp_path / "AC_ADAPTER"
+    mains.mkdir()
+    (mains / "type").write_text("Mains")
+    (mains / "online").write_text("0")
+    _mock_power_supply_root(monkeypatch, tmp_path)
+    assert battery.read_power_source() == battery.POWER_SOURCE_BATTERY
+
+
+def test_read_power_source_no_mains(tmp_path, monkeypatch):
+    _mock_power_supply_root(monkeypatch, tmp_path)
+    assert battery.read_power_source() == battery.POWER_SOURCE_BATTERY

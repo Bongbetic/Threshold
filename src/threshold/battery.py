@@ -11,6 +11,13 @@ THRESHOLD_PRESETS = (60, 70, 80, 90, 100)
 
 MSI_EC_PLATFORM = Path("/sys/devices/platform/msi-ec")
 
+POWER_SOURCE_AC = "AC Adapter"
+POWER_SOURCE_BATTERY = "Battery"
+
+HEALTH_GOOD = "Good"
+HEALTH_FAIR = "Fair"
+HEALTH_POOR = "Poor"
+
 
 class ControlMode(Enum):
     """How the application communicates charge thresholds to the battery."""
@@ -122,6 +129,78 @@ def read_charge_percent(bat_path: Path) -> int | None:
         except ValueError:
             continue
     return None
+
+
+def _read_micro_value(path: Path) -> float | None:
+    """Read a sysfs micro-value (µAh/µWh) as a float, or None."""
+    raw = read_sysfs(path)
+    if raw is None:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        return None
+    return value if value > 0 else None
+
+
+def read_cycle_count(bat_path: Path) -> int | None:
+    """Return the battery cycle count, or None when unavailable."""
+    raw = read_sysfs(bat_path / "cycle_count")
+    if raw is None:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        return None
+
+
+def read_capacity_wh(bat_path: Path) -> tuple[float, float] | None:
+    """Return ``(full_wh, design_wh)`` for the battery, or None.
+
+    Prefers ``energy_*`` (µWh) attributes, then falls back to
+    ``charge_*`` (µAh) — both converted to watt-hours.
+    """
+    for prefix in ("energy", "charge"):
+        full = _read_micro_value(bat_path / f"{prefix}_full")
+        design = _read_micro_value(bat_path / f"{prefix}_full_design")
+        if full is not None and design is not None:
+            return full / 1_000_000, design / 1_000_000
+    return None
+
+
+def battery_health_percent(bat_path: Path) -> int | None:
+    """Return battery health as full/design capacity percent, or None."""
+    capacity = read_capacity_wh(bat_path)
+    if capacity is None:
+        return None
+    full_wh, design_wh = capacity
+    if design_wh <= 0:
+        return None
+    return max(0, min(100, round(full_wh / design_wh * 100)))
+
+
+def health_grade(percent: int | None) -> str:
+    """Qualitative health grade for a health percentage."""
+    if percent is None:
+        return "—"
+    if percent >= 80:
+        return HEALTH_GOOD
+    if percent >= 60:
+        return HEALTH_FAIR
+    return HEALTH_POOR
+
+
+def read_power_source() -> str:
+    """Return POWER_SOURCE_AC when any Mains supply is online, else battery.
+
+    Used for the Battery Status card's power-source readout.
+    """
+    for psy_path in _enumerate_power_supplies():
+        if read_sysfs(psy_path / "type") != "Mains":
+            continue
+        if read_sysfs(psy_path / "online") == "1":
+            return POWER_SOURCE_AC
+    return POWER_SOURCE_BATTERY
 
 
 def write_threshold(bat_path: Path, value: int) -> tuple[bool, str]:
