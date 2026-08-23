@@ -2,10 +2,10 @@ using Gtk 4.0;
 using Adw 1;
 
 template $ThresholdWindow: Adw.ApplicationWindow {
-  default-width: 1100;
-  default-height: 820;
-  width-request: 900;
-  height-request: 640;
+  default-width: 980;
+  default-height: 680;
+  width-request: 820;
+  height-request: 560;
   title: _("Threshold");
   css-classes: ["threshold-window", "accent-orange"];
 
@@ -26,16 +26,16 @@ template $ThresholdWindow: Adw.ApplicationWindow {
 
         Gtk.Box {
           orientation: vertical;
-          spacing: 12;
-          margin-top: 14;
-          margin-bottom: 14;
-          margin-start: 18;
-          margin-end: 18;
+          spacing: 10;
+          margin-top: 10;
+          margin-bottom: 10;
+          margin-start: 12;
+          margin-end: 12;
 
           // ── Top status grid: 3 columns ─────────────────────────────
           Gtk.Grid {
-            column-spacing: 12;
-            row-spacing: 12;
+            column-spacing: 10;
+            row-spacing: 10;
             column-homogeneous: true;
 
             // Battery Status
@@ -53,11 +53,11 @@ template $ThresholdWindow: Adw.ApplicationWindow {
               Gtk.Box {
                 orientation: horizontal;
                 valign: center;
-                margin-top: 8;
+                margin-top: 4;
 
                 Gtk.Box {
                   orientation: vertical;
-                  spacing: 6;
+                  spacing: 4;
 
                   Gtk.Label current_charge_label {
                     label: "--%";
@@ -91,7 +91,7 @@ template $ThresholdWindow: Adw.ApplicationWindow {
 
                 Gtk.Box {
                   orientation: vertical;
-                  spacing: 6;
+                  spacing: 4;
                   halign: end;
                   hexpand: true;
 
@@ -140,12 +140,12 @@ template $ThresholdWindow: Adw.ApplicationWindow {
                 label: "--%";
                 styles ["instrument-value-accent"]
                 xalign: 0.0;
-                margin-top: 8;
+                margin-top: 4;
               }
 
               Gtk.Box {
                 orientation: horizontal;
-                margin-top: 12;
+                margin-top: 6;
 
                 Gtk.Label battery_name_label {
                   label: _("—");
@@ -188,14 +188,14 @@ template $ThresholdWindow: Adw.ApplicationWindow {
                 label: _("—");
                 styles ["instrument-value-sm"]
                 xalign: 0.0;
-                margin-top: 8;
+                margin-top: 4;
               }
 
               Gtk.Label {
                 label: _("How the threshold is applied to hardware");
                 styles ["metadata-caption"]
                 xalign: 0.0;
-                margin-top: 6;
+                margin-top: 2;
               }
             }
           }
@@ -204,7 +204,7 @@ template $ThresholdWindow: Adw.ApplicationWindow {
           Gtk.Box {
             orientation: vertical;
             styles ["panel"]
-            spacing: 10;
+            spacing: 8;
 
             Gtk.Box {
               orientation: horizontal;
@@ -257,7 +257,7 @@ template $ThresholdWindow: Adw.ApplicationWindow {
             Gtk.Box {
               orientation: horizontal;
               homogeneous: true;
-              spacing: 8;
+              spacing: 6;
 
               Gtk.ToggleButton preset_60 {
                 styles ["preset-tile"]
@@ -343,7 +343,7 @@ template $ThresholdWindow: Adw.ApplicationWindow {
 
             Gtk.Box {
               orientation: horizontal;
-              spacing: 10;
+              spacing: 8;
               margin-top: 2;
 
               Gtk.Button apply_button {
@@ -361,8 +361,8 @@ template $ThresholdWindow: Adw.ApplicationWindow {
 
           // ── Lower settings grid: 3 columns ──────────────────────────
           Gtk.Grid {
-            column-spacing: 12;
-            row-spacing: 12;
+            column-spacing: 10;
+            row-spacing: 10;
             column-homogeneous: true;
 
             // General
@@ -513,28 +513,28 @@ template $ThresholdWindow: Adw.ApplicationWindow {
 
                     Gtk.ToggleButton swatch_orange {
                       active: true;
-                      width-request: 24;
-                      height-request: 24;
+                      width-request: 20;
+                      height-request: 20;
                       styles ["accent-swatch", "swatch-orange"]
                     }
                     Gtk.ToggleButton swatch_blue {
-                      width-request: 24;
-                      height-request: 24;
+                      width-request: 20;
+                      height-request: 20;
                       styles ["accent-swatch", "swatch-blue"]
                     }
                     Gtk.ToggleButton swatch_green {
-                      width-request: 24;
-                      height-request: 24;
+                      width-request: 20;
+                      height-request: 20;
                       styles ["accent-swatch", "swatch-green"]
                     }
                     Gtk.ToggleButton swatch_purple {
-                      width-request: 24;
-                      height-request: 24;
+                      width-request: 20;
+                      height-request: 20;
                       styles ["accent-swatch", "swatch-purple"]
                     }
                     Gtk.ToggleButton swatch_red {
-                      width-request: 24;
-                      height-request: 24;
+                      width-request: 20;
+                      height-request: 20;
                       styles ["accent-swatch", "swatch-red"]
                     }
                   }

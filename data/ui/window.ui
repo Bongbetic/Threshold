@@ -7,10 +7,10 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
 <interface>
   <requires lib="gtk" version="4.0"/>
   <template class="ThresholdWindow" parent="AdwApplicationWindow">
-    <property name="default-width">1100</property>
-    <property name="default-height">820</property>
-    <property name="width-request">900</property>
-    <property name="height-request">640</property>
+    <property name="default-width">980</property>
+    <property name="default-height">680</property>
+    <property name="width-request">820</property>
+    <property name="height-request">560</property>
     <property name="title" translatable="yes">Threshold</property>
     <property name="css-classes">threshold-window
 accent-orange</property>
@@ -35,15 +35,15 @@ accent-orange</property>
                 <child>
                   <object class="GtkBox">
                     <property name="orientation">1</property>
-                    <property name="spacing">12</property>
-                    <property name="margin-top">14</property>
-                    <property name="margin-bottom">14</property>
-                    <property name="margin-start">18</property>
-                    <property name="margin-end">18</property>
+                    <property name="spacing">10</property>
+                    <property name="margin-top">10</property>
+                    <property name="margin-bottom">10</property>
+                    <property name="margin-start">12</property>
+                    <property name="margin-end">12</property>
                     <child>
                       <object class="GtkGrid">
-                        <property name="column-spacing">12</property>
-                        <property name="row-spacing">12</property>
+                        <property name="column-spacing">10</property>
+                        <property name="row-spacing">10</property>
                         <property name="column-homogeneous">true</property>
                         <child>
                           <object class="GtkBox">
@@ -65,11 +65,11 @@ accent-orange</property>
                               <object class="GtkBox">
                                 <property name="orientation">0</property>
                                 <property name="valign">3</property>
-                                <property name="margin-top">8</property>
+                                <property name="margin-top">4</property>
                                 <child>
                                   <object class="GtkBox">
                                     <property name="orientation">1</property>
-                                    <property name="spacing">6</property>
+                                    <property name="spacing">4</property>
                                     <child>
                                       <object class="GtkLabel" id="current_charge_label">
                                         <property name="label">--%</property>
@@ -118,7 +118,7 @@ accent-orange</property>
                                 <child>
                                   <object class="GtkBox">
                                     <property name="orientation">1</property>
-                                    <property name="spacing">6</property>
+                                    <property name="spacing">4</property>
                                     <property name="halign">2</property>
                                     <property name="hexpand">true</property>
                                     <child>
@@ -194,13 +194,13 @@ accent-orange</property>
                                   <class name="instrument-value-accent"/>
                                 </style>
                                 <property name="xalign">0</property>
-                                <property name="margin-top">8</property>
+                                <property name="margin-top">4</property>
                               </object>
                             </child>
                             <child>
                               <object class="GtkBox">
                                 <property name="orientation">0</property>
-                                <property name="margin-top">12</property>
+                                <property name="margin-top">6</property>
                                 <child>
                                   <object class="GtkLabel" id="battery_name_label">
                                     <property name="label" translatable="yes">—</property>
@@ -262,7 +262,7 @@ accent-orange</property>
                                   <class name="instrument-value-sm"/>
                                 </style>
                                 <property name="xalign">0</property>
-                                <property name="margin-top">8</property>
+                                <property name="margin-top">4</property>
                               </object>
                             </child>
                             <child>
@@ -272,7 +272,7 @@ accent-orange</property>
                                   <class name="metadata-caption"/>
                                 </style>
                                 <property name="xalign">0</property>
-                                <property name="margin-top">6</property>
+                                <property name="margin-top">2</property>
                               </object>
                             </child>
                           </object>
@@ -285,7 +285,7 @@ accent-orange</property>
                         <style>
                           <class name="panel"/>
                         </style>
-                        <property name="spacing">10</property>
+                        <property name="spacing">8</property>
                         <child>
                           <object class="GtkBox">
                             <property name="orientation">0</property>
@@ -361,7 +361,7 @@ accent-orange</property>
                           <object class="GtkBox">
                             <property name="orientation">0</property>
                             <property name="homogeneous">true</property>
-                            <property name="spacing">8</property>
+                            <property name="spacing">6</property>
                             <child>
                               <object class="GtkToggleButton" id="preset_60">
                                 <style>
@@ -517,7 +517,7 @@ accent-orange</property>
                         <child>
                           <object class="GtkBox">
                             <property name="orientation">0</property>
-                            <property name="spacing">10</property>
+                            <property name="spacing">8</property>
                             <property name="margin-top">2</property>
                             <child>
                               <object class="GtkButton" id="apply_button">
@@ -543,8 +543,8 @@ accent-orange</property>
                     </child>
                     <child>
                       <object class="GtkGrid">
-                        <property name="column-spacing">12</property>
-                        <property name="row-spacing">12</property>
+                        <property name="column-spacing">10</property>
+                        <property name="row-spacing">10</property>
                         <property name="column-homogeneous">true</property>
                         <child>
                           <object class="GtkBox">
@@ -776,8 +776,8 @@ accent-orange</property>
                                         <child>
                                           <object class="GtkToggleButton" id="swatch_orange">
                                             <property name="active">true</property>
-                                            <property name="width-request">24</property>
-                                            <property name="height-request">24</property>
+                                            <property name="width-request">20</property>
+                                            <property name="height-request">20</property>
                                             <style>
                                               <class name="accent-swatch"/>
                                               <class name="swatch-orange"/>
@@ -786,8 +786,8 @@ accent-orange</property>
                                         </child>
                                         <child>
                                           <object class="GtkToggleButton" id="swatch_blue">
-                                            <property name="width-request">24</property>
-                                            <property name="height-request">24</property>
+                                            <property name="width-request">20</property>
+                                            <property name="height-request">20</property>
                                             <style>
                                               <class name="accent-swatch"/>
                                               <class name="swatch-blue"/>
@@ -796,8 +796,8 @@ accent-orange</property>
                                         </child>
                                         <child>
                                           <object class="GtkToggleButton" id="swatch_green">
-                                            <property name="width-request">24</property>
-                                            <property name="height-request">24</property>
+                                            <property name="width-request">20</property>
+                                            <property name="height-request">20</property>
                                             <style>
                                               <class name="accent-swatch"/>
                                               <class name="swatch-green"/>
@@ -806,8 +806,8 @@ accent-orange</property>
                                         </child>
                                         <child>
                                           <object class="GtkToggleButton" id="swatch_purple">
-                                            <property name="width-request">24</property>
-                                            <property name="height-request">24</property>
+                                            <property name="width-request">20</property>
+                                            <property name="height-request">20</property>
                                             <style>
                                               <class name="accent-swatch"/>
                                               <class name="swatch-purple"/>
@@ -816,8 +816,8 @@ accent-orange</property>
                                         </child>
                                         <child>
                                           <object class="GtkToggleButton" id="swatch_red">
-                                            <property name="width-request">24</property>
-                                            <property name="height-request">24</property>
+                                            <property name="width-request">20</property>
+                                            <property name="height-request">20</property>
                                             <style>
                                               <class name="accent-swatch"/>
                                               <class name="swatch-red"/>

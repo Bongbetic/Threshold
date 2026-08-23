@@ -421,22 +421,36 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self._pending_idle_id = None
         self._geometry_debounce_id = None
 
+    def _sync_from_hardware(self):
+        """Re-detect mode and follow the EC threshold when it changes externally.
+
+        Skipped while a write is in flight or the user is dragging the slider.
+        """
+        if self._writing or self._battery_path is None:
+            return
+        mode = detect_control_mode(self._battery_path)
+        if mode != self._control_mode:
+            self._control_mode = mode
+            self._update_mode_label()
+            if self._has_threshold_control():
+                self.charge_scale.set_sensitive(True)
+                self.apply_button.set_sensitive(True)
+                self.restore_button.set_sensitive(True)
+        if self._has_threshold_control():
+            raw = read_sysfs(self._battery_path / 'charge_control_end_threshold')
+            if raw is not None:
+                try:
+                    ec_value = int(raw)
+                except ValueError:
+                    return
+                if ec_value != int(self.charge_scale.get_value()):
+                    self.charge_scale.set_value(ec_value)
+                    self._config.set_charge_threshold(ec_value)
+                    self._update_tray_label()
+
     def _poll_tick(self):
         """Called every 5 seconds — refresh battery data and animate dot."""
-        if self._battery_path is None:
-            # msi-ec may have loaded after launch — retry discovery.
-            self._battery_path = find_battery_path()
-            if self._battery_path is not None:
-                self._control_mode = detect_control_mode(self._battery_path)
-                self._update_mode_label()
-                if self._has_threshold_control():
-                    self.charge_scale.set_sensitive(True)
-                    self.apply_button.set_sensitive(True)
-                    self.restore_button.set_sensitive(True)
-        elif self._control_mode is None:
-            self._control_mode = detect_control_mode(self._battery_path)
-            self._update_mode_label()
-
+        self._sync_from_hardware()
         self._refresh_battery_data()
         self._update_tray_label()
         self._evaluate_alarm()
@@ -544,17 +558,21 @@ class ThresholdWindow(Adw.ApplicationWindow):
                 result = write_threshold(bat_path, value)
             if not self._closed:
                 self._pending_idle_id = GLib.idle_add(
-                    self._finish_apply, button, value, result
+                    self._finish_apply, button, value, result, bat_path, notify_only
                 )
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _finish_apply(self, button, value, result):
+    def _finish_apply(self, button, value, result, bat_path, notify_only):
         self._pending_idle_id = None
         if self._closed:
             return GLib.SOURCE_REMOVE
         success, message = result
         if success:
+            if not notify_only:
+                actual = read_sysfs(bat_path / 'charge_control_end_threshold')
+                if actual is not None and int(actual) != value:
+                    message = f'{message} (EC stored {actual}%)'
             self._config.set_charge_threshold(value)
             self._config.set_last_applied_time(int(datetime.now().timestamp()))
             self.last_changed_label.set_label(
@@ -601,6 +619,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self.restore_button.set_sensitive(True)
         button.set_label(_('Apply Threshold'))
         self._writing = False
+        self._update_tray_label()
         return GLib.SOURCE_REMOVE
 
     def _on_restore(self, button):
@@ -622,17 +641,21 @@ class ThresholdWindow(Adw.ApplicationWindow):
                 result = write_threshold(bat_path, 100)
             if not self._closed:
                 self._pending_idle_id = GLib.idle_add(
-                    self._finish_restore, button, result
+                    self._finish_restore, button, result, bat_path, notify_only
                 )
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _finish_restore(self, button, result):
+    def _finish_restore(self, button, result, bat_path, notify_only):
         self._pending_idle_id = None
         if self._closed:
             return GLib.SOURCE_REMOVE
         success, message = result
         if success:
+            if not notify_only:
+                actual = read_sysfs(bat_path / 'charge_control_end_threshold')
+                if actual is not None and int(actual) != 100:
+                    message = f'{message} (EC stored {actual}%)'
             self.charge_scale.set_value(100)
             self.charge_value_label.set_label('100%')
             self._sync_presets(100)
@@ -670,6 +693,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self.apply_button.set_sensitive(True)
         button.set_label(_('Restore to 100%'))
         self._writing = False
+        self._update_tray_label()
         return GLib.SOURCE_REMOVE
 
     def _on_dark_mode_toggled(self, switch, _param):
