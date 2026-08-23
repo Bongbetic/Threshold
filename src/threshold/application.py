@@ -25,6 +25,10 @@ from threshold.config import Config  # noqa: E402
 from threshold.migration import migrate_if_needed  # noqa: E402
 
 
+TIGHT_WINDOW_WIDTH = 760
+TIGHT_WINDOW_HEIGHT = 365
+
+
 class ThresholdApplication(Adw.Application):
 
     def __init__(self):
@@ -44,12 +48,15 @@ class ThresholdApplication(Adw.Application):
         win = self.props.active_window
         if not win:
             win = ThresholdWindow(application=self, config=self._config)
-            if self._config.get_maximized():
-                win.maximize()
-            else:
-                w = self._config.get_window_width()
-                h = self._config.get_window_height()
-                win.set_default_size(w, h)
+            # V3 UI is an instrument panel, not a document canvas. Older
+            # releases persisted huge/maximized geometry (e.g. 1340×890),
+            # leaving empty grid around the cards. Force the tight design
+            # size and keep settings from re-expanding future launches.
+            win.set_resizable(False)
+            win.set_default_size(TIGHT_WINDOW_WIDTH, TIGHT_WINDOW_HEIGHT)
+            self._config.set_maximized(False)
+            self._config.set_window_width(TIGHT_WINDOW_WIDTH)
+            self._config.set_window_height(TIGHT_WINDOW_HEIGHT)
         win.present()
 
     def do_shutdown(self):
@@ -58,10 +65,9 @@ class ThresholdApplication(Adw.Application):
         if win is not None:
             if hasattr(win, '_stop_polling'):
                 win._stop_polling()
-            self._config.set_maximized(win.props.maximized)
-            if not win.props.maximized:
-                self._config.set_window_width(win.get_width())
-                self._config.set_window_height(win.get_height())
+            self._config.set_maximized(False)
+            self._config.set_window_width(TIGHT_WINDOW_WIDTH)
+            self._config.set_window_height(TIGHT_WINDOW_HEIGHT)
         if Notify.is_initted():
             Notify.uninit()
         Adw.Application.do_shutdown(self)

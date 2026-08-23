@@ -49,12 +49,12 @@
       <description>Unix timestamp of the last successful threshold apply.</description>
     </key>
     <key name="window-width" type="i">
-      <default>980</default>
+      <default>760</default>
       <summary>Window width</summary>
       <description>Default window width in pixels.</description>
     </key>
     <key name="window-height" type="i">
-      <default>680</default>
+      <default>365</default>
       <summary>Window height</summary>
       <description>Default window height in pixels.</description>
     </key>
