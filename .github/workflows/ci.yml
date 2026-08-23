@@ -36,7 +36,7 @@ jobs:
             libgtk-4-dev \
             libadwaita-1-dev \
             gir1.2-notify-0.7
-          pipx install blueprint-compiler --pip-args='--no-cache-dir'
+          pipx install blueprint-compiler --pip-args='--prefer-binary'
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Configure
@@ -83,7 +83,7 @@ jobs:
         run: |
           sudo apt-get install -y libgirepository1.0-dev python3-gi-dev
           sudo apt-get build-dep -y .
-          pipx install blueprint-compiler --pip-args='--no-cache-dir'
+          pipx install blueprint-compiler --pip-args='--prefer-binary'
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Build .debs
