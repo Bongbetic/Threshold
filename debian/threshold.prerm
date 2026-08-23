@@ -2,9 +2,9 @@
 set -e
 
 case "$1" in
-    remove|upgrade|deconfigure)
+    remove|deconfigure)
         if command -v dkms >/dev/null 2>&1; then
-            dkms remove -m msi-ec -v 0.13 --all --no-depmod || true
+            dkms remove -m msi-ec -v 0.13 --all || true
         fi
         ;;
 esac

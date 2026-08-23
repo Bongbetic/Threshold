@@ -24,16 +24,16 @@ SNI_INTROSPECT = """\
 <node>
   <interface name="org.kde.StatusNotifierItem">
     <method name="Activate">
-      <parameter name="x" type="i" direction="in"/>
-      <parameter name="y" type="i" direction="in"/>
+      <arg name="x" type="i" direction="in"/>
+      <arg name="y" type="i" direction="in"/>
     </method>
     <method name="SecondaryActivate">
-      <parameter name="x" type="i" direction="in"/>
-      <parameter name="y" type="i" direction="in"/>
+      <arg name="x" type="i" direction="in"/>
+      <arg name="y" type="i" direction="in"/>
     </method>
     <method name="Scroll">
-      <parameter name="delta" type="i" direction="in"/>
-      <parameter name="orientation" type="s" direction="in"/>
+      <arg name="delta" type="i" direction="in"/>
+      <arg name="orientation" type="s" direction="in"/>
     </method>
     <property name="Category" type="s" access="read"/>
     <property name="Id" type="s" access="read"/>
@@ -164,10 +164,11 @@ class TrayIcon:
 
     # ── SNI D-Bus interface ──────────────────────────────────────────────
 
-    def _on_sni_method_call(self, _conn, _sender, _path, _iface, method, params, _invocation):
+    def _on_sni_method_call(self, _conn, _sender, _path, _iface, method, params, invocation):
         if method == 'Activate' or method == 'SecondaryActivate':
             if self._on_activate:
                 self._on_activate()
+        invocation.return_value(None)
 
     def _on_sni_get_property(self, _conn, _sender, _path, _iface, name):
         if name == 'Category':
