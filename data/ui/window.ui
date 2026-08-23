@@ -7,10 +7,10 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
 <interface>
   <requires lib="gtk" version="4.0"/>
   <template class="ThresholdWindow" parent="AdwApplicationWindow">
-    <property name="default-width">680</property>
-    <property name="default-height">420</property>
-    <property name="width-request">680</property>
-    <property name="height-request">420</property>
+    <property name="default-width">760</property>
+    <property name="default-height">365</property>
+    <property name="width-request">760</property>
+    <property name="height-request">365</property>
     <property name="title" translatable="yes">Threshold</property>
     <property name="css-classes">threshold-window
 accent-orange</property>
@@ -28,7 +28,7 @@ accent-orange</property>
         </child>
         <child>
           <object class="AdwClamp">
-            <property name="maximum-size">900</property>
+            <property name="maximum-size">760</property>
             <child>
               <object class="GtkBox">
                 <property name="orientation">1</property>
@@ -44,14 +44,16 @@ accent-orange</property>
                     <property name="column-homogeneous">true</property>
                     <child>
                       <object class="GtkBox">
-                        <property name="orientation">1</property>
+                        <property name="orientation">0</property>
                         <style>
                           <class name="panel"/>
                         </style>
                         <property name="hexpand">true</property>
+                        <property name="spacing">4</property>
+                        <property name="valign">3</property>
                         <child>
                           <object class="GtkLabel">
-                            <property name="label" translatable="yes">Battery Status</property>
+                            <property name="label" translatable="yes">Battery</property>
                             <style>
                               <class name="panel-title"/>
                             </style>
@@ -59,125 +61,62 @@ accent-orange</property>
                           </object>
                         </child>
                         <child>
-                          <object class="GtkBox">
-                            <property name="orientation">0</property>
-                            <property name="valign">3</property>
-                            <property name="margin-top">2</property>
-                            <child>
-                              <object class="GtkBox">
-                                <property name="orientation">1</property>
-                                <property name="spacing">2</property>
-                                <child>
-                                  <object class="GtkLabel" id="current_charge_label">
-                                    <property name="label">--%</property>
-                                    <style>
-                                      <class name="instrument-value-accent"/>
-                                    </style>
-                                    <property name="xalign">0</property>
-                                  </object>
-                                </child>
-                                <child>
-                                  <object class="GtkBox">
-                                    <property name="orientation">0</property>
-                                    <property name="spacing">3</property>
-                                    <child>
-                                      <object class="GtkImage">
-                                        <property name="icon-name">battery-good-symbolic</property>
-                                        <style>
-                                          <class name="charging-icon"/>
-                                        </style>
-                                      </object>
-                                    </child>
-                                    <child>
-                                      <object class="GtkLabel" id="current_status_label">
-                                        <property name="label" translatable="yes">—</property>
-                                        <style>
-                                          <class name="charging-label"/>
-                                        </style>
-                                      </object>
-                                    </child>
-                                  </object>
-                                </child>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkSeparator">
-                                <property name="orientation">1</property>
-                                <style>
-                                  <class name="v-divider"/>
-                                </style>
-                                <property name="margin-start">7</property>
-                                <property name="margin-end">7</property>
-                                <property name="valign">0</property>
-                                <property name="vexpand">true</property>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkBox">
-                                <property name="orientation">1</property>
-                                <property name="spacing">2</property>
-                                <property name="halign">2</property>
-                                <property name="hexpand">true</property>
-                                <child>
-                                  <object class="GtkBox">
-                                    <property name="orientation">0</property>
-                                    <property name="spacing">3</property>
-                                    <child>
-                                      <object class="GtkLabel">
-                                        <property name="label" translatable="yes">Power Source:</property>
-                                        <style>
-                                          <class name="metadata-caption"/>
-                                        </style>
-                                      </object>
-                                    </child>
-                                    <child>
-                                      <object class="GtkLabel" id="power_source_label">
-                                        <property name="label" translatable="yes">—</property>
-                                        <style>
-                                          <class name="metadata-caption-value"/>
-                                        </style>
-                                      </object>
-                                    </child>
-                                  </object>
-                                </child>
-                                <child>
-                                  <object class="GtkBox">
-                                    <property name="orientation">0</property>
-                                    <property name="spacing">3</property>
-                                    <child>
-                                      <object class="GtkLabel">
-                                        <property name="label" translatable="yes">Health:</property>
-                                        <style>
-                                          <class name="metadata-caption"/>
-                                        </style>
-                                      </object>
-                                    </child>
-                                    <child>
-                                      <object class="GtkLabel" id="health_label">
-                                        <property name="label" translatable="yes">—</property>
-                                        <style>
-                                          <class name="metadata-caption-value"/>
-                                        </style>
-                                      </object>
-                                    </child>
-                                  </object>
-                                </child>
-                              </object>
-                            </child>
+                          <object class="GtkLabel" id="current_charge_label">
+                            <property name="label">--%</property>
+                            <style>
+                              <class name="instrument-value-accent"/>
+                            </style>
+                            <property name="xalign">0</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkImage">
+                            <property name="icon-name">battery-good-symbolic</property>
+                            <style>
+                              <class name="charging-icon"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="current_status_label">
+                            <property name="label" translatable="yes">—</property>
+                            <style>
+                              <class name="charging-label"/>
+                            </style>
+                            <property name="hexpand">true</property>
+                            <property name="xalign">0</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="power_source_label">
+                            <property name="label" translatable="yes">—</property>
+                            <style>
+                              <class name="metadata-caption-value"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="health_label">
+                            <property name="label" translatable="yes">—</property>
+                            <style>
+                              <class name="metadata-caption-value"/>
+                            </style>
                           </object>
                         </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkBox">
-                        <property name="orientation">1</property>
+                        <property name="orientation">0</property>
                         <style>
                           <class name="panel"/>
                         </style>
                         <property name="hexpand">true</property>
+                        <property name="spacing">4</property>
+                        <property name="valign">3</property>
                         <child>
                           <object class="GtkLabel">
-                            <property name="label" translatable="yes">Active Threshold</property>
+                            <property name="label" translatable="yes">Threshold</property>
                             <style>
                               <class name="panel-title"/>
                             </style>
@@ -191,61 +130,41 @@ accent-orange</property>
                               <class name="instrument-value-accent"/>
                             </style>
                             <property name="xalign">0</property>
-                            <property name="margin-top">2</property>
                           </object>
                         </child>
                         <child>
-                          <object class="GtkBox">
-                            <property name="orientation">0</property>
-                            <property name="margin-top">3</property>
-                            <child>
-                              <object class="GtkLabel" id="battery_name_label">
-                                <property name="label" translatable="yes">—</property>
-                                <style>
-                                  <class name="metadata-label"/>
-                                </style>
-                                <property name="xalign">0</property>
-                                <property name="hexpand">true</property>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkBox">
-                                <property name="orientation">1</property>
-                                <property name="halign">2</property>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="label" translatable="yes">Last changed</property>
-                                    <style>
-                                      <class name="metadata-caption"/>
-                                    </style>
-                                    <property name="xalign">1</property>
-                                  </object>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel" id="last_changed_label">
-                                    <property name="label" translatable="yes">—</property>
-                                    <style>
-                                      <class name="metadata-caption-value"/>
-                                    </style>
-                                    <property name="xalign">1</property>
-                                  </object>
-                                </child>
-                              </object>
-                            </child>
+                          <object class="GtkLabel" id="battery_name_label">
+                            <property name="label" translatable="yes">—</property>
+                            <style>
+                              <class name="metadata-label"/>
+                            </style>
+                            <property name="hexpand">true</property>
+                            <property name="xalign">0</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="last_changed_label">
+                            <property name="label" translatable="yes">—</property>
+                            <style>
+                              <class name="metadata-caption-value"/>
+                            </style>
+                            <property name="xalign">1</property>
                           </object>
                         </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkBox">
-                        <property name="orientation">1</property>
+                        <property name="orientation">0</property>
                         <style>
                           <class name="panel"/>
                         </style>
                         <property name="hexpand">true</property>
+                        <property name="spacing">4</property>
+                        <property name="valign">3</property>
                         <child>
                           <object class="GtkLabel">
-                            <property name="label" translatable="yes">Control Mode</property>
+                            <property name="label" translatable="yes">Mode</property>
                             <style>
                               <class name="panel-title"/>
                             </style>
@@ -259,17 +178,7 @@ accent-orange</property>
                               <class name="instrument-value-sm"/>
                             </style>
                             <property name="xalign">0</property>
-                            <property name="margin-top">2</property>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkLabel">
-                            <property name="label" translatable="yes">How the threshold is applied to hardware</property>
-                            <style>
-                              <class name="metadata-caption"/>
-                            </style>
-                            <property name="xalign">0</property>
-                            <property name="margin-top">1</property>
+                            <property name="hexpand">true</property>
                           </object>
                         </child>
                       </object>
