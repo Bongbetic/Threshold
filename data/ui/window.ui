@@ -11,6 +11,7 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
     <property name="default-height">365</property>
     <property name="width-request">760</property>
     <property name="height-request">365</property>
+    <property name="resizable">false</property>
     <property name="title" translatable="yes">Threshold</property>
     <property name="css-classes">threshold-window
 accent-orange</property>

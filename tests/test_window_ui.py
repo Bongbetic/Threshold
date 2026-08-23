@@ -54,3 +54,13 @@ def test_window_ui_exposes_template_child_ids():
         assert (
             f'<property name="name">{widget_id}</property>' not in text
         ), f'id "{widget_id}" incorrectly emitted as name property'
+
+
+def test_window_ui_uses_tight_non_resizable_canvas():
+    text = WINDOW_UI.read_text(encoding="utf-8")
+    assert '<property name="default-width">760</property>' in text
+    assert '<property name="default-height">365</property>' in text
+    assert '<property name="width-request">760</property>' in text
+    assert '<property name="height-request">365</property>' in text
+    assert '<property name="resizable">false</property>' in text
+    assert "ScrolledWindow" not in text
