@@ -522,6 +522,7 @@ static const char *ALLOWED_FW_G1_6[] __initconst = {
 	"14DKEMS1.105",
 	"14DLEMS1.105", // Modern 14 B5M
 	"155LEMS1.103", // Modern 15 A5M
+	"155LEMS1.104",
 	"155LEMS1.105",
 	"155LEMS1.106",
 	"15HKEMS1.102", // Modern 15 B7M
@@ -1594,6 +1595,7 @@ static const char *ALLOWED_FW_G2_6[] __initconst = {
 	"16R8IMS2.117",
 	"16RKIMS1.110", // Thin A15 B7VF
 	"16RKIMS1.111",
+	"16RKIMS1.112", // Thin A15 B7UCX; same CONF_G2_6 layout, staged validation
 	"16RKIMS2.108",
 	"16RKIMS2.111",
 	NULL
@@ -1677,6 +1679,7 @@ static const char *ALLOWED_FW_G2_10[] __initconst = {
 	"158NIMS1.506",
 	"158NIMS1.507",
 	"15B1EMS1.103", // Stealth 15M B12UE
+	"15B1EMS1.105",
 	"15F2EMS1.109", // Stealth 16 Studio A13VG
 	"15F3EMS1.104", // Stealth 16 AI Studio A1VHG
 	"15F3EMS1.105",

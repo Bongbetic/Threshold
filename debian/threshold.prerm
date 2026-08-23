@@ -4,7 +4,7 @@ set -e
 case "$1" in
     remove|deconfigure)
         if command -v dkms >/dev/null 2>&1; then
-            dkms remove -m msi-ec -v 0.13 --all || true
+            dkms remove -m msi-ec -v 0.13.112 --all || true
         fi
         ;;
 esac

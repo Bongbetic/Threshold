@@ -62,6 +62,17 @@
     <content_attribute id="money-advertising">none</content_attribute>
   </content_rating>
   <releases>
+    <release version="1.4.1" date="2026-08-23">
+      <description>
+        <p>
+          Fix-v3: vendor msi-ec 0.13.112 for Thin A15 B7UCX firmware 16RKIMS1.112
+          (stale 0.13 lacked this FW — EC reject → notify-only). Packaging hardens
+          DKMS/modprobe failure paths. UI: restore industrial gridlines, scale to
+          half footprint scroll-free (700×520, halved paddings/fonts, no
+          ScrolledWindow).
+        </p>
+      </description>
+    </release>
     <release version="1.4.0" date="2026-08-23">
       <description>
         <p>

@@ -1,0 +1,4 @@
+Source: BeardOverflow/msi-ec
+Reviewed commit: d7fbbd88e6831e56801b860e46475cbf8ddbc7c1
+Change: add only firmware identifier 16RKIMS1.112 to existing CONF_G2_6.
+Safety: load/read validation first; use only standard battery threshold sysfs controls; do not write fan, shift, keyboard-light, or unrelated EC controls.

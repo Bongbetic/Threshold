@@ -1,3 +1,14 @@
+threshold (1.4.1-1) trixie; urgency=medium
+
+  * Fix-v3: vendor msi-ec 0.13.112 for Thin A15 B7UCX firmware 16RKIMS1.112
+    (stale 0.13 lacked this FW — "firmware not supported" → notify-only)
+  * Packaging: bump all hardcoded 0.13 references to 0.13.112, add postrm
+    purge, fail-loud DKMS/modprobe with install-warnings marker
+  * UI: restore industrial gridlines, scale to ~half footprint, scroll-free
+    (remove ScrolledWindow, default 700×520, halved paddings/fonts)
+
+ -- Soubarna <Soubarna@live.in>  Sat, 23 Aug 2026 22:30:00 +0530
+
 threshold (1.4.0-1) trixie; urgency=medium
 
   * Implement fixes-v2: hardware sync, packaging improvements, UI tightening

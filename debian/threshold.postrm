@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    purge)
+        rm -f /usr/lib/modules-load.d/msi-ec.conf
+        rm -rf /var/lib/threshold
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
