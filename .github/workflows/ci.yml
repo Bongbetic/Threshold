@@ -25,6 +25,7 @@ jobs:
             desktop-file-utils \
             gettext \
             gobject-introspection \
+            libgirepository1.0-dev \
             python3 \
             python3-gi \
             python3-pytest \
