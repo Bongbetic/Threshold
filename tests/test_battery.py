@@ -21,7 +21,7 @@ def test_find_battery_path_found(tmp_path, monkeypatch):
 
 
 def test_find_battery_path_first_wins(tmp_path, monkeypatch):
-    """Returns the path that has both type and threshold when earlier ones lack them."""
+    """Returns the first Battery-type entry by sort order."""
     bat0 = tmp_path / "BAT0"
     bat1 = tmp_path / "BAT1"
     bat0.mkdir()
@@ -30,16 +30,16 @@ def test_find_battery_path_first_wins(tmp_path, monkeypatch):
     (bat1 / "type").write_text("Battery")
     (bat1 / "charge_control_end_threshold").write_text("80")
     _mock_power_supply_root(monkeypatch, tmp_path)
-    assert battery.find_battery_path() == bat1
+    assert battery.find_battery_path() == bat0
 
 
 def test_find_battery_path_nonexistent(tmp_path, monkeypatch):
-    """Returns None when battery dir exists but lacks threshold file."""
+    """Returns the battery even when it lacks the threshold file."""
     bat0 = tmp_path / "BAT0"
     bat0.mkdir()
     (bat0 / "type").write_text("Battery")
     _mock_power_supply_root(monkeypatch, tmp_path)
-    assert battery.find_battery_path() is None
+    assert battery.find_battery_path() == bat0
 
 
 def test_find_battery_path_all_missing(tmp_path, monkeypatch):
@@ -129,13 +129,13 @@ def test_find_battery_path_multi_battery_first_wins(tmp_path, monkeypatch):
 
 
 def test_find_battery_path_no_matching_battery(tmp_path, monkeypatch):
-    """Returns None when no battery has both type and threshold."""
+    """Returns the battery even without a threshold file."""
     bat0 = tmp_path / "BAT0"
     bat0.mkdir()
     (bat0 / "type").write_text("Battery")
-    # No threshold file
+    # No threshold file — still found
     _mock_power_supply_root(monkeypatch, tmp_path)
-    assert battery.find_battery_path() is None
+    assert battery.find_battery_path() == bat0
 
 
 def test_find_battery_path_empty_directory(tmp_path, monkeypatch):
@@ -341,3 +341,98 @@ def test_write_threshold_generic_exception_in_pkexec(tmp_path, monkeypatch):
     success, method = battery.write_threshold(tmp_path, 80)
     assert success is False
     assert method == "unexpected crash"
+
+
+# ─── msi_ec_loaded ────────────────────────────────────────────────────────────
+
+
+def test_msi_ec_loaded_true(tmp_path, monkeypatch):
+    platform = tmp_path / "msi-ec"
+    platform.mkdir()
+    monkeypatch.setattr(battery, "MSI_EC_PLATFORM", platform)
+    assert battery.msi_ec_loaded() is True
+
+
+def test_msi_ec_loaded_false(tmp_path, monkeypatch):
+    monkeypatch.setattr(battery, "MSI_EC_PLATFORM", tmp_path / "no-such-dir")
+    assert battery.msi_ec_loaded() is False
+
+
+# ─── detect_control_mode ─────────────────────────────────────────────────────
+
+
+def test_detect_control_mode_none_battery(tmp_path, monkeypatch):
+    assert battery.detect_control_mode(None) is None
+
+
+def test_detect_control_mode_ec_msi(tmp_path, monkeypatch):
+    """msi-ec platform present and battery has threshold → EC_MSI."""
+    bat = tmp_path / "BAT0"
+    bat.mkdir()
+    (bat / "charge_control_end_threshold").write_text("80")
+    platform = tmp_path / "msi-ec"
+    platform.mkdir()
+    monkeypatch.setattr(battery, "MSI_EC_PLATFORM", platform)
+    assert battery.detect_control_mode(bat) is battery.ControlMode.EC_MSI
+
+
+def test_detect_control_mode_sysfs_vendor(tmp_path, monkeypatch):
+    """No msi-ec platform, threshold attr present → SYSFS_VENDOR."""
+    bat = tmp_path / "BAT0"
+    bat.mkdir()
+    (bat / "charge_control_end_threshold").write_text("80")
+    monkeypatch.setattr(battery, "MSI_EC_PLATFORM", tmp_path / "no-such-dir")
+    assert battery.detect_control_mode(bat) is battery.ControlMode.SYSFS_VENDOR
+
+
+def test_detect_control_mode_notify_only_no_attr(tmp_path, monkeypatch):
+    """No msi-ec, no threshold attr → NOTIFY_ONLY."""
+    bat = tmp_path / "BAT0"
+    bat.mkdir()
+    monkeypatch.setattr(battery, "MSI_EC_PLATFORM", tmp_path / "no-such-dir")
+    assert battery.detect_control_mode(bat) is battery.ControlMode.NOTIFY_ONLY
+
+
+def test_detect_control_mode_notify_only_msi_unsupported(tmp_path, monkeypatch):
+    """msi-ec loaded but battery lacks threshold (unsupported EC) → NOTIFY_ONLY."""
+    bat = tmp_path / "BAT0"
+    bat.mkdir()
+    platform = tmp_path / "msi-ec"
+    platform.mkdir()
+    monkeypatch.setattr(battery, "MSI_EC_PLATFORM", platform)
+    assert battery.detect_control_mode(bat) is battery.ControlMode.NOTIFY_ONLY
+
+
+# ─── evaluate_alarm ───────────────────────────────────────────────────────────
+
+
+def test_evaluate_alarm_fires_on_charging(tmp_path):
+    assert battery.evaluate_alarm(80, "Charging", 80, fired=False) is True
+
+
+def test_evaluate_alarm_fires_on_full(tmp_path):
+    assert battery.evaluate_alarm(100, "Full", 80, fired=False) is True
+
+
+def test_evaluate_alarm_does_not_fire_when_discharging(tmp_path):
+    assert battery.evaluate_alarm(85, "Discharging", 80, fired=False) is False
+
+
+def test_evaluate_alarm_latches_after_fire(tmp_path):
+    assert battery.evaluate_alarm(80, "Charging", 80, fired=True) is False
+
+
+def test_evaluate_alarm_disarmed_at_100(tmp_path):
+    assert battery.evaluate_alarm(100, "Charging", 100, fired=False) is False
+
+
+def test_evaluate_alarm_no_pct(tmp_path):
+    assert battery.evaluate_alarm(None, "Charging", 80, fired=False) is False
+
+
+def test_evaluate_alarm_no_status(tmp_path):
+    assert battery.evaluate_alarm(80, None, 80, fired=False) is False
+
+
+def test_evaluate_alarm_below_threshold(tmp_path):
+    assert battery.evaluate_alarm(79, "Charging", 80, fired=False) is False

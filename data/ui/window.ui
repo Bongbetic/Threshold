@@ -111,6 +111,16 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
                                 <property name="xalign">0</property>
                               </object>
                             </child>
+                            <child>
+                              <object class="GtkLabel" id="mode_label">
+                                <property name="label"></property>
+                                <style>
+                                  <class name="dim-label"/>
+                                  <class name="caption"/>
+                                </style>
+                                <property name="xalign">0</property>
+                              </object>
+                            </child>
                           </object>
                         </child>
                       </object>

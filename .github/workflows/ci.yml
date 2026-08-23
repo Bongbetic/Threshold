@@ -83,7 +83,7 @@ jobs:
         run: |
           dpkg-buildpackage -us -uc -b
           mkdir -p artifacts
-          cp ../threshold_*.deb ../msi-ec-dkms_*.deb artifacts/
+          cp ../threshold_*.deb artifacts/
 
       - name: Lintian
         run: lintian artifacts/*.deb
@@ -164,7 +164,7 @@ jobs:
         run: |
           runuser -u ci -- dpkg-buildpackage -us -uc -b
           mkdir -p artifacts
-          cp ../threshold_*.deb ../msi-ec-dkms_*.deb artifacts/
+          cp ../threshold_*.deb artifacts/
 
       - name: Lintian
         run: lintian artifacts/*.deb

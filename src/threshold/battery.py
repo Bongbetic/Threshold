@@ -1,11 +1,23 @@
 """Battery sysfs interaction — core domain logic."""
 
+from enum import Enum
 import subprocess
 from pathlib import Path
 
 
 THRESHOLD_MIN = 20
 THRESHOLD_MAX = 100
+THRESHOLD_PRESETS = (60, 70, 80, 90, 100)
+
+MSI_EC_PLATFORM = Path("/sys/devices/platform/msi-ec")
+
+
+class ControlMode(Enum):
+    """How the application communicates charge thresholds to the battery."""
+
+    EC_MSI = "msi-ec"
+    SYSFS_VENDOR = "sysfs"
+    NOTIFY_ONLY = "notify"
 
 
 def _enumerate_power_supplies():
@@ -19,21 +31,58 @@ def _enumerate_power_supplies():
 
 
 def find_battery_path() -> Path | None:
-    """Return the first battery sysfs path that has ``type == Battery`` and
-    ``charge_control_end_threshold``.
+    """Return the first battery sysfs path with ``type == Battery``.
 
     Enumerates ``/sys/class/power_supply/`` dynamically.  First qualifying
-    entry wins.
+    entry wins.  Does not require ``charge_control_end_threshold`` so the
+    battery can still be used for capacity/status reads in notification-only
+    mode.
     """
     for psy_path in _enumerate_power_supplies():
-        # Require type file reads Battery
         type_val = read_sysfs(psy_path / "type")
-        if type_val != "Battery":
-            continue
-        # Require threshold file exists
-        if (psy_path / "charge_control_end_threshold").exists():
+        if type_val == "Battery":
             return psy_path
     return None
+
+
+def msi_ec_loaded() -> bool:
+    """Return True if the msi-ec platform device is present."""
+    return MSI_EC_PLATFORM.is_dir()
+
+
+def detect_control_mode(bat_path: Path | None) -> ControlMode | None:
+    """Detect which control mode applies for the given battery.
+
+    Returns None when no battery path is provided.
+    """
+    if bat_path is None:
+        return None
+
+    has_threshold = (bat_path / "charge_control_end_threshold").exists()
+
+    if has_threshold and msi_ec_loaded():
+        return ControlMode.EC_MSI
+    if has_threshold:
+        return ControlMode.SYSFS_VENDOR
+    return ControlMode.NOTIFY_ONLY
+
+
+def evaluate_alarm(pct: int | None, status: str | None,
+                   threshold: int, fired: bool) -> bool:
+    """Decide whether the threshold-reached alarm should fire.
+
+    Fires once when charging/full and the charge percentage meets or
+    exceeds the threshold.  Returns False if the alarm has already
+    fired, the threshold is 100 (disarmed), or no percentage/status
+    is available.
+    """
+    if threshold >= THRESHOLD_MAX or pct is None or status is None:
+        return False
+    if fired:
+        return False
+    if status not in ("Charging", "Full"):
+        return False
+    return pct >= threshold
 
 
 def read_sysfs(path: Path) -> str | None:

@@ -10,3 +10,4 @@ usr/share/GConf/gsettings/com.bongbetic.batteryguard.convert
 usr/share/icons/hicolor/scalable/apps/com.bongbetic.threshold.svg
 usr/share/icons/hicolor/symbolic/apps/com.bongbetic.threshold-symbolic.svg
 usr/share/metainfo/com.bongbetic.threshold.metainfo.xml
+msi-ec-src/* usr/src/msi-ec-0.13/

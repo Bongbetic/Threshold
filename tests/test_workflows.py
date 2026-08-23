@@ -58,4 +58,4 @@ def test_workflows_use_threshold_package_artifact_names():
     assert "threshold-deb-" in ci
     assert "msi-batteryguard_*.deb" not in release
     assert "threshold_*.deb" in release
-    assert "msi-ec-dkms_*.deb" in release
+    assert "msi-ec-dkms_*.deb" not in release

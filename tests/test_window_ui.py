@@ -12,6 +12,7 @@ REQUIRED_IDS = (
     "current_status_label",
     "active_threshold_label",
     "battery_name_label",
+    "mode_label",
     "charge_scale",
     "charge_value_label",
     "apply_button",

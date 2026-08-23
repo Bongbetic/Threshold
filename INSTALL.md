@@ -7,12 +7,15 @@
 Other MSI machines supported by upstream `msi-ec` may work; verify the
 threshold sysfs path after loading the module.
 
+Devices with vendor sysfs threshold support (thinkpad-acpi, asus-wmi, …) are
+also supported — the app detects the appropriate control mode automatically.
+When no EC/sysfs charge control is available, Threshold falls back to a
+notification alarm.
+
 ## Supported Ubuntu versions
 
 Packages are built and tested on **Ubuntu 24.04 LTS (noble)** and
-**Ubuntu 26.04 LTS (resolute)**. The app package is `Architecture: all` and
-the kernel module package is `amd64`, so any 24.04+ `amd64` install is
-supported.
+**Ubuntu 26.04 LTS (resolute)**.  The package is built for `amd64`.
 
 ---
 
@@ -20,21 +23,18 @@ supported.
 
 1. Open the
    [Releases page](https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX/releases)
-   and download the latest release's two `.deb` files:
+   and download the latest release's `.deb` file:
 
-   - `threshold_*.deb` — the GTK4 app
-   - `msi-ec-dkms_*.deb` — the `msi-ec` kernel module (DKMS)
+   - `threshold_*.deb` — the GTK4 app + msi-ec DKMS source (single package)
 
-2. Install both. The module package must go first so it is available when the
-   app package configures:
+2. Install the package:
 
    ```bash
-   sudo apt install ./msi-ec-dkms_1.2.0-1_amd64.deb
-   sudo apt install ./threshold_1.2.0-1_all.deb
+   sudo apt install ./threshold_1.3.0-1_amd64.deb
    ```
 
-   During the `msi-ec-dkms` install, DKMS builds the module for the running
-   kernel. If kernel headers are missing, install them first:
+   DKMS builds the msi-ec module for the running kernel automatically. If
+   kernel headers are missing, install them first:
 
    ```bash
    sudo apt install -y linux-headers-$(uname -r)
@@ -68,6 +68,14 @@ supported.
 | udev rule (`plugdev` writes) | `/usr/lib/udev/rules.d/99-msi-battery.rules` |
 | `msi-ec` DKMS source | `/usr/src/msi-ec-0.13/` |
 | Built kernel module | `/lib/modules/$(uname -r)/updates/dkms/msi-ec.ko` |
+
+### Control modes
+
+The app automatically detects which control mode applies:
+
+- **EC control — msi-ec**: msi-ec module loaded, threshold attr present.
+- **Vendor sysfs control**: threshold attr present from another driver.
+- **Notification only**: no threshold attr; charge monitoring with alarm.
 
 ---
 
@@ -143,15 +151,14 @@ meson setup builddir --prefix=/usr --sysconfdir=/etc
 ### Build the .deb locally
 
 ```bash
-sudo apt install -y dpkg-dev debhelper dh-python dkms
+sudo apt install -y dpkg-dev debhelper dh-python
 sudo apt-get build-dep -y .
 dpkg-buildpackage -us -uc -b
 ```
 
-The `.deb` files land in the parent directory:
+A single `.deb` lands in the parent directory:
 
-- `../threshold_1.2.0-1_all.deb`
-- `../msi-ec-dkms_1.2.0-1_amd64.deb`
+- `../threshold_1.3.0-1_amd64.deb`
 
 ---
 
@@ -160,8 +167,8 @@ The `.deb` files land in the parent directory:
 | Problem | Fix |
 |---|---|
 | `lsmod` shows no `msi_ec` | `sudo modprobe msi-ec` and check `dmesg` |
-| `dkms status` shows build failure | Install `linux-headers-$(uname -r)` and reinstall the dkms package |
-| Threshold file not found | Module loaded but EC not supported — check `dmesg` |
+| `dkms status` shows build failure | Install `linux-headers-$(uname -r)` and reinstall the package |
+| Threshold file not found | Module loaded but EC not supported — app switches to notification mode |
 | Permission denied writing threshold | udev rule / `plugdev` membership — reload rules, re-login |
 | App missing from GNOME Software | Ensure metainfo installed; refresh Software / AppStream cache |
-| App shows battery path not found | `ls /sys/class/power_supply/` and report |
+| App shows "Notification only" mode | No EC/sysfs threshold control — alarm monitors charge and notifies at threshold |
