@@ -35,7 +35,8 @@ jobs:
             libgtk-4-dev \
             libadwaita-1-dev \
             gir1.2-notify-0.7
-          pipx install blueprint-compiler
+          pipx install blueprint-compiler --pip-args='--no-cache-dir'
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Configure
         run: meson setup builddir
@@ -79,9 +80,10 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          sudo apt-get install -y blueprint-compiler
+          sudo apt-get install -y libgirepository1.0-dev
           sudo apt-get build-dep -y .
-          pipx install blueprint-compiler
+          pipx install blueprint-compiler --pip-args='--no-cache-dir'
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Build .debs
         run: |
