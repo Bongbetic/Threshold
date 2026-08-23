@@ -26,7 +26,7 @@ jobs:
         run: |
           dpkg-buildpackage -us -uc -b
           mkdir -p artifacts
-          cp ../threshold_*.deb ../msi-ec-dkms_*.deb artifacts/
+          cp ../threshold_*.deb artifacts/
 
       - name: Lintian
         run: lintian artifacts/*.deb
@@ -50,7 +50,6 @@ jobs:
         with:
           files: |
             artifacts/threshold_*.deb
-            artifacts/msi-ec-dkms_*.deb
             artifacts/SHA256SUMS
           generate_release_notes: true
           draft: true

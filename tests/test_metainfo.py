@@ -118,9 +118,10 @@ def test_metainfo_has_project_group_and_license():
     assert root.findtext("project_license") == "GPL-3.0-or-later"
 
 
-def test_metainfo_recommends_msi_ec_dkms():
+def test_metainfo_no_recommends_msi_ec_dkms():
+    """msi-ec-dkms is now bundled, not a recommends dependency."""
     ids = {el.text for el in _root().findall("recommends/id")}
-    assert "msi-ec-dkms" in ids
+    assert "msi-ec-dkms" not in ids
 
 
 def test_metainfo_description_has_no_msi_only_language():

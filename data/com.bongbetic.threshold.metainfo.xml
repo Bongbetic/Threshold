@@ -25,9 +25,6 @@
   <developer id="com.bongbetic">
     <name>Bongbetic</name>
   </developer>
-  <recommends>
-    <id>msi-ec-dkms</id>
-  </recommends>
   <screenshots>
     <screenshot type="default">
       <image>https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX/raw/main/data/screenshots/main-window.png</image>
@@ -65,6 +62,16 @@
     <content_attribute id="money-advertising">none</content_attribute>
   </content_rating>
   <releases>
+    <release version="1.3.0" date="2026-08-23">
+      <description>
+        <p>
+          Merge msi-ec-dkms into the threshold package as a single
+          amd64 .deb.  Add automatic control-mode detection (msi-ec,
+          vendor/sysfs, notification-only) and a charge-threshold
+          reached alarm for devices without EC/sysfs charge control.
+        </p>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-08-15">
       <description>
         <p>

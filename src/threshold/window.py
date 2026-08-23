@@ -13,6 +13,9 @@ gi.require_version('Notify', '0.7')
 from gi.repository import GLib, Gtk, Adw, Gdk, Notify  # noqa: E402
 
 from threshold.battery import (  # noqa: E402
+    ControlMode,
+    detect_control_mode,
+    evaluate_alarm,
     find_battery_path,
     read_charge_percent,
     read_sysfs,
@@ -22,11 +25,11 @@ from threshold.config import Config  # noqa: E402
 
 
 try:
-    gi.require_version('AyatanaAppIndicatorGlib', '2.0')
-    from gi.repository import AyatanaAppIndicatorGlib as AppIndicator
-    HAS_TRAY = True
-except (ValueError, ImportError):
-    AppIndicator = None  # type: ignore
+    from threshold.tray import TrayIcon, HAS_DBUSMENU
+    HAS_TRAY = HAS_DBUSMENU
+except (ImportError, RuntimeError):
+    TrayIcon = None  # type: ignore
+    HAS_DBUSMENU = False
     HAS_TRAY = False
 
 
@@ -44,6 +47,35 @@ Exec=threshold
 Categories=GTK;GNOME;System;Utility;
 """
 
+_MODE_LABELS = {
+    ControlMode.EC_MSI: _('EC control — msi-ec'),
+    ControlMode.SYSFS_VENDOR: _('Vendor sysfs control'),
+    ControlMode.NOTIFY_ONLY: _('Notification only'),
+}
+
+_CHARGING_SUFFIX = {
+    'Charging': '-charging',
+    'Full': '',
+    'Discharging': '',
+    'Not charging': '',
+}
+
+
+def _battery_icon_name(pct: int, status: str | None) -> str:
+    """Return a freedesktop battery icon name for the given charge level."""
+    if pct <= 10:
+        level = 'empty'
+    elif pct <= 30:
+        level = 'low'
+    elif pct <= 50:
+        level = 'medium'
+    elif pct <= 80:
+        level = 'good'
+    else:
+        level = 'full'
+    suffix = _CHARGING_SUFFIX.get(status, '')
+    return f'battery-{level}{suffix}'
+
 
 @Gtk.Template(resource_path='/com/bongbetic/threshold/window.ui')
 class ThresholdWindow(Adw.ApplicationWindow):
@@ -53,6 +85,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
     current_status_label: Gtk.Label = Gtk.Template.Child()
     active_threshold_label: Gtk.Label = Gtk.Template.Child()
     battery_name_label: Gtk.Label = Gtk.Template.Child()
+    mode_label: Gtk.Label = Gtk.Template.Child()
     charge_scale: Gtk.Scale = Gtk.Template.Child()
     charge_value_label: Gtk.Label = Gtk.Template.Child()
     apply_button: Gtk.Button = Gtk.Template.Child()
@@ -67,6 +100,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
 
         self._config = config or Config()
         self._battery_path = find_battery_path()
+        self._control_mode = detect_control_mode(self._battery_path)
         self._polling_id = None
         self._reset_dot_id = None
         self._pending_idle_id = None
@@ -76,6 +110,10 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self._charge_pct = 0
         self._geometry_debounce_id = None
         self._suppress_launch_toggle = False
+
+        # Alarm state for notification-only fallback
+        self._alarm_armed = False
+        self._alarm_fired = False
 
         self.charge_scale.connect('value-changed', self._on_scale_changed)
         self.apply_button.connect('clicked', self._on_apply)
@@ -90,6 +128,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
 
         self._load_settings()
         self._refresh_battery_data()
+        self._update_mode_label()
         self._setup_tray()
         self._start_polling()
 
@@ -106,9 +145,8 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self.launch_switch.set_active(autostart)
         self._suppress_launch_toggle = False
 
-        # Prefer live EC threshold; fall back to last applied GSettings value.
         threshold = self._config.get_charge_threshold()
-        if self._battery_path is not None:
+        if self._battery_path is not None and self._has_threshold_control():
             ec = read_sysfs(self._battery_path / 'charge_control_end_threshold')
             if ec is not None:
                 try:
@@ -117,6 +155,13 @@ class ThresholdWindow(Adw.ApplicationWindow):
                     pass
         self.charge_scale.set_value(threshold)
         self.charge_value_label.set_label(f'{threshold}%')
+
+        if self._control_mode is ControlMode.NOTIFY_ONLY:
+            self._alarm_armed = threshold < 100
+            self._alarm_fired = False
+
+    def _has_threshold_control(self) -> bool:
+        return self._control_mode in (ControlMode.EC_MSI, ControlMode.SYSFS_VENDOR)
 
     @staticmethod
     def _apply_color_scheme(force_dark: bool) -> None:
@@ -150,6 +195,9 @@ class ThresholdWindow(Adw.ApplicationWindow):
         )
         if threshold is not None:
             self.active_threshold_label.set_label(f'{threshold}%')
+        elif self._control_mode is ControlMode.NOTIFY_ONLY:
+            val = int(self.charge_scale.get_value())
+            self.active_threshold_label.set_label(f'{val}% (alarm)')
         else:
             self.active_threshold_label.set_label('--%')
 
@@ -167,6 +215,12 @@ class ThresholdWindow(Adw.ApplicationWindow):
             _('No charge-threshold-capable battery detected'),
             is_error=True,
         )
+
+    def _update_mode_label(self):
+        if self._control_mode is None:
+            self.mode_label.set_label('')
+            return
+        self.mode_label.set_label(_MODE_LABELS.get(self._control_mode, ''))
 
     def _start_polling(self):
         """Start 5-second polling for battery charge refresh."""
@@ -194,16 +248,59 @@ class ThresholdWindow(Adw.ApplicationWindow):
             # msi-ec may have loaded after launch — retry discovery.
             self._battery_path = find_battery_path()
             if self._battery_path is not None:
-                self.charge_scale.set_sensitive(True)
-                self.apply_button.set_sensitive(True)
-                self.restore_button.set_sensitive(True)
+                self._control_mode = detect_control_mode(self._battery_path)
+                self._update_mode_label()
+                if self._has_threshold_control():
+                    self.charge_scale.set_sensitive(True)
+                    self.apply_button.set_sensitive(True)
+                    self.restore_button.set_sensitive(True)
+        elif self._control_mode is None:
+            self._control_mode = detect_control_mode(self._battery_path)
+            self._update_mode_label()
+
         self._refresh_battery_data()
         self._update_tray_label()
+        self._evaluate_alarm()
+
         self.live_dot.set_label('●')
         if self._reset_dot_id is not None:
             GLib.source_remove(self._reset_dot_id)
         self._reset_dot_id = GLib.timeout_add(500, self._reset_dot)
         return GLib.SOURCE_CONTINUE
+
+    def _evaluate_alarm(self):
+        """Fire or re-arm the threshold-reached alarm in notify-only mode."""
+        if self._control_mode is not ControlMode.NOTIFY_ONLY:
+            return
+        if not self._alarm_armed:
+            return
+
+        threshold = int(self.charge_scale.get_value())
+        status = read_sysfs(self._battery_path / 'status')
+
+        # Re-arm when the battery discharges below threshold
+        if status == 'Discharging' or (
+            self._charge_pct is not None
+            and self._charge_pct < threshold - 2
+        ):
+            self._alarm_fired = False
+            return
+
+        if evaluate_alarm(self._charge_pct, status, threshold,
+                          self._alarm_fired):
+            self._alarm_fired = True
+            self._show_notification(
+                _('Battery reached {threshold}%').format(threshold=threshold),
+                _(
+                    'Charge has reached the {threshold}% limit you set. '
+                    'Unplug the charger to preserve battery lifespan.'
+                ).format(threshold=threshold),
+                is_error=True,
+            )
+            self._set_status(
+                _('Threshold reached — unplug the charger'),
+                is_error=True,
+            )
 
     def _reset_dot(self):
         self._reset_dot_id = None
@@ -230,9 +327,13 @@ class ThresholdWindow(Adw.ApplicationWindow):
 
         value = int(self.charge_scale.get_value())
         bat_path = self._battery_path
+        notify_only = self._control_mode is ControlMode.NOTIFY_ONLY
 
         def worker():
-            result = write_threshold(bat_path, value)
+            if notify_only:
+                result = (True, 'alarm')
+            else:
+                result = write_threshold(bat_path, value)
             if not self._closed:
                 self._pending_idle_id = GLib.idle_add(
                     self._finish_apply, button, value, result
@@ -247,20 +348,34 @@ class ThresholdWindow(Adw.ApplicationWindow):
         success, message = result
         if success:
             self._config.set_charge_threshold(value)
-            self.active_threshold_label.set_label(f'{value}%')
+            if self._has_threshold_control():
+                self.active_threshold_label.set_label(f'{value}%')
+            else:
+                self.active_threshold_label.set_label(f'{value}% (alarm)')
+            self._alarm_armed = value < 100
+            self._alarm_fired = False
             self._set_status(
                 _('Threshold set to {value}% via {message}').format(
                     value=value, message=message
                 ),
                 is_success=True,
             )
-            self._show_notification(
-                _('Threshold set to {value}%').format(value=value),
-                _(
-                    'Written to EC firmware (via {message}). '
-                    'Persists across reboots.'
-                ).format(message=message),
-            )
+            if self._has_threshold_control():
+                self._show_notification(
+                    _('Threshold set to {value}%').format(value=value),
+                    _(
+                        'Written to EC firmware (via {message}). '
+                        'Persists across reboots.'
+                    ).format(message=message),
+                )
+            else:
+                self._show_notification(
+                    _('Threshold set to {value}%').format(value=value),
+                    _(
+                        'Alarm armed — you will be notified when the '
+                        'battery reaches {value}%.'
+                    ).format(value=value),
+                )
         else:
             self._set_status(_('Error: {message}').format(message=message), is_error=True)
             self._show_notification(
@@ -285,9 +400,13 @@ class ThresholdWindow(Adw.ApplicationWindow):
         button.set_label(_('Restoring…'))
 
         bat_path = self._battery_path
+        notify_only = self._control_mode is ControlMode.NOTIFY_ONLY
 
         def worker():
-            result = write_threshold(bat_path, 100)
+            if notify_only:
+                result = (True, 'alarm')
+            else:
+                result = write_threshold(bat_path, 100)
             if not self._closed:
                 self._pending_idle_id = GLib.idle_add(
                     self._finish_restore, button, result
@@ -304,12 +423,23 @@ class ThresholdWindow(Adw.ApplicationWindow):
             self.charge_scale.set_value(100)
             self.charge_value_label.set_label('100%')
             self._config.set_charge_threshold(100)
-            self.active_threshold_label.set_label('100%')
+            if self._has_threshold_control():
+                self.active_threshold_label.set_label('100%')
+            else:
+                self.active_threshold_label.set_label('--')
+            self._alarm_armed = False
+            self._alarm_fired = False
             self._set_status(_('Threshold restored to 100%'), is_success=True)
-            self._show_notification(
-                _('Threshold restored to 100%'),
-                _('Written to EC firmware. Persists across reboots.'),
-            )
+            if self._has_threshold_control():
+                self._show_notification(
+                    _('Threshold restored to 100%'),
+                    _('Written to EC firmware. Persists across reboots.'),
+                )
+            else:
+                self._show_notification(
+                    _('Threshold restored to 100%'),
+                    _('Alarm disarmed.'),
+                )
         else:
             self._set_status(_('Error: {message}').format(message=message), is_error=True)
             self._show_notification(
@@ -377,47 +507,43 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self._config.set_maximized(self.props.maximized)
 
     def _setup_tray(self):
-        """Create the system tray indicator (AyatanaAppIndicatorGlib + Gio.Menu)."""
-        if not HAS_TRAY:
+        """Create the system tray indicator with battery icon and threshold menu."""
+        if not HAS_TRAY or TrayIcon is None:
             return
 
-        from gi.repository import Gio
-
-        self._indicator = AppIndicator.Indicator.new(
-            'com.bongbetic.threshold',
-            'com.bongbetic.threshold',
-            AppIndicator.IndicatorCategory.APPLICATION_STATUS,
+        self._tray = TrayIcon(
+            on_activate=self._on_tray_show,
+            on_threshold=self._on_tray_threshold,
+            on_quit=self._on_tray_quit,
         )
-        self._indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
-        self._indicator.set_title(_('Threshold'))
-
-        actions = Gio.SimpleActionGroup.new()
-        show_action = Gio.SimpleAction.new('show', None)
-        show_action.connect('activate', self._on_tray_show)
-        actions.add_action(show_action)
-
-        quit_action = Gio.SimpleAction.new('quit', None)
-        quit_action.connect('activate', self._on_tray_quit)
-        actions.add_action(quit_action)
-
-        menu = Gio.Menu.new()
-        menu.append(_('Show Threshold'), 'indicator.show')
-        menu.append(_('Quit'), 'indicator.quit')
-
-        self._indicator.set_menu(menu)
-        self._indicator.set_actions(actions)
-        self._indicator.set_secondary_activate_target('show')
-
-        self._update_tray_label()
+        self._tray.set_state(
+            self._charge_pct,
+            None,
+            'battery-good',
+            int(self.charge_scale.get_value()),
+        )
 
     def _update_tray_label(self):
-        """Update the tray indicator label with current charge percentage."""
-        if self._indicator is not None:
-            self._indicator.set_label(f'{self._charge_pct}%', '100%')
+        """Update the tray icon, tooltip, and menu marks."""
+        if not hasattr(self, '_tray') or self._tray is None:
+            return
+        status = read_sysfs(self._battery_path / 'status') if self._battery_path else None
+        self._tray.set_state(
+            self._charge_pct,
+            status,
+            _battery_icon_name(self._charge_pct, status),
+            int(self.charge_scale.get_value()),
+        )
 
     def _on_tray_show(self, *_args):
         """Restore the window from tray."""
         self.present()
+
+    def _on_tray_threshold(self, value):
+        """Apply a threshold preset from the tray menu."""
+        self.charge_scale.set_value(value)
+        self.charge_value_label.set_label(f'{value}%')
+        self._on_apply(self.apply_button)
 
     def _on_tray_quit(self, *_args):
         """Quit the application from tray."""
@@ -429,14 +555,14 @@ class ThresholdWindow(Adw.ApplicationWindow):
 
     def _cleanup_tray(self):
         """Clean up the tray indicator."""
-        if self._indicator is not None:
-            self._indicator.set_status(AppIndicator.IndicatorStatus.PASSIVE)
-            self._indicator = None
+        if hasattr(self, '_tray') and self._tray is not None:
+            self._tray.unregister()
+            self._tray = None
 
     def _on_close_request(self, *_args):
         """Close-to-tray: hide window instead of destroying."""
         self._save_geometry()
-        if HAS_TRAY and self._indicator is not None:
+        if HAS_TRAY and getattr(self, '_tray', None) is not None:
             self.set_visible(False)
             return True
         return False
