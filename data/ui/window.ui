@@ -12,8 +12,6 @@ corresponding .blp file and regenerate this file with blueprint-compiler.
     <property name="width-request">820</property>
     <property name="height-request">560</property>
     <property name="title" translatable="yes">Threshold</property>
-    <property name="css-classes">threshold-window
-accent-orange</property>
     <child>
       <object class="GtkBox">
         <property name="orientation">1</property>

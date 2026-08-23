@@ -204,6 +204,8 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self.connect('close-request', self._on_close_request)
         self.connect('destroy', self._on_destroy)
 
+        self.add_css_class('accent-orange')
+
         self._load_settings()
         self._sync_dark_class()
         self._refresh_battery_data()
