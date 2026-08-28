@@ -204,7 +204,7 @@ jobs:
         run: |
           V=$(sed -n "s/.*version: '\([0-9.]*\)'.*/\1/p" meson.build | head -1)
           mkdir -p rpmbuild/{SOURCES,SPECS,RPMS,SRPMS,BUILD}
-          tar --exclude=.git --transform "s,^\.,Threshold-$V," \
+          tar --exclude=.git --exclude=rpmbuild --transform "s,^\.,Threshold-$V," \
               -czf rpmbuild/SOURCES/Threshold-$V.tar.gz .
           cp packaging/threshold.sysusers rpmbuild/SOURCES/
           cp packaging/threshold.spec rpmbuild/SPECS/
