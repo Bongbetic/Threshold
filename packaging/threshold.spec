@@ -118,7 +118,8 @@ fi
 %{_datadir}/GConf/gsettings/com.bongbetic.batteryguard.convert
 %{_datadir}/icons/hicolor/scalable/apps/com.bongbetic.threshold.svg
 %{_datadir}/icons/hicolor/symbolic/apps/com.bongbetic.threshold-symbolic.svg
-%{_datadir}/locale/*/LC_MESSAGES/*.mo
+# po/LINGUAS is empty — no .mo installed yet; re-add
+# %%{_datadir}/locale/*/LC_MESSAGES/*.mo when translations land
 %{_udevrulesdir}/99-msi-battery.rules
 %{_sysusersdir}/threshold.conf
 
