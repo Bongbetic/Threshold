@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  deb:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -31,25 +31,81 @@ jobs:
       - name: Lintian
         run: lintian artifacts/*.deb
 
-      - name: Generate checksums
-        run: |
-          cd artifacts
-          sha256sum *.deb > SHA256SUMS
-          cat SHA256SUMS
-
-      - name: Upload artifacts
+      - name: Upload .deb artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-debs
-          path: artifacts/
-          retention-days: 30
+          path: artifacts/*.deb
+          retention-days: 5
           if-no-files-found: error
+
+  rpm:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        fedora: ['43', '44']
+    container: fedora:${{ matrix.fedora }}
+    steps:
+      - name: Install build dependencies
+        run: |
+          dnf -y install git rpm-build \
+            meson ninja-build pkgconf-pkg-config gettext blueprint-compiler \
+            gtk4-devel libadwaita-devel python3-devel python3-gobject \
+            desktop-file-utils libappstream-glib systemd-rpm-macros
+
+      - uses: actions/checkout@v4
+
+      - name: Build SRPM and RPMs
+        run: |
+          V=$(sed -n "s/.*version: '\([0-9.]*\)'.*/\1/p" meson.build | head -1)
+          mkdir -p rpmbuild/{SOURCES,SPECS,RPMS,SRPMS,BUILD}
+          tar --exclude=.git --transform "s,^\.,Threshold-$V," \
+              -czf rpmbuild/SOURCES/Threshold-$V.tar.gz .
+          cp packaging/threshold.sysusers rpmbuild/SOURCES/
+          cp packaging/threshold.spec rpmbuild/SPECS/
+          rpmbuild -ba --define "_topdir $PWD/rpmbuild" rpmbuild/SPECS/threshold.spec
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts
+          cp rpmbuild/RPMS/noarch/*.rpm artifacts/
+          ls -l artifacts/
+
+      - name: Upload RPM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-rpm-fedora-${{ matrix.fedora }}
+          path: artifacts/*.rpm
+          retention-days: 5
+          if-no-files-found: error
+
+  release:
+    needs: [deb, rpm]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Stage release files
+        run: |
+          mkdir -p release
+          find dist -type f \( -name '*.deb' -o -name '*.rpm' \) -exec cp {} release/ \;
+          ls -l release/
+
+      - name: Generate checksums
+        run: |
+          cd release
+          sha256sum *.deb *.rpm > SHA256SUMS
+          cat SHA256SUMS
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/threshold_*.deb
-            artifacts/SHA256SUMS
+            release/*.deb
+            release/*.rpm
+            release/SHA256SUMS
           generate_release_notes: true
           draft: true
