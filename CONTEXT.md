@@ -31,3 +31,20 @@ The kernel module (msi-ec, thinkpad-acpi, asus-wmi, …) that exposes the
 battery's charge-threshold sysfs interface.  The app detects mode based on
 whether the msi-ec platform device is present alongside the threshold file.
 _Avoid_: driver, firmware
+
+### Appearance
+
+**Dark mode**:
+The appearance setting that forces the dark theme when on; when off, the UI
+follows the system's light/dark preference instead.
+_Avoid_: night mode, force dark
+
+**Theme scheme**:
+Which of the light or dark themes the UI renders right now: dark when Dark
+mode is on, otherwise whatever the system currently prefers.
+_Avoid_: color scheme, theme
+
+**Accent color**:
+The highlight hue applied across the UI, chosen from five presets
+(orange, blue, green, purple, red); orange is the default.
+_Avoid_: theme color, highlight color
