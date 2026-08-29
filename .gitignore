@@ -20,3 +20,6 @@
 /.coverage
 /.commandcode/
 debian/threshold/
+
+# Local tool state (fabric mesh/MCP cache, release downloads)
+/.pi/
