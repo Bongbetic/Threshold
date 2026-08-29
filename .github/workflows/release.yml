@@ -104,7 +104,7 @@ jobs:
 
       - name: Record checksums of the RPMs under test
         run: |
-          sha256sum artifacts/*.rpm > sha256s.txt
+          (cd artifacts && sha256sum *.rpm) > sha256s.txt
           cat sha256s.txt
 
       - name: Install main package + DKMS subpackage
