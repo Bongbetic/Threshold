@@ -80,8 +80,90 @@ jobs:
           retention-days: 5
           if-no-files-found: error
 
+  # RPM install smoke test (map #35 ticket #50): automates most of check A and
+  # parts of B/E from docs/verification/fedora-rpm.md. Runs in the same Fedora
+  # containers the RPMs were built in; the draft Release is only published after
+  # this job passes, and the recorded hashes pin SHA256SUMS to the tested RPMs.
+  rpm-smoke:
+    needs: rpm
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        fedora: ['43', '44']
+    container: fedora:${{ matrix.fedora }}
+    steps:
+      - name: Install smoke-test tools
+        run: dnf -y install desktop-file-utils
+
+      - name: Download built RPMs
+        uses: actions/download-artifact@v4
+        with:
+          name: release-rpm-fedora-${{ matrix.fedora }}
+          path: artifacts
+
+      - name: Record checksums of the RPMs under test
+        run: |
+          sha256sum artifacts/*.rpm > sha256s.txt
+          cat sha256s.txt
+
+      - name: Install main package + DKMS subpackage
+        run: dnf -y install artifacts/threshold-*.rpm
+
+      - name: Check A — package files landed
+        run: |
+          set -e
+          test -x /usr/bin/threshold
+          test -d /usr/share/com.bongbetic.threshold/threshold
+          test -f /usr/share/applications/com.bongbetic.threshold.desktop
+          test -f /usr/share/metainfo/com.bongbetic.threshold.metainfo.xml
+          test -f /usr/share/glib-2.0/schemas/com.bongbetic.threshold.gschema.xml
+          test -f /usr/share/icons/hicolor/scalable/apps/com.bongbetic.threshold.svg
+          test -d /usr/src/msi-ec-0.13.112
+          test -f /usr/lib/modules-load.d/msi-ec.conf
+          test -f /usr/lib/sysusers.d/threshold.conf
+
+      - name: Check A — desktop entry validates
+        run: desktop-file-validate /usr/share/applications/com.bongbetic.threshold.desktop
+
+      # NB: a bare `! cmd` never trips `set -e` in bash — negative assertions use if-form.
+      - name: Check B — sysusers group created, udev rule rewritten
+        run: |
+          set -e
+          if ! getent group threshold; then
+            echo "FAIL: sysusers group 'threshold' was not created"
+            exit 1
+          fi
+          if grep -q plugdev /usr/lib/udev/rules.d/99-msi-battery.rules; then
+            echo "FAIL: udev rule still references plugdev"
+            exit 1
+          fi
+          grep -q 'chgrp threshold' /usr/lib/udev/rules.d/99-msi-battery.rules
+
+      - name: Check E — dnf remove cleans up
+        run: |
+          set -e
+          dnf -y remove threshold threshold-msi-ec-dkms
+          for f in /usr/bin/threshold \
+                   /usr/share/com.bongbetic.threshold \
+                   /usr/lib/udev/rules.d/99-msi-battery.rules \
+                   /usr/src/msi-ec-0.13.112 \
+                   /usr/lib/modules-load.d/msi-ec.conf; do
+            if test -e "$f"; then
+              echo "FAIL: leftover after dnf remove: $f"
+              exit 1
+            fi
+          done
+
+      - name: Upload smoke checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-smoke-sha-fedora-${{ matrix.fedora }}
+          path: sha256s.txt
+          retention-days: 5
+          if-no-files-found: error
   release:
-    needs: [deb, rpm]
+    needs: [deb, rpm, rpm-smoke]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v4
@@ -99,6 +181,22 @@ jobs:
           cd release
           sha256sum *.deb *.rpm > SHA256SUMS
           cat SHA256SUMS
+
+      - name: Verify RPM checksums match smoke-tested artifacts
+        run: |
+          cd release
+          while read -r h f; do
+            got=$(awk -v f="$f" '$2==f{print $1}' SHA256SUMS)
+            if [ -z "$got" ]; then
+              echo "MISSING from SHA256SUMS: $f"
+              exit 1
+            fi
+            if [ "$got" != "$h" ]; then
+              echo "HASH MISMATCH: $f (smoke=$h release=$got)"
+              exit 1
+            fi
+          done < ../dist/rpm-smoke-sha-fedora-*/sha256s.txt
+          echo "RPM hashes match the smoke-tested artifacts"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
