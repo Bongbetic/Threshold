@@ -1,1 +1,5 @@
-f43e91f953b87daf13864478dfd619d3068916fd1f52a6eb18fce6f5dc4324f9  threshold_1.4.1-1_amd64.deb
+ddda1ce45ddd6a698e56007d2cb4285af3084103879dc880f52c48e4e95d1bdf  threshold_1.4.2-1_amd64.deb
+6835fe85fca8bc752df0056020a157b1454e3c01b095361fe872ffc0afe2f6d0  threshold-1.4.2-1.fc43.noarch.rpm
+d0eecd7234226a3ab99c9cef58a5f4ac55d36f0f8dfd4f6bdda68462a8ba5994  threshold-1.4.2-1.fc44.noarch.rpm
+3e5961a98cb8c322f3710f129854d743b684bb635bbcbd71f0d736b1f97ff486  threshold-msi-ec-dkms-1.4.2-1.fc43.noarch.rpm
+59dbc57903b682c70b7efa3a61ebc2d3fa9eecf55e50dd5c348653eedfdfc5ff  threshold-msi-ec-dkms-1.4.2-1.fc44.noarch.rpm
