@@ -12,14 +12,18 @@ also supported — the app detects the appropriate control mode automatically.
 When no EC/sysfs charge control is available, Threshold falls back to a
 notification alarm.
 
-## Supported Ubuntu versions
+## Supported distributions
 
-Packages are built and tested on **Ubuntu 24.04 LTS (noble)** and
-**Ubuntu 26.04 LTS (resolute)**.  The package is built for `amd64`.
+| Distribution | Package | Notes |
+|---|---|---|
+| Ubuntu 24.04 LTS (noble), 26.04 LTS (resolute), Debian trixie | `threshold_*.deb` | `amd64` |
+| Fedora 43, Fedora 44 | `threshold-*.rpm` | `noarch` — app + DKMS subpackage |
 
 ---
 
 ## Install from a GitHub Release (recommended)
+
+### Ubuntu / Debian (.deb)
 
 1. Open the
    [Releases page](https://github.com/Bongbetic/MSI-batteryguard-for-Thin-A15-B7UCX/releases)
@@ -30,7 +34,7 @@ Packages are built and tested on **Ubuntu 24.04 LTS (noble)** and
 2. Install the package:
 
    ```bash
-   sudo apt install ./threshold_1.3.0-1_amd64.deb
+   sudo apt install ./threshold_1.4.1-1_amd64.deb
    ```
 
    DKMS builds the msi-ec module for the running kernel automatically. If
@@ -56,6 +60,60 @@ Packages are built and tested on **Ubuntu 24.04 LTS (noble)** and
    threshold
    ```
 
+### Fedora (.rpm)
+
+Two packages are attached to each release (built for Fedora 43 and 44):
+
+- `threshold-<version>-1.fcXX.noarch.rpm` — the GTK4 app
+- `threshold-msi-ec-dkms-<version>-1.fcXX.noarch.rpm` — the `msi-ec` DKMS
+  source; pulled in automatically by `dnf` as a weak dependency (install
+  it explicitly if you run with `--setopt=install_weak_deps=False`)
+
+1. Install the kernel-module prerequisites, then the app (the DKMS
+   subpackage comes with it and builds the `msi-ec` module for the
+   running kernel at install time; DKMS also rebuilds it on kernel
+   updates):
+
+   ```bash
+   sudo dnf install -y dkms "kernel-devel-uname-r == $(uname -r)"
+   sudo dnf install ./threshold-1.4.1-1.fc44.noarch.rpm
+   ```
+
+2. The package creates a system group `threshold` (Fedora has no
+   `plugdev`) and the udev rule grants that group write access to the
+   charge threshold attribute. Add yourself and log back in:
+
+   ```bash
+   sudo usermod -aG threshold $USER
+   # log out and back in for the group to take effect
+   ```
+
+   Users not in the `threshold` group can still apply thresholds through
+   the app's `pkexec` (polkit) fallback.
+
+3. **Secure Boot**: the unsigned DKMS module will not load until signed.
+   Enroll a MOK key once (for example, if one was created during DKMS
+   setup), then reboot:
+
+   ```bash
+   sudo mokutil --import /var/lib/shim-signed/mok/mok.pub
+   ```
+
+4. Launch from the app menu (**Threshold**) or:
+
+   ```bash
+   threshold
+   ```
+
+#### Fedora differences
+
+- udev rule group: `threshold` (rewritten from the Debian `plugdev` at
+  build time)
+- group config: `/usr/lib/sysusers.d/threshold.conf`
+- DKMS source: `/usr/src/msi-ec-0.13.112/`
+- autoload hint: `/usr/lib/modules-load.d/msi-ec.conf`
+- everything else matches the table below
+
 ### What gets installed
 
 | Component | Location |
@@ -79,13 +137,26 @@ The app automatically detects which control mode applies:
 
 ---
 
+## Verify downloads
+
+Every release carries a `SHA256SUMS` file covering the `.deb` and `.rpm`
+artifacts:
+
+```bash
+sha256sum -c SHA256SUMS --ignore-missing
+```
+
+A GPG-signed copy is maintained in the repository at
+`output/SHA256SUMS.asc`; verify it with `gpg --verify output/SHA256SUMS.asc`.
+
 ## Verify the module
 
-After installing `msi-ec-dkms`, load and check:
+After installing the DKMS package (`msi-ec-dkms` on Ubuntu/Debian,
+`threshold-msi-ec-dkms` on Fedora), load and check:
 
 ```bash
 sudo modprobe msi-ec
-dkms status                     # msi-ec/0.13 should be built + installed
+dkms status                     # msi-ec/0.13 (deb) or msi-ec/0.13.112 (rpm) built + installed
 modinfo msi-ec | grep filename # should point at updates/dkms, not the built-in path
 ls /sys/class/power_supply/BAT*/charge_control_end_threshold
 ```
@@ -100,6 +171,7 @@ If you prefer the latest upstream module instead of the packaged snapshot:
 
 ```bash
 sudo apt install -y git dkms linux-headers-$(uname -r)
+# Fedora: sudo dnf install -y git dkms "kernel-devel-uname-r == $(uname -r)"
 
 git clone https://github.com/BeardOverflow/msi-ec.git
 cd msi-ec
@@ -129,6 +201,13 @@ sudo apt install -y \
   gobject-introspection python3 python3-gi python3-pytest \
   blueprint-compiler libgtk-4-dev libadwaita-1-dev \
   gir1.2-gtk-4.0 gir1.2-adw-1
+```
+
+Fedora build dependencies:
+
+```bash
+sudo dnf install -y meson ninja-build gettext blueprint-compiler \
+  gtk4-devel libadwaita-devel python3-gobject desktop-file-utils
 ```
 
 Configure, test, install:
@@ -170,5 +249,7 @@ A single `.deb` lands in the parent directory:
 | `dkms status` shows build failure | Install `linux-headers-$(uname -r)` and reinstall the package |
 | Threshold file not found | Module loaded but EC not supported — app switches to notification mode |
 | Permission denied writing threshold | udev rule / `plugdev` membership — reload rules, re-login |
+| Permission denied writing threshold (Fedora) | `threshold` group membership (not `plugdev`) — `usermod -aG threshold $USER`, re-login |
+| DKMS module won't load (Secure Boot) | Sign and enroll a MOK key — see "Fedora (.rpm)" above |
 | App missing from GNOME Software | Ensure metainfo installed; refresh Software / AppStream cache |
 | App shows "Notification only" mode | No EC/sysfs threshold control — alarm monitors charge and notifies at threshold |
