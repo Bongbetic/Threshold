@@ -1,3 +1,12 @@
+threshold (1.4.2-1) trixie; urgency=medium
+
+  * Packaging: release CI now builds a Fedora .rpm (main package + msi-ec DKMS
+    subpackage) and smoke-tests installs in F43/F44 containers; draft Release
+    appears only after the smoke gate
+  * Lint: wrap over-long print calls in window.py
+
+ -- Soubarna <Soubarna@live.in>  Sat, 29 Aug 2026 11:55:34 +0530
+
 threshold (1.4.1-1) trixie; urgency=medium
 
   * Fix-v3: vendor msi-ec 0.13.112 for Thin A15 B7UCX firmware 16RKIMS1.112
