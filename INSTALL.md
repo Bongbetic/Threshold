@@ -146,8 +146,15 @@ artifacts:
 sha256sum -c SHA256SUMS --ignore-missing
 ```
 
-A GPG-signed copy is maintained in the repository at
-`output/SHA256SUMS.asc`; verify it with `gpg --verify output/SHA256SUMS.asc`.
+A GPG-signed copy is attached to each release and maintained in the
+repository at `output/SHA256SUMS.asc`. The release signing key is
+ed25519, fingerprint:
+
+```
+0560467C 274F2A72 1007DDF6 E9B18DB9 8E43B738
+```
+
+Verify with `gpg --verify SHA256SUMS.asc SHA256SUMS`.
 
 ## Verify the module
 
