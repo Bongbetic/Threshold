@@ -412,7 +412,11 @@ class ThresholdWindow(Adw.ApplicationWindow):
                     _("msi-ec loaded but not controlling battery — check EC firmware support"),
                     is_error=True,
                 )
-                print("Threshold: msi-ec platform exists but mode is notify-only — check firmware whitelist", file=sys.stderr)
+                print(
+                    "Threshold: msi-ec platform exists but mode is notify-only"
+                    " — check firmware whitelist",
+                    file=sys.stderr,
+                )
 
     def _start_polling(self):
         """Start 5-second polling for battery charge refresh."""
@@ -586,7 +590,10 @@ class ThresholdWindow(Adw.ApplicationWindow):
                 actual = read_sysfs(bat_path / 'charge_control_end_threshold')
                 if actual is not None and int(actual) != value:
                     message = f'{message} (EC stored {actual}%)'
-                    print(f"Threshold: EC stored {actual}% differs from requested {value}%", file=sys.stderr)
+                    print(
+                        f"Threshold: EC stored {actual}% differs from requested {value}%",
+                        file=sys.stderr,
+                    )
             self._config.set_charge_threshold(value)
             self._config.set_last_applied_time(int(datetime.now().timestamp()))
             self.last_changed_label.set_label(
@@ -670,7 +677,10 @@ class ThresholdWindow(Adw.ApplicationWindow):
                 actual = read_sysfs(bat_path / 'charge_control_end_threshold')
                 if actual is not None and int(actual) != 100:
                     message = f'{message} (EC stored {actual}%)'
-                    print(f"Threshold: EC stored {actual}% differs from requested 100%", file=sys.stderr)
+                    print(
+                        f"Threshold: EC stored {actual}% differs from requested 100%",
+                        file=sys.stderr,
+                    )
             self.charge_scale.set_value(100)
             self.charge_value_label.set_label('100%')
             self._sync_presets(100)
