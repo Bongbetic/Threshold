@@ -5,7 +5,7 @@
 %global msi_ec_ver 0.13.112
 
 Name:           threshold
-Version:        1.4.1
+Version:        1.4.2
 Release:        1%{?dist}
 Summary:        Battery charge threshold controller for Linux laptops
 License:        GPL-3.0-or-later
@@ -128,6 +128,9 @@ fi
 %{_modulesloaddir}/msi-ec.conf
 
 %changelog
+* Sat Aug 29 2026 Soubarna <Soubarna@live.in> - 1.4.2-1
+- Release 1.4.2: Fedora .rpm joins the .deb in CI-built GitHub Releases
+
 * Fri Aug 28 2026 Soubarna <Soubarna@live.in> - 1.4.1-1
 - Initial Fedora RPM: sysusers.d group threshold replaces plugdev, manual
   %%py_byte_compile for the /usr/share python tree, DKMS subpackage for the

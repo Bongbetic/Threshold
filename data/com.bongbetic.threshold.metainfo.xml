@@ -62,6 +62,16 @@
     <content_attribute id="money-advertising">none</content_attribute>
   </content_rating>
   <releases>
+    <release version="1.4.2" date="2026-08-29">
+      <description>
+        <p>
+          Packaging: Fedora .rpm (main package plus msi-ec DKMS subpackage) now
+          built and smoke-tested in release CI alongside the .deb, released as
+          draft only after the smoke gate passes. Fix: wrap over-long print
+          calls flagged by lint.
+        </p>
+      </description>
+    </release>
     <release version="1.4.1" date="2026-08-23">
       <description>
         <p>
