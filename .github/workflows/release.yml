@@ -185,17 +185,19 @@ jobs:
       - name: Verify RPM checksums match smoke-tested artifacts
         run: |
           cd release
-          while read -r h f; do
-            got=$(awk -v f="$f" '$2==f{print $1}' SHA256SUMS)
-            if [ -z "$got" ]; then
-              echo "MISSING from SHA256SUMS: $f"
-              exit 1
-            fi
-            if [ "$got" != "$h" ]; then
-              echo "HASH MISMATCH: $f (smoke=$h release=$got)"
-              exit 1
-            fi
-          done < ../dist/rpm-smoke-sha-fedora-*/sha256s.txt
+          for sf in ../dist/rpm-smoke-sha-fedora-*/sha256s.txt; do
+            while read -r h f; do
+              got=$(awk -v f="$f" '$2==f{print $1}' SHA256SUMS)
+              if [ -z "$got" ]; then
+                echo "MISSING from SHA256SUMS: $f"
+                exit 1
+              fi
+              if [ "$got" != "$h" ]; then
+                echo "HASH MISMATCH: $f (smoke=$h release=$got)"
+                exit 1
+              fi
+            done < "$sf"
+          done
           echo "RPM hashes match the smoke-tested artifacts"
 
       - name: Publish GitHub Release
