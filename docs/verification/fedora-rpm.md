@@ -4,8 +4,13 @@ Reusable procedure for verifying a Fedora RPM release. The bar was decided
 on the map's checklist ticket; the release cut itself runs this and records
 the evidence.
 
-**Bar for "verified": full coverage of checks A–E, proven on Fedora 43 +
-Fedora 44 via split environments, with one CI gate.**
+**Bar for "verified" (amended at the v1.4.2 cut, see #46): full coverage of
+checks A–E on Fedora 44 bare metal, plus the CI smoke gate on Fedora 43 +
+44 containers. A Fedora 43 VM run is optional, not required: the RPM is
+noarch, so the fc43/fc44 packages carry an identical payload and the CI
+smoke job already exercises install/lifecycle on F43. The interactive
+checks (non-sudo group write, pkexec fallback, C) run on the F44 metal
+environment.**
 
 ## Checks
 
@@ -59,12 +64,12 @@ Fedora 44 via split environments, with one CI gate.**
 | Environment | Checks | Notes |
 |---|---|---|
 | CI smoke job (`release.yml`, Fedora 43 + 44 containers) | most of A, parts of B/E | install, assert group/udev/files/`SHA256SUMS`, remove clean; runs on every release |
-| Fedora 43 VM | A, B, C, E | D skipped (hardware-bound). GNOME needs the AppIndicator extension for the tray check. |
-| Fedora 44 bare metal (MSI Thin A15, Xfce, Secure Boot **on**) | A–E full | D needs one-time DKMS MOK signing setup (`/etc/dkms/framework.conf` had no signing config at the time of writing). Then install `threshold-msi-ec-dkms` and confirm build/load/attr/write. MOK enrollment keeps Secure Boot on — do not verify with SB off. |
+| Fedora 43 VM | A, B, C, E | Optional — not required by the bar. D skipped (hardware-bound). GNOME needs the AppIndicator extension for the tray check. |
+| Fedora 44 bare metal (MSI Thin A15, Xfce, Secure Boot **on**) | A–E full | Includes the interactive checks: non-sudo group write after re-login, pkexec fallback, C (window/tray/notification). D needs one-time DKMS MOK signing setup. MOK enrollment keeps Secure Boot on — do not verify with SB off. |
 
 ## Evidence
 
 Record run results in the "Cut the release and run verification" ticket
 resolution and in the GitHub Release notes. A release page counts as
-verified only once both the Fedora 43 and Fedora 44 results are recorded
-against it.
+verified once the CI smoke gate is green and the Fedora 44 bare-metal
+results (A–E, including the interactive checks) are recorded against it.
