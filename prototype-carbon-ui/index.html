@@ -1,0 +1,571 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway, not production code.
+  Wayfinder ticket #36 "Carbon UI: pick layout direction from prototype variants" (map: #34).
+  Question: which layout direction from prototype-gtk4-ui (a/b/c + scroll-free iteration),
+  translated into Carbon idioms, becomes the redesign's layout?
+  Four structurally different Carbon translations, switchable via ?variant=a|b|c|d
+  and the floating pill (arrow keys work). Data is static; nothing persists.
+  Run: open this file in any browser (needs network for the Carbon CDN on first load).
+-->
+<html lang="en" class="cds--g100">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Threshold — Carbon layout prototype</title>
+<link rel="stylesheet" href="https://unpkg.com/@carbon/styles@1.87.0/css/styles.css">
+<style>
+  /* ============ theme: Carbon g100 + the industrial orange accent ============
+     Accent mapping is provisional (real theme mapping is wayfinder ticket #42). */
+  :root { --acc: #FF7800; --acc-hover: #FF8B1A; --acc-active: #E96D00; }
+  .cds--g100 {
+    --cds-button-primary: var(--acc);
+    --cds-button-primary-hover: var(--acc-hover);
+    --cds-button-primary-active: var(--acc-active);
+    --cds-background-brand: var(--acc);
+    --cds-link-primary: var(--acc);
+    --cds-border-interactive: var(--acc);
+    --cds-focus: var(--acc);
+    --cds-interactive: var(--acc);
+    --cds-layer-selected: var(--acc);
+    --cds-layer-selected-hover: var(--acc-hover);
+    /* industrial spec wants orange selection states; Carbon uses success-green for
+       checked toggles — overridden for the mock only */
+    --cds-support-success: var(--acc);
+  }
+  html, body { margin: 0; padding: 0; background: var(--cds-background); color: var(--cds-text-primary);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+  section[data-variant] { min-height: 100vh; }
+  section[data-variant][hidden] { display: none; }
+
+  /* ---------- shared bits ---------- */
+  .sec-label { font-size: 12px; letter-spacing: .32px; color: var(--cds-text-secondary);
+    text-transform: uppercase; margin: 28px 0 8px; }
+  .row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px;
+    padding: 13px 0; border-bottom: 1px solid var(--cds-border-subtle); }
+  .row:last-child { border-bottom: none; }
+  .row-title { font-size: 14px; color: var(--cds-text-primary); }
+  .row-desc { font-size: 12px; color: var(--cds-text-secondary); margin-top: 2px; }
+  .row-value { font-size: 14px; color: var(--cds-text-secondary); }
+  .row-value.accent { color: var(--acc); font-weight: 600; }
+  .accent { color: var(--acc); }
+  .big-num { font-size: 44px; font-weight: 300; line-height: 1.05; }
+  .caption { font-size: 12px; color: var(--cds-text-secondary); }
+  cds-button { text-transform: none; }
+
+  /* ============ Variant A — Preferences form ============ */
+  .a-page { max-width: 620px; margin: 0 auto; padding: 40px 24px 110px; }
+  .a-page h1 { font-size: 24px; font-weight: 600; margin: 0 0 4px; }
+  .a-page .sub { font-size: 13px; color: var(--cds-text-secondary); margin-bottom: 8px; }
+  .a-slider-row { padding: 18px 0 6px; }
+  .a-actions { display: flex; gap: 12px; margin: 22px 0 6px; }
+
+  /* ============ Variant B — Dashboard tiles ============ */
+  .b-page { max-width: 780px; margin: 0 auto; padding: 40px 24px 110px; }
+  .b-page h1 { font-size: 24px; font-weight: 600; margin: 0 0 20px; }
+  .b-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .b-stats cds-tile { padding: 22px; }
+  .b-tile-label { font-size: 12px; color: var(--cds-text-secondary); margin-bottom: 14px; }
+  .b-tile-sub { font-size: 13px; color: var(--cds-text-secondary); margin-top: 10px; }
+  .b-control cds-tile { padding: 26px; }
+  .b-control .big-num { text-align: center; font-size: 52px; margin: 18px 0; }
+  .b-control .caption { text-align: center; margin: 14px 0 6px; }
+  .b-actions { display: flex; gap: 12px; margin-top: 22px; }
+  .b-settings { margin-top: 16px; }
+  .b-settings cds-tile { padding: 10px 22px; }
+
+  /* ============ Variant C — Side-nav shell ============ */
+  cds-header { position: fixed; inset: 0 0 auto 0; z-index: 90; }
+  .c-shell { padding-top: 48px; min-height: 100vh; }
+  cds-side-nav { position: fixed !important; top: 48px; bottom: 0; left: 0; z-index: 80;
+    --cds-background: #262626; --cds-layer: #262626; background: #262626 !important; }
+  cds-side-nav-link[active] { background: #393939 !important; color: var(--cds-text-primary) !important; }
+  .proto-menu-btn { flex: none; width: 48px; height: 48px; background: transparent; border: none;
+    color: var(--cds-text-primary); font-size: 18px; cursor: pointer; }
+  .proto-menu-btn:hover { background: rgba(255,255,255,.08); }
+  .c-content { margin-left: 0; transition: margin-left .15s ease; padding: 32px 40px 110px; }
+  .c-shell.nav-open .c-content { margin-left: 256px; }
+  .c-page h2 { font-size: 20px; font-weight: 600; margin: 0 0 18px; }
+  .c-hero { text-align: center; padding: 64px 0 24px; }
+  .c-hero .big-num { font-size: 72px; }
+  .c-hero .caption { margin-top: 10px; }
+  .c-hero .chip { margin-top: 22px; font-size: 14px; }
+  .c-presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 18px 0 22px; }
+  .c-actions { display: flex; gap: 12px; }
+  .c-settings { max-width: 560px; }
+
+  /* ============ Variant D — Industrial grid (scroll-free) ============ */
+  .d-app { height: 100vh; display: flex; flex-direction: column; min-height: 780px; }
+  .d-app cds-header { position: static; flex: none; }
+  .d-body { flex: 1; overflow: auto; padding: 14px 22px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-content: start; }
+  .d-tile { padding: 16px 18px !important; }
+  .d-tile-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .d-span3 { grid-column: 1 / -1; min-height: 356px; }
+  .d-status-inner { display: grid; grid-template-columns: 1.1fr auto 1fr; gap: 16px; flex: 1; align-items: center; }
+  .d-divider { width: 1px; background: var(--cds-border-subtle); align-self: stretch; }
+  .d-diag { text-align: right; display: grid; gap: 9px; }
+  .d-diag .caption { font-size: 11px; }
+  .d-diag .val { font-size: 13px; color: var(--cds-text-primary); }
+  .d-charging { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 12px; }
+  .d-mode { margin-top: 6px; flex: 1; display: flex; align-items: center; }
+  .d-mode cds-content-switcher { width: 100%; }
+  .d-mode cds-content-switcher-item { flex: 1; }
+  /* charge panel */
+  .d-charge-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 26px; }
+  .d-charge-head .d-tile-title { margin: 0; font-size: 15px; }
+  .d-charge-head .val { font-size: 28px; font-weight: 400; color: var(--acc); }
+  .d-slider-wrap { position: relative; padding: 22px 14px 0; }
+  .d-float { position: absolute; top: 0; transform: translateX(-50%); font-size: 13px; color: var(--cds-text-primary); }
+  .d-slider-ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--cds-text-secondary); margin-top: 6px; }
+  .d-rec { text-align: center; font-size: 12px; color: var(--cds-text-secondary); margin: 10px 0 14px; }
+  .d-presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+  .d-presets cds-selectable-tile { padding: 10px 12px; min-height: 64px; }
+  .d-preset-val { font-size: 16px; font-weight: 600; }
+  .d-preset-sub { font-size: 11px; color: var(--cds-text-secondary); margin-top: 2px; }
+  .d-presets cds-selectable-tile[selected] .d-preset-val,
+  .d-presets cds-selectable-tile[selected] .d-preset-sub { color: var(--acc); }
+  .d-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  /* settings tiles */
+  .d-settings-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center;
+    padding: 6px 0; border-bottom: 1px solid var(--cds-border-subtle); }
+  .d-settings-row:last-child { border-bottom: none; }
+  .d-settings-row .row-title { font-size: 13px; }
+  .d-settings-row .row-desc { font-size: 11px; }
+  .d-settings-row .val { font-size: 13px; color: var(--cds-text-secondary); }
+  .chev { color: var(--cds-text-secondary); font-size: 16px; }
+  .d-swatches { display: flex; gap: 10px; align-items: center; }
+  .swatch { width: 20px; height: 20px; border-radius: 50%; }
+  .swatch.sel { outline: 2px solid var(--acc); outline-offset: 2px; }
+  /* footer */
+  .d-footer { flex: none; display: flex; justify-content: space-between; align-items: center;
+    border-top: 1px solid var(--cds-border-subtle); background: var(--cds-layer);
+    padding: 10px 22px; font-size: 13px; color: var(--cds-text-secondary); }
+  .d-footer .meta { display: flex; gap: 28px; }
+  .d-footer .meta b { color: var(--cds-text-primary); font-weight: 400; }
+  .d-footer .right { display: flex; gap: 12px; align-items: center; }
+
+  /* ============ prototype switcher (not part of any design) ============ */
+  .proto-pill { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,.82); color: #fff;
+    border-radius: 999px; padding: 6px 10px 6px 16px; z-index: 999; box-shadow: 0 4px 16px rgba(0,0,0,.5);
+    font-family: system-ui, sans-serif; }
+  .proto-pill .pp-tag { font-size: 10px; letter-spacing: 1.5px; color: #FF7800; font-weight: 700; margin-right: 10px; }
+  .proto-pill .pp-name { font-size: 13px; margin: 0 8px; white-space: nowrap; }
+  .proto-pill button { background: #2b2b2b; color: #fff; border: none; border-radius: 50%;
+    width: 30px; height: 30px; font-size: 15px; cursor: pointer; }
+  .proto-pill button:hover { background: #444; }
+</style>
+</head>
+<body>
+
+<!-- ==================== A — Preferences form (GTK variant A) ==================== -->
+<section data-variant="a" hidden>
+  <main class="a-page">
+    <h1>Threshold</h1>
+    <div class="sub">BAT1 · Battery charge-threshold control</div>
+
+    <div class="sec-label">Battery status</div>
+    <div class="row">
+      <div><div class="row-title">Current charge</div><div class="row-desc">BAT1 · Charging on AC adapter</div></div>
+      <div class="row-value accent">72%</div>
+    </div>
+    <div class="row">
+      <div><div class="row-title">Active threshold</div><div class="row-desc">Changed today, 10:24 AM</div></div>
+      <div class="row-value accent" data-value-out>80%</div>
+    </div>
+    <div class="row">
+      <div><div class="row-title">Health</div><div class="row-desc">Temperature 34°C</div></div>
+      <div class="row-value">Good</div>
+    </div>
+
+    <div class="sec-label">Charge limit</div>
+    <div class="a-slider-row">
+      <cds-slider label-text="Set threshold" min="20" max="100" step="1" value="80"><cds-slider-input type="number" aria-label="Set threshold" hide-text-input></cds-slider-input></cds-slider>
+    </div>
+    <div class="caption">Recommended: 60–80% daily · 100% for travel</div>
+
+    <div class="a-actions">
+      <cds-button kind="primary">Apply Threshold</cds-button>
+      <cds-button kind="secondary">Restore to 100%</cds-button>
+    </div>
+
+    <div class="sec-label">Settings</div>
+    <div class="row">
+      <div><div class="row-title">Dark mode</div><div class="row-desc">Follow system preference</div></div>
+      <cds-toggle aria-label="Dark mode" hide-label toggled></cds-toggle>
+    </div>
+    <div class="row">
+      <div><div class="row-title">Launch at login</div><div class="row-desc">Start minimized in background</div></div>
+      <cds-toggle aria-label="Launch at login" hide-label></cds-toggle>
+    </div>
+    <div class="row">
+      <div><div class="row-title">Minimize to tray</div><div class="row-desc">Keep app in system tray</div></div>
+      <cds-toggle aria-label="Minimize to tray" hide-label toggled></cds-toggle>
+    </div>
+  </main>
+</section>
+
+<!-- ==================== B — Dashboard tiles (GTK variant B) ==================== -->
+<section data-variant="b" hidden>
+  <main class="b-page">
+    <h1>Threshold</h1>
+    <div class="b-stats">
+      <cds-tile>
+        <div class="b-tile-label">Current charge</div>
+        <div class="big-num">72%</div>
+        <div class="b-tile-sub">⚡ Charging · BAT1</div>
+      </cds-tile>
+      <cds-tile>
+        <div class="b-tile-label">Active threshold</div>
+        <div class="big-num accent" data-value-out>80%</div>
+        <div class="b-tile-sub">Changed today, 10:24 AM</div>
+      </cds-tile>
+    </div>
+    <div class="b-control">
+      <cds-tile>
+        <div class="row-title" style="font-size:15px;font-weight:600;">Charge Limit</div>
+        <div class="big-num accent" data-value-out>80%</div>
+        <cds-slider label-text="Set threshold" min="20" max="100" step="1" value="80"><cds-slider-input type="number" aria-label="Set threshold" hide-text-input></cds-slider-input></cds-slider>
+        <div class="caption">Recommended: 60–80% daily · 100% for travel</div>
+        <div class="b-actions">
+          <cds-button kind="primary">Apply Threshold</cds-button>
+          <cds-button kind="secondary">Restore to 100%</cds-button>
+        </div>
+      </cds-tile>
+    </div>
+    <div class="b-settings">
+      <cds-tile>
+        <div class="row">
+          <div><div class="row-title">Dark mode</div><div class="row-desc">Follow system preference</div></div>
+          <cds-toggle aria-label="Dark mode" hide-label toggled></cds-toggle>
+        </div>
+        <div class="row">
+          <div><div class="row-title">Launch at login</div><div class="row-desc">Start minimized in background</div></div>
+          <cds-toggle aria-label="Launch at login" hide-label></cds-toggle>
+        </div>
+      </cds-tile>
+    </div>
+  </main>
+</section>
+
+<!-- ==================== C — Side-nav shell (GTK variant C) ==================== -->
+<section data-variant="c" hidden>
+  <cds-header aria-label="Threshold">
+    <button id="cMenuBtn" class="proto-menu-btn" aria-label="Toggle navigation">☰</button>
+    <cds-header-name href="#" prefix="Battery">Guard</cds-header-name>
+  </cds-header>
+  <div class="c-shell nav-open" id="cShell">
+    <cds-side-nav id="cNav" expanded aria-label="Main navigation">
+      <cds-side-nav-items>
+        <cds-side-nav-link href="#" data-page="status" active>Status</cds-side-nav-link>
+        <cds-side-nav-link href="#" data-page="threshold">Threshold</cds-side-nav-link>
+        <cds-side-nav-link href="#" data-page="settings">Settings</cds-side-nav-link>
+      </cds-side-nav-items>
+    </cds-side-nav>
+    <main class="c-content">
+      <div class="c-page" data-page="status">
+        <div class="c-hero">
+          <div class="big-num accent">72%</div>
+          <div class="caption">⚡ Charging · AC Adapter</div>
+          <div class="caption">BAT1 · Health Good · 34°C</div>
+          <div class="chip">Current threshold: <span data-value-out>80%</span></div>
+          <div class="c-actions" style="justify-content:center; margin-top:20px;">
+            <cds-button kind="primary" id="cGoThreshold">Adjust charge limit</cds-button>
+          </div>
+        </div>
+      </div>
+      <div class="c-page" data-page="threshold" hidden>
+        <h2>Charge Limit</h2>
+        <div class="big-num accent" data-value-out style="margin-bottom:14px;">80%</div>
+        <cds-slider label-text="Set threshold" min="20" max="100" step="1" value="80"><cds-slider-input type="number" aria-label="Set threshold" hide-text-input></cds-slider-input></cds-slider>
+        <div class="c-presets">
+          <cds-selectable-tile data-preset="60" checkmark-label="60%"><div class="d-preset-val">60%</div><div class="d-preset-sub">Daily</div></cds-selectable-tile>
+          <cds-selectable-tile data-preset="70" checkmark-label="70%"><div class="d-preset-val">70%</div><div class="d-preset-sub">Balanced</div></cds-selectable-tile>
+          <cds-selectable-tile data-preset="80" selected checkmark-label="80%"><div class="d-preset-val">80%</div><div class="d-preset-sub">Recommended</div></cds-selectable-tile>
+          <cds-selectable-tile data-preset="90" checkmark-label="90%"><div class="d-preset-val">90%</div><div class="d-preset-sub">Extended</div></cds-selectable-tile>
+          <cds-selectable-tile data-preset="100" checkmark-label="100%"><div class="d-preset-val">100%</div><div class="d-preset-sub">Travel</div></cds-selectable-tile>
+        </div>
+        <div class="caption" style="margin-bottom:16px;">Recommended: 60–80% daily · 100% for travel</div>
+        <div class="c-actions">
+          <cds-button kind="primary">Apply</cds-button>
+          <cds-button kind="secondary">Restore to 100%</cds-button>
+        </div>
+      </div>
+      <div class="c-page c-settings" data-page="settings" hidden>
+        <h2>Settings</h2>
+        <div class="sec-label" style="margin-top:0;">General</div>
+        <div class="row">
+          <div><div class="row-title">Dark mode</div><div class="row-desc">Follow system preference</div></div>
+          <cds-toggle aria-label="Dark mode" hide-label toggled></cds-toggle>
+        </div>
+        <div class="row">
+          <div><div class="row-title">Launch at login</div><div class="row-desc">Start minimized in background</div></div>
+          <cds-toggle aria-label="Launch at login" hide-label></cds-toggle>
+        </div>
+        <div class="sec-label">Appearance</div>
+        <div class="row">
+          <div><div class="row-title">Accent color</div><div class="row-desc">Highlight color across the app</div></div>
+          <div class="d-swatches">
+            <span class="swatch sel" style="background:#FF7800;"></span>
+            <span class="swatch" style="background:#4A91F2;"></span>
+            <span class="swatch" style="background:#32D74B;"></span>
+            <span class="swatch" style="background:#A44BF4;"></span>
+            <span class="swatch" style="background:#F04444;"></span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- ==================== D — Industrial grid, scroll-free (scroll-free iteration) ==================== -->
+<section data-variant="d" hidden>
+  <div class="d-app">
+    <cds-header aria-label="Threshold">
+      <button class="proto-menu-btn" aria-label="Menu" tabindex="-1">☰</button>
+      <cds-header-name href="#" prefix="Battery">Guard</cds-header-name>
+      <cds-header-nav aria-label="Sections" id="dNav">
+        <cds-header-nav-item href="#" is-active>Overview</cds-header-nav-item>
+        <cds-header-nav-item href="#">Threshold</cds-header-nav-item>
+        <cds-header-nav-item href="#">Settings</cds-header-nav-item>
+        <cds-header-nav-item href="#">About</cds-header-nav-item>
+      </cds-header-nav>
+    </cds-header>
+
+    <div class="d-body">
+      <!-- top status grid -->
+      <cds-tile class="d-tile">
+        <div class="d-tile-title">Battery Status</div>
+        <div class="d-status-inner">
+          <div>
+            <div class="big-num accent">72%</div>
+            <div class="d-charging">⚡ Charging</div>
+          </div>
+          <div class="d-divider"></div>
+          <div class="d-diag">
+            <div><div class="caption">Power Source</div><div class="val">AC Adapter</div></div>
+            <div><div class="caption">Health</div><div class="val">Good</div></div>
+            <div><div class="caption">Temperature</div><div class="val">34°C</div></div>
+          </div>
+        </div>
+      </cds-tile>
+      <cds-tile class="d-tile">
+        <div class="d-tile-title">Active Threshold</div>
+        <div class="big-num accent" data-value-out>80%</div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px;">
+          <div class="caption">BAT1</div>
+          <div style="text-align:right;"><div class="caption">Last changed</div><div class="val" style="font-size:13px;">Today, 10:24 AM</div></div>
+        </div>
+      </cds-tile>
+      <cds-tile class="d-tile">
+        <div class="d-tile-title">Threshold Mode</div>
+        <div class="d-mode">
+          <cds-content-switcher selected-index="0">
+            <cds-content-switcher-item value="automatic">Automatic</cds-content-switcher-item>
+            <cds-content-switcher-item value="manual">Manual</cds-content-switcher-item>
+          </cds-content-switcher>
+        </div>
+        <div class="caption" style="margin-top:10px;">Automatic applies the recommended limit</div>
+      </cds-tile>
+
+      <!-- dominant charge panel -->
+      <cds-tile class="d-tile d-span3">
+        <div class="d-charge-head">
+          <div class="d-tile-title">Charge Limit</div>
+          <div class="val" data-value-out>80%</div>
+        </div>
+        <div class="d-slider-wrap">
+          <div class="d-float" id="dFloat" data-value-out>80%</div>
+          <cds-slider id="dSlider" label-text="Charge limit" min="20" max="100" step="1" value="80" hide-label><cds-slider-input type="number" aria-label="Charge limit" hide-text-input></cds-slider-input></cds-slider>
+          <div class="d-slider-ends"><span>20%</span><span>100%</span></div>
+        </div>
+        <div class="d-rec">Recommended: 60–80% daily&nbsp;&nbsp;•&nbsp;&nbsp;100% for travel</div>
+        <div class="d-presets">
+          <cds-selectable-tile data-preset="60" checkmark-label="60%"><div class="d-preset-val">60%</div><div class="d-preset-sub">Daily</div></cds-selectable-tile>
+          <cds-selectable-tile data-preset="70" checkmark-label="70%"><div class="d-preset-val">70%</div><div class="d-preset-sub">Balanced</div></cds-selectable-tile>
+          <cds-selectable-tile data-preset="80" selected checkmark-label="80%"><div class="d-preset-val">80%</div><div class="d-preset-sub">Recommended</div></cds-selectable-tile>
+          <cds-selectable-tile data-preset="90" checkmark-label="90%"><div class="d-preset-val">90%</div><div class="d-preset-sub">Extended</div></cds-selectable-tile>
+          <cds-selectable-tile data-preset="100" checkmark-label="100%"><div class="d-preset-val">100%</div><div class="d-preset-sub">Travel</div></cds-selectable-tile>
+        </div>
+        <div class="d-actions">
+          <cds-button kind="primary">Apply Threshold</cds-button>
+          <cds-button kind="secondary">Restore to 100%</cds-button>
+        </div>
+      </cds-tile>
+
+      <!-- lower settings grid -->
+      <cds-tile class="d-tile">
+        <div class="d-tile-title">General</div>
+        <div class="d-settings-row">
+          <div><div class="row-title">Dark mode</div><div class="row-desc">Follow system preference</div></div>
+          <cds-toggle aria-label="Dark mode" hide-label toggled></cds-toggle>
+        </div>
+        <div class="d-settings-row">
+          <div><div class="row-title">Launch at login</div><div class="row-desc">Start minimized in background</div></div>
+          <cds-toggle aria-label="Launch at login" hide-label></cds-toggle>
+        </div>
+        <div class="d-settings-row">
+          <div><div class="row-title">Minimize to tray</div><div class="row-desc">Keep app in system tray</div></div>
+          <cds-toggle aria-label="Minimize to tray" hide-label toggled></cds-toggle>
+        </div>
+        <div class="d-settings-row">
+          <div><div class="row-title">Show notifications</div><div class="row-desc">Notify on threshold changes</div></div>
+          <cds-toggle aria-label="Show notifications" hide-label toggled></cds-toggle>
+        </div>
+      </cds-tile>
+      <cds-tile class="d-tile">
+        <div class="d-tile-title">Charging Behavior</div>
+        <div class="d-settings-row">
+          <div><div class="row-title">Resume charging below</div><div class="row-desc">Start charging when below limit</div></div>
+          <span class="val">75% <span class="chev">›</span></span>
+        </div>
+        <div class="d-settings-row">
+          <div><div class="row-title">Full charge reminder</div><div class="row-desc">Notify when reaching 100%</div></div>
+          <cds-toggle aria-label="Full charge reminder" hide-label toggled></cds-toggle>
+        </div>
+        <div class="d-settings-row">
+          <div><div class="row-title">Stop charging at limit</div><div class="row-desc">Prevent overcharging</div></div>
+          <cds-toggle aria-label="Stop charging at limit" hide-label toggled></cds-toggle>
+        </div>
+        <div class="d-settings-row">
+          <div><div class="row-title">Charge hysteresis</div><div class="row-desc">Avoid rapid charging toggles</div></div>
+          <span class="val">5% <span class="chev">›</span></span>
+        </div>
+      </cds-tile>
+      <cds-tile class="d-tile">
+        <div class="d-tile-title">Appearance</div>
+        <div class="d-settings-row">
+          <div><div class="row-title">Accent color</div><div class="row-desc">Highlight color across the app</div></div>
+          <div class="d-swatches">
+            <span class="swatch sel" style="background:#FF7800;"></span>
+            <span class="swatch" style="background:#4A91F2;"></span>
+            <span class="swatch" style="background:#32D74B;"></span>
+            <span class="swatch" style="background:#A44BF4;"></span>
+            <span class="swatch" style="background:#F04444;"></span>
+          </div>
+        </div>
+        <div class="d-settings-row">
+          <div><div class="row-title">Compact mode</div><div class="row-desc">Reduce spacing and padding</div></div>
+          <cds-toggle aria-label="Compact mode" hide-label></cds-toggle>
+        </div>
+        <div class="d-settings-row">
+          <div><div class="row-title">Show percentage in title</div><div class="row-desc">Display battery % in window title</div></div>
+          <cds-toggle aria-label="Show percentage in title" hide-label toggled></cds-toggle>
+        </div>
+      </cds-tile>
+    </div>
+
+    <div class="d-footer">
+      <div class="meta">
+        <span>Battery <b>BAT1</b></span>
+        <span>Cycle Count <b>156</b></span>
+        <span>Design Capacity <b>54.0 Wh</b></span>
+      </div>
+      <div class="right">
+        <cds-dropdown type="inline" title-text="Profile" label="Profile" value="Daily">
+          <cds-dropdown-item value="Daily">Daily</cds-dropdown-item>
+          <cds-dropdown-item value="Balanced">Balanced</cds-dropdown-item>
+          <cds-dropdown-item value="Travel">Travel</cds-dropdown-item>
+        </cds-dropdown>
+        <cds-button kind="tertiary" size="sm">Save</cds-button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== prototype switcher (not part of any design) ==================== -->
+<div class="proto-pill" role="toolbar" aria-label="Prototype variant switcher">
+  <span class="pp-tag">PROTOTYPE</span>
+  <button id="ppPrev" aria-label="Previous variant">←</button>
+  <span class="pp-name" id="ppName"></span>
+  <button id="ppNext" aria-label="Next variant">→</button>
+</div>
+
+<script type="module">
+  // Carbon web components, self-styled; loaded from CDN (throwaway prototype).
+  const base = "https://esm.sh/@carbon/web-components@2.62.0/es/components/";
+  await Promise.allSettled(
+    ["button", "slider", "toggle", "tile", "content-switcher", "dropdown", "ui-shell"].map(c => import(base + c))
+  );
+
+  // ---------- variant switching ----------
+  const NAMES = { a: "A — Preferences form", b: "B — Dashboard tiles", c: "C — Side-nav shell", d: "D — Industrial grid (scroll-free)" };
+  const ORDER = ["a", "b", "c", "d"];
+  const sections = Object.fromEntries(
+    [...document.querySelectorAll("section[data-variant]")].map(s => [s.dataset.variant, s])
+  );
+  const fromUrl = (location.search.match(/[?&]variant=([a-d])/) || [])[1];
+  let cur = ORDER.includes(fromUrl) ? fromUrl : "d";
+
+  function show(v) {
+    cur = v;
+    for (const [k, s] of Object.entries(sections)) s.hidden = k !== v;
+    document.getElementById("ppName").textContent = NAMES[v];
+    try { history.replaceState(null, "", "?variant=" + v); } catch {}
+  }
+  const step = d => show(ORDER[(ORDER.indexOf(cur) + d + ORDER.length) % ORDER.length]);
+  document.getElementById("ppPrev").onclick = () => step(-1);
+  document.getElementById("ppNext").onclick = () => step(1);
+  document.addEventListener("keydown", e => {
+    if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+    const t = e.target;
+    if (t.closest?.("cds-slider, cds-slider-input, cds-dropdown, cds-tabs, cds-content-switcher, input, textarea, [contenteditable]")) return;
+    step(e.key === "ArrowRight" ? 1 : -1);
+  });
+  show(cur);
+
+  // ---------- sliders, value outs, presets ----------
+  for (const sec of Object.values(sections)) {
+    const slider = sec.querySelector("cds-slider");
+    const outs = sec.querySelectorAll("[data-value-out]");
+    if (slider && outs.length) {
+      slider.addEventListener("cds-slider-changed", e => {
+        const v = Math.round(e.detail.value);
+        outs.forEach(o => (o.textContent = v + "%"));
+        positionFloat(sec, v);
+      });
+    }
+    sec.querySelectorAll("cds-selectable-tile[data-preset]").forEach(tile => {
+      tile.addEventListener("click", () => {
+        const v = parseInt(tile.dataset.preset, 10);
+        sec.querySelectorAll("cds-selectable-tile[data-preset]").forEach(x => x.toggleAttribute("selected", x === tile));
+        if (slider) { slider.value = v; slider.setAttribute("value", String(v)); }
+        outs.forEach(o => (o.textContent = v + "%"));
+        positionFloat(sec, v);
+      });
+    });
+  }
+  function positionFloat(sec, v) {
+    const f = sec.querySelector(".d-float");
+    if (f) f.style.left = ((v - 20) / 80) * 100 + "%";
+  }
+  positionFloat(sections.d, 80);
+
+  // ---------- variant C: nav ----------
+  const cShell = document.getElementById("cShell");
+  const cBtn = document.getElementById("cMenuBtn");
+  cBtn?.addEventListener("click", () => {
+    const open = !cShell.classList.contains("nav-open");
+    cShell.classList.toggle("nav-open", open);
+    document.getElementById("cNav").toggleAttribute("expanded", open);
+  });
+  const cLinks = [...document.querySelectorAll("#cNav cds-side-nav-link")];
+  function gotoCPage(page) {
+    cLinks.forEach(l => l.toggleAttribute("active", l.dataset.page === page));
+    document.querySelectorAll(".c-page").forEach(p => (p.hidden = p.dataset.page !== page));
+  }
+  cLinks.forEach(l => l.addEventListener("click", e => { e.preventDefault(); gotoCPage(l.dataset.page); }));
+  document.getElementById("cGoThreshold")?.addEventListener("click", () => gotoCPage("threshold"));
+
+  // ---------- variant D: top nav underline (decorative — one-screen layout) ----------
+  document.querySelectorAll("#dNav cds-header-nav-item").forEach(item => {
+    item.addEventListener("click", e => {
+      e.preventDefault();
+      document.querySelectorAll("#dNav cds-header-nav-item").forEach(x => x.removeAttribute("is-active"));
+      item.setAttribute("is-active", "");
+    });
+  });
+</script>
+</body>
+</html>
