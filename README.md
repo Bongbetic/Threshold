@@ -51,29 +51,36 @@ Slider → Apply → /sys/class/power_supply/BAT*/charge_control_end_threshold
 
 ## Install
 
-Download the latest `.deb` from
-**[Releases](https://github.com/Bongbetic/Threshold/releases/latest)**
-and install:
+Download the latest package from
+**[Releases](https://github.com/Bongbetic/Threshold/releases/latest)**:
+
+**Ubuntu / Debian** (`threshold_<version>_amd64.deb`):
 
 ```bash
-sudo apt install ./threshold_1.4.0-1_amd64.deb
+sudo apt install ./threshold_1.4.1-1_amd64.deb
+sudo usermod -aG plugdev $USER   # log out and back in
 ```
 
-The package includes:
+**Fedora 43 / 44** (`threshold-<version>-1.fcXX.noarch.rpm`):
+
+```bash
+sudo dnf install -y dkms "kernel-devel-uname-r == $(uname -r)"
+sudo dnf install ./threshold-1.4.1-1.fc44.noarch.rpm
+sudo usermod -aG threshold $USER   # log out and back in
+```
+
+Every package includes:
 - The Threshold GTK4 app
 - Desktop entry and icons
-- A udev rule for passwordless threshold writes (`plugdev` group)
+- A udev rule for passwordless threshold writes (`plugdev` group on
+  Debian/Ubuntu, `threshold` group on Fedora)
 - The `msi-ec` DKMS source tree (built automatically on install)
 
-Add your user to the `plugdev` group (log out and back in):
+Launch from the app menu or run `threshold`. Full walkthrough, Secure
+Boot notes and download verification: **[INSTALL.md](INSTALL.md)**.
 
-```bash
-sudo usermod -aG plugdev $USER
-```
-
-Launch from the app menu or run `threshold`.
-
-> **Supported:** Ubuntu 24.04 LTS, 26.04 LTS, Debian Trixie — `amd64` only.
+> **Supported:** Ubuntu 24.04 LTS, 26.04 LTS, Debian Trixie (`amd64`);
+> Fedora 43, 44.
 
 ## Usage
 
@@ -104,8 +111,8 @@ Settings are also saved automatically when you click **Apply Threshold**.
 
 ## Building from source
 
-See **[INSTALL.md](INSTALL.md)** for the Meson build setup and local `.deb`
-packaging.
+See **[INSTALL.md](INSTALL.md)** for the Meson build setup and local
+`.deb`/`.rpm` packaging.
 
 ---
 
