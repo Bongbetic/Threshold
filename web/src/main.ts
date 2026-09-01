@@ -1,8 +1,10 @@
+
 /**
  * Threshold Carbon shell - entry point.
  *
  * Sends ready handshake, requests state, renders battery overview.
- * Handles charge limit UI interactions.
+ * Handles charge limit UI interactions, window controls, navigation,
+ * and About modal.
  *
  * Overview cards:
  *   - Battery Status: charge percent, charge status, power source
@@ -17,6 +19,8 @@ import './styles.css';
 import {
   bridge, sendReady, getState, applyThreshold, restoreThreshold,
   setDarkMode, setAccentColor, setCompactMode, setTitlePercentage,
+  minimizeWindow, maximizeWindow, restoreWindow, toggleMaximizeWindow,
+  closeWindow, beginWindowDrag,
 } from './bridge/client';
 import type { BatteryState, AppearanceState } from './types/protocol';
 import { t } from './i18n/t';
@@ -49,6 +53,139 @@ function formatHealth(percent: number | null, grade: string | null): { percent: 
     percent: percent !== null ? percent + '%' : '—',
     grade: grade || '',
   };
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+
+/** Set of region IDs that can receive keyboard focus. */
+const NAV_REGIONS = ['overview', 'threshold', 'settings'] as const;
+type NavRegion = (typeof NAV_REGIONS)[number];
+
+/** Currently active navigation region. */
+let activeRegion: NavRegion = 'overview';
+
+/** Move keyboard focus to the specified region and update active nav item. */
+function navigateToRegion(region: NavRegion): void {
+  const section = document.getElementById(region);
+  if (section) {
+    section.focus({ preventScroll: false });
+  }
+
+  // Update active state on nav items
+  const navItems = document.querySelectorAll<HTMLElement>('[data-region]');
+  navItems.forEach(item => {
+    const itemRegion = item.getAttribute('data-region');
+    if (itemRegion === region) {
+      item.setAttribute('is-active', 'true');
+      item.setAttribute('aria-current', 'page');
+    } else {
+      item.removeAttribute('is-active');
+      item.removeAttribute('aria-current');
+    }
+  });
+
+  activeRegion = region;
+}
+
+/** Handle keyboard navigation for nav items. */
+function handleNavKeydown(event: KeyboardEvent): void {
+  const target = event.target as HTMLElement;
+  const region = target.getAttribute('data-region') as NavRegion | null;
+  if (!region) return;
+
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    navigateToRegion(region);
+  } else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+    event.preventDefault();
+    const currentIndex = NAV_REGIONS.indexOf(region);
+    const nextIndex = event.key === 'ArrowRight'
+      ? (currentIndex + 1) % NAV_REGIONS.length
+      : (currentIndex - 1 + NAV_REGIONS.length) % NAV_REGIONS.length;
+    const nextRegion = NAV_REGIONS[nextIndex];
+    const nextItem = document.querySelector<HTMLElement>(`[data-region="${nextRegion}"]`);
+    if (nextItem) {
+      nextItem.focus();
+    }
+  }
+}
+
+// ── About Modal ─────────────────────────────────────────────────────────────
+
+/** Show the About modal. */
+function showAboutModal(): void {
+  const modal = document.querySelector<HTMLElement>('cds-modal[data-testid="about-modal"]');
+  if (modal) {
+    modal.setAttribute('open', '');
+  }
+}
+
+/** Hide the About modal. */
+function hideAboutModal(): void {
+  const modal = document.querySelector<HTMLElement>('cds-modal[data-testid="about-modal"]');
+  if (modal) {
+    modal.removeAttribute('open');
+  }
+}
+
+// ── Window controls ─────────────────────────────────────────────────────────
+
+/** Set up window control button handlers. */
+function setupWindowControls(): void {
+  const controls = document.querySelector<HTMLElement>('[data-testid="window-controls"]');
+  if (!controls) return;
+
+  // Handle button clicks via data-command attribute
+  controls.addEventListener('click', async (event) => {
+    const target = (event.target as HTMLElement).closest('[data-command]') as HTMLElement;
+    if (!target) return;
+
+    const command = target.getAttribute('data-command');
+    switch (command) {
+      case 'minimize':
+        await minimizeWindow();
+        break;
+      case 'toggle_maximize':
+        await toggleMaximizeWindow();
+        break;
+      case 'close':
+        await closeWindow();
+        break;
+    }
+  });
+}
+
+/** Set up header drag region for native move and double-click maximize. */
+function setupDragRegion(): void {
+  const dragRegion = document.querySelector<HTMLElement>('[data-testid="header-drag-region"]');
+  if (!dragRegion) return;
+
+  // Prevent default drag behavior
+  dragRegion.addEventListener('dragstart', (e) => e.preventDefault());
+
+  // Single click: begin native move drag
+  dragRegion.addEventListener('mousedown', async (event) => {
+    // Only handle primary button (left click)
+    if (event.button !== 0) return;
+
+    // Don't start drag if clicking on a button or nav item
+    const target = event.target as HTMLElement;
+    if (target.closest('cds-button') || target.closest('cds-header-nav-item')) {
+      return;
+    }
+
+    await beginWindowDrag();
+  });
+
+  // Double-click: toggle maximize/restore
+  dragRegion.addEventListener('dblclick', async (event) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('cds-button') || target.closest('cds-header-nav-item')) {
+      return;
+    }
+
+    await toggleMaximizeWindow();
+  });
 }
 
 // ── DOM rendering ───────────────────────────────────────────────────────────
@@ -250,6 +387,50 @@ async function init(): Promise<void> {
   let pendingValue = 80;
 
   try {
+    // Set up window controls and drag region
+    setupWindowControls();
+    setupDragRegion();
+
+    // Set up navigation
+    const navItems = document.querySelectorAll<HTMLElement>('[data-region]');
+    navItems.forEach(item => {
+      item.addEventListener('keydown', handleNavKeydown);
+      item.addEventListener('click', () => {
+        const region = item.getAttribute('data-region') as NavRegion;
+        if (region) {
+          navigateToRegion(region);
+        }
+      });
+    });
+
+    // Set up About modal
+    const aboutButton = document.querySelector<HTMLElement>('[data-testid="about-button"]');
+    const aboutCloseButton = document.querySelector<HTMLElement>('[data-testid="about-close-button"]');
+    const aboutModal = document.querySelector<HTMLElement>('cds-modal[data-testid="about-modal"]');
+
+    if (aboutButton) {
+      aboutButton.addEventListener('click', showAboutModal);
+    }
+    if (aboutCloseButton) {
+      aboutCloseButton.addEventListener('click', hideAboutModal);
+    }
+
+    // Close About modal on Escape key
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        hideAboutModal();
+      }
+    });
+
+    // Close About modal when clicking backdrop
+    if (aboutModal) {
+      aboutModal.addEventListener('click', (event) => {
+        if (event.target === aboutModal) {
+          hideAboutModal();
+        }
+      });
+    }
+
     await sendReady();
 
     const stateData = await getState() as { state?: BatteryState; appearance?: AppearanceState };
@@ -429,6 +610,9 @@ async function init(): Promise<void> {
         }
       });
     });
+
+    // Set initial navigation focus to overview
+    navigateToRegion('overview');
 
     console.log('Threshold Carbon shell ready');
   } catch (err) {

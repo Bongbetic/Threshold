@@ -1,3 +1,4 @@
+
 /**
  * Threshold Carbon shell - appearance styles.
  *
@@ -192,4 +193,206 @@
 
 .compact-mode .preset-group {
   gap: 0.25rem;
+}
+
+/* ── Header window controls ─────────────────────────────────────────────── */
+
+cds-header {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.header-drag-region {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  cursor: default;
+  -webkit-app-region: drag;
+  z-index: 0;
+}
+
+.header-drag-region:active {
+  cursor: grabbing;
+}
+
+.window-controls {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-left: auto;
+  z-index: 1;
+  -webkit-app-region: no-drag;
+}
+
+.window-controls cds-button {
+  min-width: 2.5rem;
+  height: 2rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  transition: background-color 0.15s;
+}
+
+.window-controls cds-button:hover {
+  background-color: var(--layer-hover, #e5e5e5);
+}
+
+.cds--g100 .window-controls cds-button:hover {
+  background-color: var(--layer-hover, #393939);
+}
+
+.window-controls cds-button[data-command="close"]:hover {
+  background-color: var(--button-danger-active, #da1e28);
+  color: var(--text-on-color, #ffffff);
+}
+
+/* ── Navigation ─────────────────────────────────────────────────────────── */
+
+cds-header-nav {
+  z-index: 1;
+  -webkit-app-region: no-drag;
+}
+
+cds-header-nav-item {
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  border-bottom: 2px solid transparent;
+}
+
+cds-header-nav-item[is-active] {
+  color: var(--accent-primary, #eb6200);
+  border-bottom-color: var(--accent-primary, #eb6200);
+}
+
+cds-header-nav-item:focus-visible {
+  outline: 2px solid var(--accent-focus, #0043ce);
+  outline-offset: -2px;
+}
+
+/* ── Content regions ────────────────────────────────────────────────────── */
+
+.content-region {
+  outline: none;
+}
+
+.content-region:focus-visible {
+  outline: 2px solid var(--accent-focus, #0043ce);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* ── About modal ────────────────────────────────────────────────────────── */
+
+.about-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.about-version {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #525252);
+}
+
+.cds--g100 .about-version {
+  color: var(--text-secondary, #c6c6c6);
+}
+
+.about-description {
+  font-size: 1rem;
+  color: var(--text-primary, #161616);
+}
+
+.cds--g100 .about-description {
+  color: var(--text-primary, #f4f4f4);
+}
+
+.about-license {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #525252);
+}
+
+.cds--g100 .about-license {
+  color: var(--text-secondary, #c6c6c6);
+}
+
+/* ── Live dot indicator ─────────────────────────────────────────────────── */
+
+.live-dot {
+  font-size: 0.75rem;
+  color: var(--accent-primary, #eb6200);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ── Card header layout ─────────────────────────────────────────────────── */
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.card-header h3 {
+  margin: 0;
+}
+
+/* ── Floating slider label ──────────────────────────────────────────────── */
+
+.floating-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-primary, #eb6200);
+  margin-left: 0.5rem;
+}
+
+/* ── Status bar ─────────────────────────────────────────────────────────── */
+
+.status-bar {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #525252);
+  padding: 0.5rem !important;
+}
+
+.status-bar.success {
+  color: var(--support-success, #198038);
+}
+
+.status-bar.error {
+  color: var(--support-error, #da1e28);
+}
+
+/* ── Toast container ────────────────────────────────────────────────────── */
+
+.toast-container {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ── Health grade styling ───────────────────────────────────────────────── */
+
+.health-grade {
+  color: var(--text-secondary, #525252);
+  font-size: 0.875rem;
+}
+
+.cds--g100 .health-grade {
+  color: var(--text-secondary, #c6c6c6);
 }

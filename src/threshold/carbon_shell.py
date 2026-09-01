@@ -79,6 +79,12 @@ class BridgeHandler:
         self._writing = False
         self._polling_source_id = None
         self._gsettings_handler_ids: list[int] = []
+        self._window = None
+
+    def set_window(self, window) -> None:
+        """Set the window reference for window commands."""
+        self._window = window
+        self._dispatcher.set_window(window)
 
     def _build_state(self):
         """Build a fresh state snapshot."""
@@ -358,15 +364,26 @@ def create_carbon_window(application, config):
     web_view.load_uri(bundle_uri)
 
     # Create the window
+    saved_width = config.get_window_width() or WINDOW_WIDTH
+    saved_height = config.get_window_height() or WINDOW_HEIGHT
+    saved_maximized = config.get_maximized()
+
     win = Gtk.ApplicationWindow(
         application=application,
         title="Threshold",
-        default_width=WINDOW_WIDTH,
-        default_height=WINDOW_HEIGHT,
+        default_width=saved_width,
+        default_height=saved_height,
     )
     win.set_resizable(True)
     win.set_size_request(MIN_WIDTH, MIN_HEIGHT)
     win.set_child(web_view)
+
+    # Wire window reference to handler and dispatcher
+    handler.set_window(win)
+
+    # Restore maximized state if saved
+    if saved_maximized:
+        win.maximize()
 
     # Connect close request
     def on_close_request(*_args):
