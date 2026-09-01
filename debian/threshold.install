@@ -4,6 +4,7 @@ usr/share/applications/com.bongbetic.threshold.desktop
 usr/share/com.bongbetic.threshold/threshold.gresource
 usr/share/com.bongbetic.threshold/threshold/*.py
 usr/share/com.bongbetic.threshold/style.css
+usr/share/com.bongbetic.threshold/web/
 usr/share/glib-2.0/schemas/com.bongbetic.threshold.gschema.xml
 usr/share/glib-2.0/schemas/com.bongbetic.batteryguard.gschema.xml
 usr/share/GConf/gsettings/com.bongbetic.batteryguard.convert

@@ -2,14 +2,18 @@ pkgdatadir = get_option('prefix') / get_option('datadir') / 'com.bongbetic.thres
 
 python_sources = [
     'threshold/__init__.py',
+    'threshold/adapter.py',
     'threshold/battery.py',
+    'threshold/commands.py',
     'threshold/config.py',
     'threshold/main.py',
     'threshold/application.py',
     'threshold/migration.py',
+    'threshold/state.py',
     'threshold/tray.py',
     'threshold/window.py',
     'threshold/resources.py',
+    'threshold/carbon_shell.py',
 ]
 
 install_data(
