@@ -76,11 +76,17 @@ class BridgeHandler:
         self._dispatcher = CommandDispatcher(config)
         self._state = None
         self._battery_path = find_battery_path()
+        self._writing = False
+        self._polling_source_id = None
 
     def _build_state(self):
         """Build a fresh state snapshot."""
         from threshold.adapter import build_state
         return build_state(self._config, battery_path=self._battery_path)
+
+    def _is_write_command(self, cmd: str) -> bool:
+        """Return True if the command initiates a threshold write."""
+        return cmd in ("apply_threshold", "restore_threshold")
 
     def _push_to_js(self, message: dict[str, Any]) -> None:
         """Send a message to JS via evaluate_javascript (WebKit 6.0 async API)."""
@@ -110,6 +116,9 @@ class BridgeHandler:
         cmd = msg.get("cmd", "")
         msg_id = msg.get("id", "")
         args = msg.get("args", {})
+
+        # Track write-in-flight for external EC change detection
+        self._writing = self._is_write_command(cmd)
 
         # Build state for the command
         self._state = self._build_state()
@@ -153,6 +162,75 @@ class BridgeHandler:
 
         self._push_to_js(response)
 
+        # Clear write-in-flight flag after response sent
+        if self._writing:
+            self._writing = False
+
+    def start_polling(self, interval_seconds: int = 5) -> None:
+        """Start periodic state push to JS.
+
+        Mirrors the GTK window's 5-second poll — no JS timer needed.
+        """
+        from gi.repository import GLib
+        if self._polling_source_id is not None:
+            return
+        self._polling_source_id = GLib.timeout_add_seconds(
+            interval_seconds, self._poll_tick
+        )
+
+    def stop_polling(self) -> None:
+        """Stop periodic state push."""
+        from gi.repository import GLib
+        if self._polling_source_id is not None:
+            GLib.source_remove(self._polling_source_id)
+            self._polling_source_id = None
+
+    def _poll_tick(self) -> bool:
+        """Called every interval_seconds — refresh state and push to JS."""
+        from threshold.battery import detect_control_mode, read_sysfs
+        from gi.repository import GLib
+
+        # Re-detect mode and follow external EC threshold changes
+        self._sync_from_hardware()
+
+        # Build fresh state and push
+        self._state = self._build_state()
+        self._push_to_js({
+            "event": "battery",
+            "data": self._serialize_state(self._state),
+        })
+
+        return GLib.SOURCE_CONTINUE
+
+    def _sync_from_hardware(self) -> None:
+        """Re-detect mode and follow external EC threshold changes.
+
+        Skipped while a write is in flight.
+        """
+        if self._writing or self._battery_path is None:
+            return
+
+        from threshold.battery import detect_control_mode, read_sysfs
+
+        mode = detect_control_mode(self._battery_path)
+        if mode != self._state.control_mode:
+            self._state = self._state.with_updates(control_mode=mode)
+
+        # Follow external EC threshold changes
+        raw = read_sysfs(self._battery_path / "charge_control_end_threshold")
+        if raw is not None:
+            try:
+                ec_value = int(raw)
+            except ValueError:
+                return
+            current = self._state.active_threshold
+            if ec_value != current:
+                self._state = self._state.with_updates(
+                    active_threshold=ec_value,
+                    pending_threshold=ec_value,
+                )
+                self._config.set_charge_threshold(ec_value)
+
     def _serialize_state(self, state) -> dict[str, Any]:
         """Serialize ThresholdState for the bridge."""
         return {
@@ -160,10 +238,17 @@ class BridgeHandler:
             "charge_percent": state.charge_percent,
             "charge_status": state.charge_status,
             "active_threshold": state.active_threshold,
+            "pending_threshold": state.pending_threshold,
             "control_mode": state.control_mode.value if state.control_mode else None,
+            "battery_identifier": state.battery_path.name if state.battery_path else None,
             "health_percent": state.health_percent,
             "health_grade": state.health_grade,
             "power_source": state.power_source,
+            "cycle_count": state.cycle_count,
+            "capacity_full_wh": state.capacity_full_wh,
+            "capacity_design_wh": state.capacity_design_wh,
+            "alarm_armed": state.alarm_armed,
+            "alarm_fired": state.alarm_fired,
             "dark_mode": state.dark_mode,
             "accent_color": state.accent_color,
         }
@@ -236,6 +321,7 @@ def create_carbon_window(application, config):
 
     # Connect close request
     def on_close_request(*_args):
+        handler.stop_polling()
         if not win.is_maximized():
             config.set_window_width(win.get_width())
             config.set_window_height(win.get_height())
@@ -243,4 +329,8 @@ def create_carbon_window(application, config):
         return False
 
     win.connect("close-request", on_close_request)
+
+    # Start Python-owned 5-second poll
+    handler.start_polling(5)
+
     return win

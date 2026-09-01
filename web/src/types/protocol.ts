@@ -32,10 +32,17 @@ export interface BatteryState {
   charge_percent: number | null;
   charge_status: string | null;
   active_threshold: number | null;
+  pending_threshold: number | null;
   control_mode: string | null;
+  battery_identifier: string | null;
   health_percent: number | null;
   health_grade: string | null;
   power_source: string | null;
+  cycle_count: number | null;
+  capacity_full_wh: number | null;
+  capacity_design_wh: number | null;
+  alarm_armed: boolean;
+  alarm_fired: boolean;
   dark_mode: boolean;
   accent_color: string;
 }
