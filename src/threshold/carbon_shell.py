@@ -44,6 +44,11 @@ def _find_bundle() -> Optional[Path]:
     return None
 
 
+def _load_shim_source() -> str:
+    """Load document-start bridge JavaScript for WebKit injection."""
+    return SHIM_SCRIPT_PATH.read_text(encoding="utf-8")
+
+
 
 
 
@@ -565,7 +570,8 @@ def create_carbon_window(application, config):
     settings.set_allow_universal_access_from_file_urls(True)
 
     # Create WebView
-    web_view = WebKit.WebView.new_with_settings(settings)
+    web_view = WebKit.WebView()
+    web_view.set_settings(settings)
 
     # Register the message handler for JS -> Python communication
     user_content = web_view.get_user_content_manager()
@@ -573,10 +579,10 @@ def create_carbon_window(application, config):
     user_content.register_script_message_handler("threshold")
     user_content.connect("script-message-received::threshold", handler.on_message)
 
-    # Inject the document-start shim
-    shim_uri = "file://" + str(SHIM_SCRIPT_PATH.resolve())
+    # Inject bridge source at document start. UserScript.new expects
+    # JavaScript source, not a file URI.
     shim = WebKit.UserScript.new(
-        shim_uri,
+        _load_shim_source(),
         WebKit.UserContentInjectedFrames.TOP_FRAME,
         WebKit.UserScriptInjectionTime.START,
         [],  # allow_list

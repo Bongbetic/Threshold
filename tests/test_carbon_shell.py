@@ -1149,3 +1149,12 @@ class TestAlarmEvaluation:
         handler._alarm_armed = True
         handler._evaluate_alarm()  # Should return early
 
+
+
+def test_shim_source_is_javascript_not_file_uri():
+    from threshold.carbon_shell import _load_shim_source
+
+    source = _load_shim_source()
+
+    assert 'window.threshold' in source
+    assert not source.startswith('file://')

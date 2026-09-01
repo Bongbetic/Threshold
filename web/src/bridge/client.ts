@@ -41,6 +41,11 @@ class BridgeClient {
     args?: Record<string, unknown>,
     timeoutMs = REQUEST_TIMEOUT_MS,
   ): Promise<T> {
+    const injected = (window as any).threshold;
+    if (injected?.request) {
+      return injected.request(cmd, args) as Promise<T>;
+    }
+
     const id = this._generateId();
     const request: BridgeRequest = { id, cmd, args };
 
@@ -75,6 +80,11 @@ class BridgeClient {
    * Returns an unsubscribe function.
    */
   on(event: string, callback: EventCallback): () => void {
+    const injected = (window as any).threshold;
+    if (injected?.on) {
+      return injected.on(event, callback);
+    }
+
     if (!this._listeners.has(event)) {
       this._listeners.set(event, new Set());
     }
