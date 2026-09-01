@@ -1,6 +1,7 @@
 
 """Adapter: builds ThresholdState from sysfs readings and Config."""
 
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -18,6 +19,35 @@ from threshold.battery import (
 )
 from threshold.config import Config
 from threshold.state import ThresholdState
+
+
+def detect_system_theme_scheme() -> str:
+    """Detect the system color scheme from GNOME/Adwaita settings.
+
+    Returns 'dark' or 'light'. Falls back to 'light' on unknown DEs.
+    """
+    try:
+        import gi
+        gi.require_version('Gio', '2.0')
+        from gi.repository import Gio
+
+        settings = Gio.Settings.new('org.gnome.desktop.interface')
+        scheme = settings.get_string('color-scheme')
+        if scheme in ('prefer-dark', 'default'):
+            # 'default' on GNOME means dark variant is available;
+            # Adwaita uses 'default' to mean follow-dark when the
+            # GTK theme is Adwaita-dark.  Read the GTK theme name to
+            # disambiguate.
+            if scheme == 'prefer-dark':
+                return 'dark'
+            # 'default' — check the GTK theme for dark variant
+            theme = settings.get_string('gtk-theme')
+            if theme and 'dark' in theme.lower():
+                return 'dark'
+        return 'light'
+    except Exception:
+        # Non-GNOME or missing GSettings — fall back
+        return 'light'
 
 
 def build_state(
@@ -67,6 +97,8 @@ def build_state(
     full_wh = capacity[0] if capacity else None
     design_wh = capacity[1] if capacity else None
     
+    system_theme = detect_system_theme_scheme()
+
     return ThresholdState(
         battery_available=battery_path is not None,
         battery_path=battery_path,
@@ -83,6 +115,7 @@ def build_state(
         capacity_design_wh=design_wh,
         dark_mode=config.get_dark_mode(),
         accent_color=config.get_accent_color(),
+        system_theme_scheme=system_theme,
         compact_mode=config.get_compact_mode(),
         title_percentage=config.get_title_percentage(),
         show_notifications=config.get_show_notifications(),

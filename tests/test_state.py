@@ -204,3 +204,52 @@ class TestThresholdStateFromSysfs:
         assert state.charge_status is None
         assert state.active_threshold is None
         assert state.health_percent is None
+
+
+
+class TestSystemThemeScheme:
+    """Test system_theme_scheme field and effective_theme_scheme resolution."""
+
+    def test_dark_mode_forces_dark(self):
+        """dark_mode=True always returns 'dark' regardless of system theme."""
+        state = ThresholdState(
+            battery_available=False,
+            dark_mode=True,
+            system_theme_scheme="light",
+        )
+        assert state.effective_theme_scheme == "dark"
+
+    def test_dark_mode_off_follows_system_light(self):
+        """dark_mode=False with system_theme_scheme='light' returns 'light'."""
+        state = ThresholdState(
+            battery_available=False,
+            dark_mode=False,
+            system_theme_scheme="light",
+        )
+        assert state.effective_theme_scheme == "light"
+
+    def test_dark_mode_off_follows_system_dark(self):
+        """dark_mode=False with system_theme_scheme='dark' returns 'dark'."""
+        state = ThresholdState(
+            battery_available=False,
+            dark_mode=False,
+            system_theme_scheme="dark",
+        )
+        assert state.effective_theme_scheme == "dark"
+
+    def test_system_theme_scheme_default_is_light(self):
+        """system_theme_scheme defaults to 'light' when not set."""
+        state = ThresholdState(battery_available=False)
+        assert state.system_theme_scheme == "light"
+        assert state.effective_theme_scheme == "light"
+
+    def test_system_theme_scheme_preserved_on_update(self):
+        """with_updates preserves system_theme_scheme."""
+        state = ThresholdState(
+            battery_available=False,
+            dark_mode=False,
+            system_theme_scheme="dark",
+        )
+        updated = state.with_updates(charge_percent=50)
+        assert updated.system_theme_scheme == "dark"
+        assert updated.effective_theme_scheme == "dark"

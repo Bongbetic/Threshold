@@ -199,3 +199,31 @@ export async function applyThreshold(threshold: number): Promise<Record<string, 
 export async function restoreThreshold(): Promise<Record<string, unknown>> {
   return bridge.request('restore_threshold');
 }
+
+/**
+ * Set dark mode preference via the bridge.
+ */
+export async function setDarkMode(value: boolean): Promise<Record<string, unknown>> {
+  return bridge.request('set_dark_mode', { value });
+}
+
+/**
+ * Set accent color preference via the bridge.
+ */
+export async function setAccentColor(value: string): Promise<Record<string, unknown>> {
+  return bridge.request('set_accent_color', { value });
+}
+
+/**
+ * Set compact mode preference via the bridge.
+ */
+export async function setCompactMode(value: boolean): Promise<Record<string, unknown>> {
+  return bridge.request('set_compact_mode', { value });
+}
+
+/**
+ * Set title percentage preference via the bridge.
+ */
+export async function setTitlePercentage(value: boolean): Promise<Record<string, unknown>> {
+  return bridge.request('set_title_percentage', { value });
+}
