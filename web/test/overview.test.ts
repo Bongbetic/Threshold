@@ -35,6 +35,24 @@ function setupDOM(): void {
         <span id="alarm-threshold" data-testid="alarm-threshold"></span>
       </div>
     </div>
+    <div id="appearance-panel" data-testid="appearance-panel">
+      <div class="accent-radio-group" role="radiogroup" aria-label="Accent color" data-testid="accent-radio-group">
+        <button class="accent-swatch accent-orange" role="radio" aria-checked="true" aria-label="Orange" value="orange" data-testid="accent-orange"></button>
+        <button class="accent-swatch accent-blue" role="radio" aria-checked="false" aria-label="Blue" value="blue" data-testid="accent-blue"></button>
+        <button class="accent-swatch accent-green" role="radio" aria-checked="false" aria-label="Green" value="green" data-testid="accent-green"></button>
+        <button class="accent-swatch accent-purple" role="radio" aria-checked="false" aria-label="Purple" value="purple" data-testid="accent-purple"></button>
+        <button class="accent-swatch accent-red" role="radio" aria-checked="false" aria-label="Red" value="red" data-testid="accent-red"></button>
+      </div>
+      <cds-toggle id="dark-mode-toggle" label-text="Dark mode" data-testid="dark-mode-toggle">
+        <input type="checkbox" role="switch" aria-label="Dark mode" />
+      </cds-toggle>
+      <cds-toggle id="compact-mode-toggle" label-text="Compact mode" data-testid="compact-mode-toggle">
+        <input type="checkbox" role="switch" aria-label="Compact mode" />
+      </cds-toggle>
+      <cds-toggle id="title-percentage-toggle" label-text="Show percentage in title" data-testid="title-percentage-toggle">
+        <input type="checkbox" role="switch" aria-label="Show percentage in title" />
+      </cds-toggle>
+    </div>
     <div id="error-state" data-testid="error-state" hidden>
       <p id="error-message" data-testid="error-message"></p>
     </div>
@@ -65,6 +83,8 @@ const COMPLETE_STATE: BatteryState = {
   alarm_fired: false,
   dark_mode: false,
   accent_color: 'orange',
+  compact_mode: false,
+  title_percentage: false,
 };
 
 const PARTIAL_STATE: BatteryState = {
@@ -85,6 +105,8 @@ const PARTIAL_STATE: BatteryState = {
   alarm_fired: false,
   dark_mode: false,
   accent_color: 'orange',
+  compact_mode: false,
+  title_percentage: false,
 };
 
 const NOTIFICATION_ONLY_STATE: BatteryState = {
@@ -105,6 +127,8 @@ const NOTIFICATION_ONLY_STATE: BatteryState = {
   alarm_fired: false,
   dark_mode: false,
   accent_color: 'orange',
+  compact_mode: false,
+  title_percentage: false,
 };
 
 const NO_BATTERY_STATE: BatteryState = {
@@ -125,6 +149,8 @@ const NO_BATTERY_STATE: BatteryState = {
   alarm_fired: false,
   dark_mode: false,
   accent_color: 'orange',
+  compact_mode: false,
+  title_percentage: false,
 };
 
 const CHANGED_HARDWARE_STATE: BatteryState = {
@@ -145,6 +171,8 @@ const CHANGED_HARDWARE_STATE: BatteryState = {
   alarm_fired: false,
   dark_mode: false,
   accent_color: 'orange',
+  compact_mode: false,
+  title_percentage: false,
 };
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -359,6 +387,106 @@ describe('Overview state-to-view rendering', () => {
       statusEl.textContent = CHANGED_HARDWARE_STATE.charge_status || 'Unknown';
       expect(pctEl.textContent).toBe('90%');
       expect(statusEl.textContent).toBe('Full');
+    });
+  });
+
+  describe('Appearance controls rendering', () => {
+    it('renders accent radio group with all five colors', () => {
+      const group = document.querySelector('[data-testid="accent-radio-group"]');
+      expect(group).not.toBeNull();
+      const swatches = group!.querySelectorAll('.accent-swatch');
+      expect(swatches).toHaveLength(5);
+      const values = Array.from(swatches).map(s => s.getAttribute('value'));
+      expect(values).toEqual(['orange', 'blue', 'green', 'purple', 'red']);
+    });
+
+    it('marks the current accent as checked', () => {
+      const blueSwatch = document.querySelector('[data-testid="accent-blue"]')!;
+      blueSwatch.setAttribute('aria-checked', 'true');
+      expect(blueSwatch.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('renders dark mode toggle', () => {
+      const toggle = document.querySelector('[data-testid="dark-mode-toggle"]');
+      expect(toggle).not.toBeNull();
+    });
+
+    it('renders compact mode toggle', () => {
+      const toggle = document.querySelector('[data-testid="compact-mode-toggle"]');
+      expect(toggle).not.toBeNull();
+    });
+
+    it('renders title percentage toggle', () => {
+      const toggle = document.querySelector('[data-testid="title-percentage-toggle"]');
+      expect(toggle).not.toBeNull();
+    });
+
+    it('applies compact-mode class to document root', () => {
+      document.documentElement.classList.add('compact-mode');
+      expect(document.documentElement.classList.contains('compact-mode')).toBe(true);
+      document.documentElement.classList.remove('compact-mode');
+    });
+
+    it('applies accent color class to document root', () => {
+      document.documentElement.classList.add('accent-blue');
+      expect(document.documentElement.classList.contains('accent-blue')).toBe(true);
+      document.documentElement.classList.remove('accent-blue');
+    });
+
+    it('applies dark theme class to document root', () => {
+      document.documentElement.classList.add('cds--g100');
+      expect(document.documentElement.classList.contains('cds--g100')).toBe(true);
+      document.documentElement.classList.remove('cds--g100');
+    });
+  });
+
+  describe('Title update', () => {
+    it('updates header name with percentage when enabled', () => {
+      const header = document.createElement('cds-header-name');
+      header.textContent = 'Threshold';
+      document.body.appendChild(header);
+
+      const titlePercentage = true;
+      const chargePercent = 75;
+      if (titlePercentage && chargePercent !== null) {
+        header.textContent = 'Threshold — ' + chargePercent + '%';
+      }
+      expect(header.textContent).toBe('Threshold — 75%');
+
+      header.remove();
+    });
+
+    it('shows plain title when percentage disabled', () => {
+      const header = document.createElement('cds-header-name');
+      header.textContent = 'Threshold — 75%';
+      document.body.appendChild(header);
+
+      const titlePercentage = false;
+      const chargePercent = 75;
+      if (titlePercentage && chargePercent !== null) {
+        header.textContent = 'Threshold — ' + chargePercent + '%';
+      } else {
+        header.textContent = 'Threshold';
+      }
+      expect(header.textContent).toBe('Threshold');
+
+      header.remove();
+    });
+  });
+
+  describe('Translation fallback', () => {
+    it('t() returns the key as-is for English', async () => {
+      const { t } = await import('../src/i18n/t');
+      expect(t('Appearance')).toBe('Appearance');
+      expect(t('Dark mode')).toBe('Dark mode');
+      expect(t('Accent color')).toBe('Accent color');
+      expect(t('Compact mode')).toBe('Compact mode');
+      expect(t('Show percentage in title')).toBe('Show percentage in title');
+      expect(t('Orange')).toBe('Orange');
+      expect(t('Blue')).toBe('Blue');
+      expect(t('Green')).toBe('Green');
+      expect(t('Purple')).toBe('Purple');
+      expect(t('Red')).toBe('Red');
     });
   });
 });

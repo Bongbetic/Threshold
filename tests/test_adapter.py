@@ -166,3 +166,63 @@ class TestBuildStateNotificationOnly:
         assert state.pending_threshold == 80
         assert state.alarm_armed is True
         assert state.capabilities.supports_alarm is True
+
+
+
+class TestDetectSystemThemeScheme:
+    """Test system theme scheme detection from GNOME settings."""
+
+    def test_returns_light_on_missing_gsettings(self):
+        """Falls back to 'light' when GSettings schema is unavailable."""
+        with patch('gi.repository.Gio.Settings.new', side_effect=Exception('no schema')):
+            from threshold.adapter import detect_system_theme_scheme
+            result = detect_system_theme_scheme()
+            assert result == "light"
+
+    def test_returns_dark_for_prefer_dark(self):
+        """Returns 'dark' when color-scheme is 'prefer-dark'."""
+        mock_settings = MagicMock()
+        mock_settings.get_string.side_effect = lambda key: {
+            'color-scheme': 'prefer-dark',
+            'gtk-theme': 'Adwaita',
+        }.get(key, '')
+        with patch('gi.repository.Gio.Settings.new', return_value=mock_settings):
+            from threshold.adapter import detect_system_theme_scheme
+            result = detect_system_theme_scheme()
+            assert result == "dark"
+
+    def test_returns_light_for_prefer_light(self):
+        """Returns 'light' when color-scheme is 'prefer-light'."""
+        mock_settings = MagicMock()
+        mock_settings.get_string.side_effect = lambda key: {
+            'color-scheme': 'prefer-light',
+            'gtk-theme': 'Adwaita',
+        }.get(key, '')
+        with patch('gi.repository.Gio.Settings.new', return_value=mock_settings):
+            from threshold.adapter import detect_system_theme_scheme
+            result = detect_system_theme_scheme()
+            assert result == "light"
+
+    def test_default_scheme_checks_gtk_theme(self):
+        """When color-scheme is 'default', checks GTK theme for dark variant."""
+        mock_settings = MagicMock()
+        mock_settings.get_string.side_effect = lambda key: {
+            'color-scheme': 'default',
+            'gtk-theme': 'Adwaita-dark',
+        }.get(key, '')
+        with patch('gi.repository.Gio.Settings.new', return_value=mock_settings):
+            from threshold.adapter import detect_system_theme_scheme
+            result = detect_system_theme_scheme()
+            assert result == "dark"
+
+    def test_default_scheme_light_theme(self):
+        """When color-scheme is 'default' and GTK theme is light, returns 'light'."""
+        mock_settings = MagicMock()
+        mock_settings.get_string.side_effect = lambda key: {
+            'color-scheme': 'default',
+            'gtk-theme': 'Adwaita',
+        }.get(key, '')
+        with patch('gi.repository.Gio.Settings.new', return_value=mock_settings):
+            from threshold.adapter import detect_system_theme_scheme
+            result = detect_system_theme_scheme()
+            assert result == "light"

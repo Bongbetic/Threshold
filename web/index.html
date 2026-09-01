@@ -109,6 +109,48 @@
         </div>
       </div>
 
+      <!-- Appearance Settings Card -->
+      <div id="appearance-panel" class="cds-tile" data-testid="appearance-panel">
+        <h3>Appearance</h3>
+        <div class="card-body appearance-controls">
+          <!-- Dark Mode Toggle -->
+          <div class="control-row">
+            <span class="control-label">Dark mode</span>
+            <cds-toggle id="dark-mode-toggle" label-text="Dark mode" data-testid="dark-mode-toggle">
+              <input type="checkbox" role="switch" aria-label="Dark mode" />
+            </cds-toggle>
+          </div>
+
+          <!-- Accent Color Radio Group -->
+          <div class="control-row">
+            <span class="control-label">Accent color</span>
+            <div class="accent-radio-group" role="radiogroup" aria-label="Accent color" data-testid="accent-radio-group">
+              <button class="accent-swatch accent-orange" role="radio" aria-checked="true" aria-label="Orange" value="orange" data-testid="accent-orange"></button>
+              <button class="accent-swatch accent-blue" role="radio" aria-checked="false" aria-label="Blue" value="blue" data-testid="accent-blue"></button>
+              <button class="accent-swatch accent-green" role="radio" aria-checked="false" aria-label="Green" value="green" data-testid="accent-green"></button>
+              <button class="accent-swatch accent-purple" role="radio" aria-checked="false" aria-label="Purple" value="purple" data-testid="accent-purple"></button>
+              <button class="accent-swatch accent-red" role="radio" aria-checked="false" aria-label="Red" value="red" data-testid="accent-red"></button>
+            </div>
+          </div>
+
+          <!-- Compact Mode Toggle -->
+          <div class="control-row">
+            <span class="control-label">Compact mode</span>
+            <cds-toggle id="compact-mode-toggle" label-text="Compact mode" data-testid="compact-mode-toggle">
+              <input type="checkbox" role="switch" aria-label="Compact mode" />
+            </cds-toggle>
+          </div>
+
+          <!-- Title Percentage Toggle -->
+          <div class="control-row">
+            <span class="control-label">Show percentage in title</span>
+            <cds-toggle id="title-percentage-toggle" label-text="Show percentage in title" data-testid="title-percentage-toggle">
+              <input type="checkbox" role="switch" aria-label="Show percentage in title" />
+            </cds-toggle>
+          </div>
+        </div>
+      </div>
+
       <!-- Error State (hidden by default) -->
       <div id="error-state" class="cds-tile cds-tile--dark" hidden data-testid="error-state">
         <h3>No Battery Detected</h3>

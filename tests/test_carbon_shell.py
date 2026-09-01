@@ -556,3 +556,223 @@ class TestPollingPush:
         assert handler._state.active_threshold == 65
         assert handler._state.pending_threshold == 65
         handler._config.set_charge_threshold.assert_called_with(65)
+
+
+# ── Appearance serialization tests ─────────────────────────────────────────
+
+
+class TestAppearanceSerialization:
+    """Test appearance state serialization includes new fields."""
+
+    def test_serialize_state_includes_compact_mode(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            dark_mode=False,
+            accent_color="orange",
+            compact_mode=True,
+            title_percentage=False,
+        )
+        handler = _make_handler(state)
+        serialized = handler._serialize_state(state)
+        assert serialized["compact_mode"] is True
+        assert serialized["title_percentage"] is False
+
+    def test_serialize_state_defaults(self):
+        state = ThresholdState(battery_available=False)
+        handler = _make_handler(state)
+        serialized = handler._serialize_state(state)
+        assert serialized["compact_mode"] is False
+        assert serialized["title_percentage"] is True  # default in ThresholdState
+
+    def test_serialize_appearance_with_system_theme(self):
+        """Appearance uses effective_theme_scheme, not raw dark_mode."""
+        state = ThresholdState(
+            battery_available=False,
+            dark_mode=False,
+            system_theme_scheme="dark",
+            accent_color="purple",
+        )
+        handler = _make_handler(state)
+        appearance = handler._serialize_appearance(state)
+        # dark_mode=False but system is dark → effective scheme is dark
+        assert appearance["scheme"] == "dark"
+        assert appearance["accent_color"] == "purple"
+
+    def test_serialize_appearance_dark_mode_forces_dark(self):
+        state = ThresholdState(
+            battery_available=False,
+            dark_mode=True,
+            system_theme_scheme="light",
+            accent_color="red",
+        )
+        handler = _make_handler(state)
+        appearance = handler._serialize_appearance(state)
+        assert appearance["scheme"] == "dark"
+        assert appearance["accent_color"] == "red"
+
+
+# ── GSettings listener tests ───────────────────────────────────────────────
+
+
+class TestGSettingsListeners:
+    """Test GSettings change listeners push events to JS."""
+
+    def test_start_gsettings_listeners_connects_handlers(self):
+        from threshold.carbon_shell import BridgeHandler
+        config = MagicMock()
+        web_view = MagicMock()
+        handler = BridgeHandler.__new__(BridgeHandler)
+        handler._config = config
+        handler._web_view = web_view
+        handler._dispatcher = CommandDispatcher(config)
+        handler._state = ThresholdState(battery_available=False)
+        handler._battery_path = None
+        handler._writing = False
+        handler._polling_source_id = None
+        handler._gsettings_handler_ids = []
+
+        handler.start_gsettings_listeners()
+
+        # Should have connected to 4 keys
+        assert len(handler._gsettings_handler_ids) == 4
+        assert config.connect.call_count == 4
+
+    def test_stop_gsettings_listeners_clears_handlers(self):
+        from threshold.carbon_shell import BridgeHandler
+        handler = BridgeHandler.__new__(BridgeHandler)
+        handler._gsettings_handler_ids = [1, 2, 3, 4]
+
+        handler.stop_gsettings_listeners()
+
+        assert handler._gsettings_handler_ids == []
+
+    def test_on_appearance_changed_pushes_events(self):
+        from threshold.carbon_shell import BridgeHandler
+        config = MagicMock()
+        web_view = MagicMock()
+        handler = BridgeHandler.__new__(BridgeHandler)
+        handler._config = config
+        handler._web_view = web_view
+        handler._dispatcher = CommandDispatcher(config)
+        handler._state = ThresholdState(battery_available=False)
+        handler._battery_path = None
+        handler._writing = False
+        handler._polling_source_id = None
+        handler._gsettings_handler_ids = []
+
+        with patch.object(handler, '_build_state') as mock_build:
+            new_state = ThresholdState(
+                battery_available=False,
+                dark_mode=True,
+                accent_color="blue",
+                compact_mode=True,
+                title_percentage=False,
+            )
+            mock_build.return_value = new_state
+            handler._on_appearance_changed(config, "dark-mode")
+
+        # Should have pushed appearance and battery events
+        assert web_view.evaluate_javascript.call_count >= 2
+
+    def test_on_appearance_changed_pushes_title_update(self):
+        from threshold.carbon_shell import BridgeHandler
+        config = MagicMock()
+        web_view = MagicMock()
+        handler = BridgeHandler.__new__(BridgeHandler)
+        handler._config = config
+        handler._web_view = web_view
+        handler._dispatcher = CommandDispatcher(config)
+        handler._state = ThresholdState(battery_available=False)
+        handler._battery_path = None
+        handler._writing = False
+        handler._polling_source_id = None
+        handler._gsettings_handler_ids = []
+
+        with patch.object(handler, '_build_state') as mock_build:
+            new_state = ThresholdState(
+                battery_available=True,
+                charge_percent=75,
+                title_percentage=True,
+            )
+            mock_build.return_value = new_state
+            handler._on_appearance_changed(config, "title-percentage")
+
+        # Should have pushed 3 events: appearance, battery, title_update
+        assert web_view.evaluate_javascript.call_count == 3
+        # Verify the title_update event
+        calls = web_view.evaluate_javascript.call_args_list
+        last_js = calls[-1][0][0]
+        start = last_js.index('window.threshold._handleMessage(') + len('window.threshold._handleMessage(')
+        end = last_js.rindex(')')
+        event = json.loads(json.loads(last_js[start:end]))
+        assert event["event"] == "title_update"
+        assert event["data"]["title_percentage"] is True
+        assert event["data"]["charge_percent"] == 75
+
+
+# ── Appearance event serialization tests ──────────────────────────────────
+
+
+class TestAppearanceEvents:
+    """Test appearance event payloads match JS fixture contracts."""
+
+    def test_appearance_push_event_dark(self):
+        state = ThresholdState(
+            battery_available=False,
+            dark_mode=True,
+            accent_color="blue",
+        )
+        handler = _make_handler(state)
+        handler._push_to_js({
+            "event": "appearance",
+            "data": handler._serialize_appearance(state),
+        })
+        event = _extract_pushed_event(handler)
+        assert event["event"] == "appearance"
+        assert event["data"]["scheme"] == "dark"
+        assert event["data"]["accent_color"] == "blue"
+
+    def test_battery_push_event_includes_appearance_fields(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            dark_mode=True,
+            accent_color="green",
+            compact_mode=True,
+            title_percentage=False,
+        )
+        handler = _make_handler(state)
+        handler._push_to_js({
+            "event": "battery",
+            "data": handler._serialize_state(state),
+        })
+        event = _extract_pushed_event(handler)
+        data = event["data"]
+        assert data["dark_mode"] is True
+        assert data["accent_color"] == "green"
+        assert data["compact_mode"] is True
+        assert data["title_percentage"] is False
+
+    def test_title_update_event_payload(self):
+        state = ThresholdState(
+            battery_available=True,
+            charge_percent=82,
+            title_percentage=True,
+        )
+        handler = _make_handler(state)
+        handler._push_to_js({
+            "event": "title_update",
+            "data": {
+                "title_percentage": state.title_percentage,
+                "charge_percent": state.charge_percent,
+            },
+        })
+        event = _extract_pushed_event(handler)
+        assert event["event"] == "title_update"
+        assert event["data"]["title_percentage"] is True
+        assert event["data"]["charge_percent"] == 82

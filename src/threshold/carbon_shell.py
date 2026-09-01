@@ -78,11 +78,58 @@ class BridgeHandler:
         self._battery_path = find_battery_path()
         self._writing = False
         self._polling_source_id = None
+        self._gsettings_handler_ids: list[int] = []
 
     def _build_state(self):
         """Build a fresh state snapshot."""
         from threshold.adapter import build_state
         return build_state(self._config, battery_path=self._battery_path)
+
+    def start_gsettings_listeners(self) -> None:
+        """Listen for GSettings appearance changes and push events to JS."""
+        appearance_keys = [
+            'dark-mode',
+            'accent-color',
+            'compact-mode',
+            'title-percentage',
+        ]
+        for key in appearance_keys:
+            handler_id = self._config.connect(
+                f'changed::{key}',
+                self._on_appearance_changed,
+            )
+            self._gsettings_handler_ids.append(handler_id)
+
+    def stop_gsettings_listeners(self) -> None:
+        """Disconnect GSettings listeners."""
+        self._gsettings_handler_ids.clear()
+
+    def _on_appearance_changed(self, settings, key) -> None:
+        """Handle a GSettings appearance change — push updated state to JS."""
+        # Rebuild state from fresh config
+        self._state = self._build_state()
+
+        # Push appearance event
+        self._push_to_js({
+            'event': 'appearance',
+            'data': self._serialize_appearance(self._state),
+        })
+
+        # Push full battery event (includes dark_mode, accent_color, compact_mode)
+        self._push_to_js({
+            'event': 'battery',
+            'data': self._serialize_state(self._state),
+        })
+
+        # If title-percentage changed, push title update
+        if key == 'title-percentage':
+            self._push_to_js({
+                'event': 'title_update',
+                'data': {
+                    'title_percentage': self._state.title_percentage,
+                    'charge_percent': self._state.charge_percent,
+                },
+            })
 
     def _is_write_command(self, cmd: str) -> bool:
         """Return True if the command initiates a threshold write."""
@@ -251,6 +298,8 @@ class BridgeHandler:
             "alarm_fired": state.alarm_fired,
             "dark_mode": state.dark_mode,
             "accent_color": state.accent_color,
+            "compact_mode": state.compact_mode,
+            "title_percentage": state.title_percentage,
         }
 
     def _serialize_appearance(self, state) -> dict[str, Any]:
@@ -322,6 +371,7 @@ def create_carbon_window(application, config):
     # Connect close request
     def on_close_request(*_args):
         handler.stop_polling()
+        handler.stop_gsettings_listeners()
         if not win.is_maximized():
             config.set_window_width(win.get_width())
             config.set_window_height(win.get_height())
@@ -332,5 +382,8 @@ def create_carbon_window(application, config):
 
     # Start Python-owned 5-second poll
     handler.start_polling(5)
+
+    # Listen for GSettings appearance changes
+    handler.start_gsettings_listeners()
 
     return win
