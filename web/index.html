@@ -16,15 +16,70 @@
         <p id="charge-percent">--%</p>
         <p id="charge-status">Unknown</p>
       </div>
+      
       <div id="threshold-panel" class="cds-tile">
         <h3>Charge Threshold</h3>
         <p id="active-threshold">--%</p>
       </div>
+      
+      <div id="charge-limit-panel" class="cds-tile">
+        <h3>Charge Limit</h3>
+        <div class="charge-limit-controls">
+          <div class="slider-container">
+            <cds-slider
+              label-text="Charge threshold"
+              max="100"
+              min="20"
+              step="1"
+              value="80"
+              aria-label="Charge threshold percentage"
+            >
+              <cds-slider-input
+                aria-label="Charge threshold value"
+              ></cds-slider-input>
+            </cds-slider>
+            <div id="floating-value-label" class="floating-value">80%</div>
+          </div>
+          
+          <div class="presets-container" role="radiogroup" aria-label="Threshold presets">
+            <cds-radio-tile value="60" aria-label="60%">60%</cds-radio-tile>
+            <cds-radio-tile value="70" aria-label="70%">70%</cds-radio-tile>
+            <cds-radio-tile value="80" aria-label="80%">80%</cds-radio-tile>
+            <cds-radio-tile value="90" aria-label="90%">90%</cds-radio-tile>
+            <cds-radio-tile value="100" aria-label="100%">100%</cds-radio-tile>
+          </div>
+          
+          <div class="action-buttons">
+            <cds-button
+              id="apply-button"
+              kind="primary"
+              aria-label="Apply charge threshold"
+            >
+              Apply Threshold
+            </cds-button>
+            <cds-button
+              id="restore-button"
+              kind="secondary"
+              aria-label="Restore threshold to 100%"
+            >
+              Restore to 100%
+            </cds-button>
+          </div>
+          
+          <div id="pending-indicator" class="pending-indicator" hidden>
+            <cds-inline-loading status="active">Applying...</cds-inline-loading>
+          </div>
+        </div>
+      </div>
+      
       <div id="status-bar" class="cds-tile">
         <p id="status-text">Connecting...</p>
       </div>
     </div>
   </main>
+  
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+  
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

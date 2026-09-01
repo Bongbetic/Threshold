@@ -31,8 +31,8 @@ def fixtures():
         "ready_request": {"id": "req-ready-0", "cmd": "ready"},
         "ready_response": {"id": "req-ready-0", "ok": True, "data": {"acknowledged": True}},
         "get_state_request": {"id": "req-state-1", "cmd": "get_state"},
-        "unknown_command_request": {"id": "req-unk-3", "cmd": "nonexistent_command"},
-        "unknown_command_response": {"id": "req-unk-3", "ok": False, "error": "Unknown command: nonexistent_command"},
+        "unknown_command_request": {"id": "req-unk-7", "cmd": "nonexistent_command"},
+        "unknown_command_response": {"id": "req-unk-7", "ok": False, "error": "Unknown command: nonexistent_command"},
     }
 
 
@@ -147,7 +147,7 @@ class TestBridgeHandlerReadyCommand:
             end = js.rindex(')')
             inner_json = json.loads(json.loads(js[start:end]))
 
-            assert inner_json["id"] == "req-ready-0"
+            assert inner_json["id"] == fixtures["ready_request"]["id"]
             assert inner_json["ok"] is True
             assert inner_json["data"]["acknowledged"] is True
             assert "state" in inner_json["data"]
@@ -202,7 +202,7 @@ class TestBridgeHandlerUnknownCommand:
 
             assert inner_json["ok"] is False
             assert "Unknown command" in inner_json["error"]
-            assert inner_json["id"] == "req-unk-3"
+            assert inner_json["id"] == fixtures["unknown_command_request"]["id"]
 
 
 class TestBridgeHandlerMalformedPayload:

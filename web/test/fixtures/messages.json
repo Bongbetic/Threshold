@@ -52,12 +52,49 @@
       "ec_mismatch": false
     }
   },
+  "restore_threshold_request": {
+    "id": "req-restore-3",
+    "cmd": "restore_threshold"
+  },
+  "restore_threshold_response": {
+    "id": "req-restore-3",
+    "ok": true,
+    "data": {
+      "threshold": 100,
+      "method": "direct",
+      "ec_mismatch": false
+    }
+  },
+  "apply_threshold_error": {
+    "id": "req-error-4",
+    "ok": false,
+    "error": "Permission denied: need root privileges"
+  },
+  "ec_mismatch_response": {
+    "id": "req-mismatch-5",
+    "ok": true,
+    "data": {
+      "threshold": 80,
+      "method": "direct",
+      "ec_mismatch": true,
+      "ec_actual": 85
+    }
+  },
+  "notification_only_response": {
+    "id": "req-notify-6",
+    "ok": true,
+    "data": {
+      "threshold": 80,
+      "method": "alarm",
+      "ec_mismatch": false
+    }
+  },
   "unknown_command_request": {
-    "id": "req-unk-3",
+    "id": "req-unk-7",
     "cmd": "nonexistent_command"
   },
   "unknown_command_response": {
-    "id": "req-unk-3",
+    "id": "req-unk-7",
     "ok": false,
     "error": "Unknown command: nonexistent_command"
   },
