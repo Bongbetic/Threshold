@@ -18,7 +18,6 @@ BuildRequires:  meson
 BuildRequires:  ninja-build
 BuildRequires:  pkgconf-pkg-config
 BuildRequires:  gettext
-BuildRequires:  blueprint-compiler
 BuildRequires:  gtk4-devel >= 4.14
 BuildRequires:  libadwaita-devel >= 1.5
 BuildRequires:  python3-devel

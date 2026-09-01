@@ -206,15 +206,15 @@ Build dependencies (Ubuntu 24.04+):
 sudo apt install -y \
   meson ninja-build pkg-config desktop-file-utils gettext \
   gobject-introspection python3 python3-gi python3-pytest \
-  blueprint-compiler libgtk-4-dev libadwaita-1-dev \
-  gir1.2-gtk-4.0 gir1.2-adw-1
+  libgtk-4-dev libadwaita-1-dev gir1.2-gtk-4.0 gir1.2-adw-1 \
+  gir1.2-webkit-6.0
 ```
 
 Fedora build dependencies:
 
 ```bash
-sudo dnf install -y meson ninja-build gettext blueprint-compiler \
-  gtk4-devel libadwaita-devel python3-gobject desktop-file-utils
+sudo dnf install -y meson ninja-build gettext \
+  gtk4-devel libadwaita-devel webkitgtk6.0-devel python3-gobject desktop-file-utils
 ```
 
 Configure, test, install:

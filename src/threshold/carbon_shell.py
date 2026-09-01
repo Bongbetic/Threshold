@@ -5,7 +5,7 @@ Otherwise, falls back to the existing GTK presentation.
 
 Requires WebKitGTK >= 2.40 for evaluate_javascript + world param.
 All GTK/WebKit imports are deferred so the module can be imported on
-systems without the typelibs (for testing helpers like carbon_enabled).
+systems without the typelibs (for testing).
 """
 
 import json
@@ -44,19 +44,10 @@ def _find_bundle() -> Optional[Path]:
     return None
 
 
-def carbon_enabled() -> bool:
-    """Check if the Carbon shell is opt-in enabled."""
-    return os.environ.get("THRESHOLD_CARBON", "0") == "1"
 
 
-def _carbon_requested() -> bool:
-    """Check if the Carbon shell was requested via --carbon flag or env var."""
-    if "--carbon" in sys.argv:
-        return True
-    return os.environ.get("THRESHOLD_CARBON", "0") == "1"
 
-
-# ── Icon helpers (avoids importing window.py and its GTK template deps) ────
+# ── Icon helpers ──────────────────────────────────────────────────────────────
 
 _CHARGING_SUFFIX = {
     'Charging': '-charging',

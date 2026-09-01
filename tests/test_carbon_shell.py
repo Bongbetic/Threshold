@@ -278,28 +278,6 @@ class TestBridgeHandlerThresholdCommand:
 
 class TestCarbonShellModule:
 
-    def test_carbon_enabled_default(self):
-        from threshold.carbon_shell import carbon_enabled
-        import os
-        with patch.dict(os.environ, {}, clear=True):
-            assert carbon_enabled() is False
-
-    def test_carbon_enabled_via_env(self):
-        from threshold.carbon_shell import carbon_enabled
-        import os
-        with patch.dict(os.environ, {"THRESHOLD_CARBON": "1"}):
-            assert carbon_enabled() is True
-
-    def test_carbon_enabled_via_flag(self):
-        from threshold.carbon_shell import _carbon_requested
-        # Temporarily add --carbon to argv
-        saved = sys.argv[:]
-        sys.argv.append("--carbon")
-        try:
-            assert _carbon_requested() is True
-        finally:
-            sys.argv[:] = saved
-
     def test_find_bundle_missing(self):
         from threshold.carbon_shell import _find_bundle
         result = _find_bundle()

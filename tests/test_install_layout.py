@@ -53,8 +53,7 @@ def _install_to_destdir() -> Path:
     build = _build_root()
     _assert_builddir_matches_repo(build)
     destdir = Path(tempfile.mkdtemp(prefix="threshold-destdir-"))
-    # Allow rebuild so Blueprint/UI changes are picked up; stale --no-rebuild
-    # fails hard after source-tree moves.
+    # Allow rebuild so Blueprint/UI changes are picked up; stale --no-rebuild fails hard after source-tree moves.
     result = subprocess.run(
         [_meson(), "install", "-C", str(build), f"--destdir={destdir}"],
         capture_output=True,
