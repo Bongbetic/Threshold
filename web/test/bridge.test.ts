@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { bridge, sendReady, getState, applyThreshold, restoreThreshold } from '../src/bridge/client';
+import { bridge, sendReady, getState, applyThreshold, restoreThreshold, setDarkMode, setAccentColor, setCompactMode, setTitlePercentage } from '../src/bridge/client';
 import fixtures from './fixtures/messages.json';
 
 /** Mock webkit.messageHandlers.threshold.postMessage. */
@@ -223,5 +223,95 @@ describe('restoreThreshold', () => {
     expect(sent.cmd).toBe('restore_threshold');
     expect(sent.args).toBeUndefined();
     expect(result.threshold).toBe(100);
+  });
+});
+
+describe('setDarkMode', () => {
+  it('sends set_dark_mode with boolean value', async () => {
+    const { messages } = mockWebKit();
+    const promise = setDarkMode(true);
+    resolvePending(fixtures.set_dark_mode_response.data);
+
+    const result = await promise;
+    expect(messages).toHaveLength(1);
+    const sent = JSON.parse(messages[0]);
+    expect(sent.cmd).toBe('set_dark_mode');
+    expect(sent.args).toEqual({ value: true });
+    expect(result.dark_mode).toBe(true);
+  });
+});
+
+describe('setAccentColor', () => {
+  it('sends set_accent_color with color value', async () => {
+    const { messages } = mockWebKit();
+    const promise = setAccentColor('blue');
+    resolvePending(fixtures.set_accent_color_response.data);
+
+    const result = await promise;
+    expect(messages).toHaveLength(1);
+    const sent = JSON.parse(messages[0]);
+    expect(sent.cmd).toBe('set_accent_color');
+    expect(sent.args).toEqual({ value: 'blue' });
+    expect(result.accent_color).toBe('blue');
+  });
+
+  it('rejects invalid accent color', async () => {
+    mockWebKit();
+    const promise = setAccentColor('invalid');
+    rejectPending(fixtures.invalid_accent_response.error!);
+
+    await expect(promise).rejects.toThrow('Invalid accent color');
+  });
+});
+
+describe('setCompactMode', () => {
+  it('sends set_compact_mode with boolean value', async () => {
+    const { messages } = mockWebKit();
+    const promise = setCompactMode(true);
+    resolvePending(fixtures.set_compact_mode_response.data);
+
+    const result = await promise;
+    expect(messages).toHaveLength(1);
+    const sent = JSON.parse(messages[0]);
+    expect(sent.cmd).toBe('set_compact_mode');
+    expect(sent.args).toEqual({ value: true });
+    expect(result.compact_mode).toBe(true);
+  });
+});
+
+describe('setTitlePercentage', () => {
+  it('sends set_title_percentage with boolean value', async () => {
+    const { messages } = mockWebKit();
+    const promise = setTitlePercentage(true);
+    resolvePending(fixtures.set_title_percentage_response.data);
+
+    const result = await promise;
+    expect(messages).toHaveLength(1);
+    const sent = JSON.parse(messages[0]);
+    expect(sent.cmd).toBe('set_title_percentage');
+    expect(sent.args).toEqual({ value: true });
+    expect(result.title_percentage).toBe(true);
+  });
+});
+
+describe('Appearance events', () => {
+  it('dispatches title_update events to listeners', () => {
+    mockWebKit();
+    const callback = vi.fn();
+    bridge.on('title_update', callback);
+
+    bridge._handleMessage(JSON.stringify(fixtures.title_update_event));
+
+    expect(callback).toHaveBeenCalledWith(fixtures.title_update_event.data);
+  });
+
+  it('dispatches dark appearance push events', () => {
+    mockWebKit();
+    const callback = vi.fn();
+    bridge.on('appearance', callback);
+
+    bridge._handleMessage(JSON.stringify(fixtures.appearance_push_event_dark));
+
+    expect(callback).toHaveBeenCalledWith(fixtures.appearance_push_event_dark.data);
   });
 });

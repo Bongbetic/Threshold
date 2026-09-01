@@ -13,7 +13,11 @@
  * Python-owned 5-second poll pushes changed state; no JS battery timer.
  */
 
-import { bridge, sendReady, getState, applyThreshold, restoreThreshold } from './bridge/client';
+import './styles.css';
+import {
+  bridge, sendReady, getState, applyThreshold, restoreThreshold,
+  setDarkMode, setAccentColor, setCompactMode, setTitlePercentage,
+} from './bridge/client';
 import type { BatteryState, AppearanceState } from './types/protocol';
 import { t } from './i18n/t';
 
@@ -142,6 +146,58 @@ function applyAppearance(appearance: AppearanceState): void {
   );
 }
 
+/** Apply accent color token class to the document root. */
+function applyAccentColor(color: string): void {
+  const root = document.documentElement;
+  root.classList.remove(
+    'accent-orange', 'accent-blue', 'accent-green', 'accent-purple', 'accent-red',
+  );
+  root.classList.add('accent-' + color);
+}
+
+/** Apply or remove compact mode class on the document root. */
+function applyCompactMode(compact: boolean): void {
+  const root = document.documentElement;
+  if (compact) {
+    root.classList.add('compact-mode');
+  } else {
+    root.classList.remove('compact-mode');
+  }
+}
+
+/** Update the Carbon header title based on title_percentage setting. */
+function updateHeaderTitle(titlePercentage: boolean, chargePercent: number | null): void {
+  const headerName = document.querySelector('cds-header-name');
+  if (!headerName) return;
+  if (titlePercentage && chargePercent !== null) {
+    headerName.textContent = 'Threshold — ' + chargePercent + '%';
+  } else {
+    headerName.textContent = 'Threshold';
+  }
+}
+
+/** Sync appearance controls (toggles, radio group) with state. */
+function syncAppearanceControls(state: BatteryState): void {
+  // Dark mode toggle
+  const darkToggle = document.querySelector('[data-testid="dark-mode-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
+  if (darkToggle) darkToggle.checked = state.dark_mode;
+
+  // Accent radio group
+  const swatches = document.querySelectorAll<HTMLElement>('.accent-swatch');
+  swatches.forEach(swatch => {
+    const isActive = swatch.getAttribute('value') === state.accent_color;
+    swatch.setAttribute('aria-checked', isActive ? 'true' : 'false');
+  });
+
+  // Compact mode toggle
+  const compactToggle = document.querySelector('[data-testid="compact-mode-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
+  if (compactToggle) compactToggle.checked = state.compact_mode;
+
+  // Title percentage toggle
+  const titleToggle = document.querySelector('[data-testid="title-percentage-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
+  if (titleToggle) titleToggle.checked = state.title_percentage;
+}
+
 /** Show a Carbon toast notification. */
 function showToast(message: string, kind: 'success' | 'error' | 'info' = 'info'): void {
   const container = document.getElementById('toast-container');
@@ -223,7 +279,16 @@ async function init(): Promise<void> {
     }
 
     if (stateData.appearance) {
+      // Apply theme synchronously before first meaningful paint
       applyAppearance(stateData.appearance);
+      applyAccentColor(stateData.appearance.accent_color);
+    }
+
+    // Apply compact mode and title from state
+    if (stateData.state) {
+      applyCompactMode(stateData.state.compact_mode);
+      updateHeaderTitle(stateData.state.title_percentage, stateData.state.charge_percent);
+      syncAppearanceControls(stateData.state);
     }
 
     // ── Slider change handler ──────────────────────────────────────────────
@@ -325,8 +390,44 @@ async function init(): Promise<void> {
 
     bridge.on('appearance', (data) => {
       if (data) {
-        applyAppearance(data as unknown as AppearanceState);
+        const appearance = data as unknown as AppearanceState;
+        applyAppearance(appearance);
+        applyAccentColor(appearance.accent_color);
       }
+    });
+
+    bridge.on('title_update', (data) => {
+      if (data) {
+        const d = data as { title_percentage: boolean; charge_percent: number | null };
+        updateHeaderTitle(d.title_percentage, d.charge_percent);
+      }
+    });
+
+    // ── Appearance controls event handlers ──────────────────────────────────
+    const darkToggle = document.querySelector('[data-testid="dark-mode-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
+    const compactToggle = document.querySelector('[data-testid="compact-mode-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
+    const titleToggle = document.querySelector('[data-testid="title-percentage-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
+    const accentSwatches = document.querySelectorAll<HTMLElement>('.accent-swatch');
+
+    darkToggle?.addEventListener('change', async () => {
+      await setDarkMode(darkToggle.checked);
+    });
+
+    compactToggle?.addEventListener('change', async () => {
+      await setCompactMode(compactToggle.checked);
+    });
+
+    titleToggle?.addEventListener('change', async () => {
+      await setTitlePercentage(titleToggle.checked);
+    });
+
+    accentSwatches.forEach(swatch => {
+      swatch.addEventListener('click', async () => {
+        const color = swatch.getAttribute('value');
+        if (color) {
+          await setAccentColor(color);
+        }
+      });
     });
 
     console.log('Threshold Carbon shell ready');

@@ -91,11 +91,16 @@ class ThresholdState:
     alarm_armed: bool = False
     alarm_fired: bool = False
     
+    # ── System theme (read by adapter, not authoritative) ─────────────────
+    system_theme_scheme: str = "light"
+
     # ── Derived values ────────────────────────────────────────────────────
     @property
     def effective_theme_scheme(self) -> str:
-        """Effective theme scheme derived from dark_mode preference."""
-        return "dark" if self.dark_mode else "light"
+        """Effective theme scheme: dark_mode forces dark, otherwise follows system."""
+        if self.dark_mode:
+            return "dark"
+        return self.system_theme_scheme
     
     @property
     def capabilities(self) -> Capabilities:

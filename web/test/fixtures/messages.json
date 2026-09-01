@@ -31,11 +31,13 @@
         "power_source": "AC Adapter",
         "cycle_count": 142,
         "capacity_full_wh": 52.5,
-        "capacity_design_wh": 56.0,
+        "capacity_design_wh": 56,
         "alarm_armed": false,
         "alarm_fired": false,
         "dark_mode": false,
-        "accent_color": "orange"
+        "accent_color": "orange",
+        "compact_mode": false,
+        "title_percentage": false
       },
       "appearance": {
         "scheme": "light",
@@ -121,7 +123,7 @@
       "power_source": "AC Adapter",
       "cycle_count": 142,
       "capacity_full_wh": 52.5,
-      "capacity_design_wh": 56.0,
+      "capacity_design_wh": 56,
       "alarm_armed": false,
       "alarm_fired": false,
       "dark_mode": false,
@@ -171,8 +173,8 @@
       "health_grade": "Fair",
       "power_source": "AC Adapter",
       "cycle_count": 310,
-      "capacity_full_wh": 42.0,
-      "capacity_design_wh": 56.0,
+      "capacity_full_wh": 42,
+      "capacity_design_wh": 56,
       "alarm_armed": true,
       "alarm_fired": false,
       "dark_mode": false,
@@ -216,11 +218,86 @@
       "power_source": "AC Adapter",
       "cycle_count": 142,
       "capacity_full_wh": 52.5,
-      "capacity_design_wh": 56.0,
+      "capacity_design_wh": 56,
       "alarm_armed": false,
       "alarm_fired": false,
       "dark_mode": false,
       "accent_color": "orange"
     }
+  },
+  "set_dark_mode_request": {
+    "id": "req-dark-10",
+    "cmd": "set_dark_mode",
+    "args": {
+      "value": true
+    }
+  },
+  "set_dark_mode_response": {
+    "id": "req-dark-10",
+    "ok": true,
+    "data": {
+      "dark_mode": true
+    }
+  },
+  "set_accent_color_request": {
+    "id": "req-accent-11",
+    "cmd": "set_accent_color",
+    "args": {
+      "value": "blue"
+    }
+  },
+  "set_accent_color_response": {
+    "id": "req-accent-11",
+    "ok": true,
+    "data": {
+      "accent_color": "blue"
+    }
+  },
+  "set_compact_mode_request": {
+    "id": "req-compact-12",
+    "cmd": "set_compact_mode",
+    "args": {
+      "value": true
+    }
+  },
+  "set_compact_mode_response": {
+    "id": "req-compact-12",
+    "ok": true,
+    "data": {
+      "compact_mode": true
+    }
+  },
+  "set_title_percentage_request": {
+    "id": "req-title-13",
+    "cmd": "set_title_percentage",
+    "args": {
+      "value": true
+    }
+  },
+  "set_title_percentage_response": {
+    "id": "req-title-13",
+    "ok": true,
+    "data": {
+      "title_percentage": true
+    }
+  },
+  "title_update_event": {
+    "event": "title_update",
+    "data": {
+      "title_percentage": true,
+      "charge_percent": 75
+    }
+  },
+  "appearance_push_event_dark": {
+    "event": "appearance",
+    "data": {
+      "scheme": "dark",
+      "accent_color": "blue"
+    }
+  },
+  "invalid_accent_response": {
+    "id": "req-accent-14",
+    "ok": false,
+    "error": "Invalid accent color. Must be one of: blue, green, orange, purple, red"
   }
 }
