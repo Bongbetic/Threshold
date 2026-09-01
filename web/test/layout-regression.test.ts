@@ -14,6 +14,18 @@ describe('viewport layout regressions', () => {
     expect(html).toContain('src="./bongbetic-icon-dark.png"');
   });
 
+  it('keeps header free of section tabs', () => {
+    expect(html).not.toContain('class="header-nav"');
+    expect(html).not.toContain('data-region="overview"');
+    expect(html).not.toContain('data-region="threshold"');
+    expect(html).not.toContain('data-region="settings"');
+  });
+
+  it('removes compact mode from Appearance card', () => {
+    expect(html).not.toContain('data-testid="compact-mode-toggle"');
+    expect(html).not.toContain('Compact mode');
+  });
+
   it('uses native frame controls only', () => {
     expect(html).not.toContain('data-testid="window-controls"');
     expect(html).not.toContain('data-command="minimize"');

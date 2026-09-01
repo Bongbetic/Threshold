@@ -42,7 +42,7 @@ import './styles.css';
 import './styles.css';
 import {
   bridge, sendReady, getState, applyThreshold, restoreThreshold,
-  setDarkMode, setAccentColor, setCompactMode, setTitlePercentage,
+  setDarkMode, setAccentColor, setTitlePercentage,
   minimizeWindow, maximizeWindow, restoreWindow, toggleMaximizeWindow,
   closeWindow, beginWindowDrag,
 } from './bridge/client';
@@ -319,16 +319,6 @@ function applyAccentColor(color: string): void {
   root.classList.add('accent-' + color);
 }
 
-/** Apply or remove compact mode class on the document root. */
-function applyCompactMode(compact: boolean): void {
-  const root = document.documentElement;
-  if (compact) {
-    root.classList.add('compact-mode');
-  } else {
-    root.classList.remove('compact-mode');
-  }
-}
-
 /** Update the Carbon header title based on title_percentage setting. */
 function updateHeaderTitle(titlePercentage: boolean, chargePercent: number | null): void {
   const headerName = document.querySelector('.header-name');
@@ -352,10 +342,6 @@ function syncAppearanceControls(state: BatteryState): void {
     const isActive = swatch.getAttribute('value') === state.accent_color;
     swatch.setAttribute('aria-checked', isActive ? 'true' : 'false');
   });
-
-  // Compact mode toggle
-  const compactToggle = document.getElementById('compact-mode-toggle-input') as HTMLInputElement | null;
-  if (compactToggle) compactToggle.checked = state.compact_mode;
 
   // Title percentage toggle
   const titleToggle = document.getElementById('title-percentage-toggle-input') as HTMLInputElement | null;
@@ -492,7 +478,6 @@ async function init(): Promise<void> {
 
     // Apply compact mode and title from state
     if (stateData.state) {
-      applyCompactMode(stateData.state.compact_mode);
       updateHeaderTitle(stateData.state.title_percentage, stateData.state.charge_percent);
       syncAppearanceControls(stateData.state);
     }
@@ -610,16 +595,11 @@ async function init(): Promise<void> {
 
     // ── Appearance controls event handlers ──────────────────────────────────
     const darkToggle = document.querySelector('[data-testid="dark-mode-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
-    const compactToggle = document.querySelector('[data-testid="compact-mode-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
     const titleToggle = document.querySelector('[data-testid="title-percentage-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
     const accentSwatches = document.querySelectorAll<HTMLElement>('.accent-swatch');
 
     darkToggle?.addEventListener('change', async () => {
       await setDarkMode(darkToggle.checked);
-    });
-
-    compactToggle?.addEventListener('change', async () => {
-      await setCompactMode(compactToggle.checked);
     });
 
     titleToggle?.addEventListener('change', async () => {
