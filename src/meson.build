@@ -11,7 +11,6 @@ python_sources = [
     'threshold/migration.py',
     'threshold/state.py',
     'threshold/tray.py',
-    'threshold/window.py',
     'threshold/resources.py',
     'threshold/carbon_shell.py',
 ]

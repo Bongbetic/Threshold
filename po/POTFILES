@@ -1,8 +1,7 @@
-data/ui/window.blp
 data/com.bongbetic.threshold.desktop
 data/com.bongbetic.threshold.gschema.xml
 src/threshold/main.py
 src/threshold/application.py
-src/threshold/window.py
+src/threshold/carbon_shell.py
 src/threshold/config.py
 src/threshold/battery.py

@@ -1,26 +1,10 @@
 app_id = 'com.bongbetic.threshold'
 
-# Blueprint .blp → .ui compilation
-blueprint_compiler = find_program('blueprint-compiler', required: false)
-
-if blueprint_compiler.found()
-    window_ui = custom_target(
-        'window-ui',
-        input: 'ui/window.blp',
-        output: 'window.ui',
-        command: [blueprint_compiler, 'compile', '@INPUT@', '--output', '@OUTPUT@'],
-        install: false,
-    )
-else
-    window_ui = files('ui/window.ui')
-endif
-
 # GResource bundle
 app_resources = gnome.compile_resources(
     'threshold',
     'resources/resources.gresource.xml',
-    source_dir: [meson.current_build_dir(), meson.current_source_dir() / 'ui', meson.current_source_dir()],
-    dependencies: [window_ui],
+    source_dir: [meson.current_build_dir(), meson.current_source_dir()],
     gresource_bundle: true,
     install: true,
     install_dir: pkgdatadir,
