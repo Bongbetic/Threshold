@@ -10,76 +10,120 @@
     <cds-header-name href="#">Threshold</cds-header-name>
   </cds-header>
   <main class="cds-content">
-    <div class="cds-grid" style="padding: 1rem;">
-      <div id="battery-status" class="cds-tile">
-        <h3>Battery</h3>
-        <p id="charge-percent">--%</p>
-        <p id="charge-status">Unknown</p>
+    <div class="cds-grid" style="padding: 1rem; gap: 1rem;">
+
+      <!-- Battery Status Card -->
+      <div id="battery-status" class="cds-tile" data-testid="battery-status">
+        <div class="card-header">
+          <h3>Battery Status</h3>
+          <span id="live-dot" class="live-dot">○</span>
+        </div>
+        <div class="card-body">
+          <div class="stat-row">
+            <span class="stat-label">Charge</span>
+            <span id="charge-percent" class="stat-value" data-testid="charge-percent">--%</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Status</span>
+            <span id="charge-status" class="stat-value" data-testid="charge-status">Unknown</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Power Source</span>
+            <span id="power-source" class="stat-value" data-testid="power-source">—</span>
+          </div>
+        </div>
       </div>
-      
-      <div id="threshold-panel" class="cds-tile">
+
+      <!-- Device Information Card -->
+      <div id="device-info" class="cds-tile" data-testid="device-info">
+        <h3>Device Information</h3>
+        <div class="card-body">
+          <div class="stat-row">
+            <span class="stat-label">Battery</span>
+            <span id="battery-identifier" class="stat-value" data-testid="battery-identifier">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Control Mode</span>
+            <span id="control-mode" class="stat-value" data-testid="control-mode">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Health</span>
+            <span class="stat-value">
+              <span id="health-percent" data-testid="health-percent">—</span>
+              <span id="health-grade" class="health-grade" data-testid="health-grade"></span>
+            </span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Cycle Count</span>
+            <span id="cycle-count" class="stat-value" data-testid="cycle-count">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Full Capacity</span>
+            <span id="capacity-full" class="stat-value" data-testid="capacity-full">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Design Capacity</span>
+            <span id="capacity-design" class="stat-value" data-testid="capacity-design">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Threshold Control Card -->
+      <div id="threshold-panel" class="cds-tile" data-testid="threshold-panel">
         <h3>Charge Threshold</h3>
-        <p id="active-threshold">--%</p>
-      </div>
-      
-      <div id="charge-limit-panel" class="cds-tile">
-        <h3>Charge Limit</h3>
-        <div class="charge-limit-controls">
-          <div class="slider-container">
+        <div class="card-body">
+          <div class="stat-row">
+            <span class="stat-label">Active Threshold</span>
+            <span id="active-threshold" class="stat-value" data-testid="active-threshold">--%</span>
+          </div>
+          <div id="alarm-info" class="stat-row" hidden data-testid="alarm-info">
+            <span class="stat-label">Alarm Threshold</span>
+            <span id="alarm-threshold" class="stat-value" data-testid="alarm-threshold">—</span>
+          </div>
+          <div class="threshold-controls">
             <cds-slider
-              label-text="Charge threshold"
+              label-text="Charge limit"
               max="100"
               min="20"
               step="1"
               value="80"
-              aria-label="Charge threshold percentage"
-            >
-              <cds-slider-input
-                aria-label="Charge threshold value"
-              ></cds-slider-input>
+              data-testid="threshold-slider">
+              <cds-slider-input aria-label="Charge limit" />
             </cds-slider>
-            <div id="floating-value-label" class="floating-value">80%</div>
-          </div>
-          
-          <div class="presets-container" role="radiogroup" aria-label="Threshold presets">
-            <cds-radio-tile value="60" aria-label="60%">60%</cds-radio-tile>
-            <cds-radio-tile value="70" aria-label="70%">70%</cds-radio-tile>
-            <cds-radio-tile value="80" aria-label="80%">80%</cds-radio-tile>
-            <cds-radio-tile value="90" aria-label="90%">90%</cds-radio-tile>
-            <cds-radio-tile value="100" aria-label="100%">100%</cds-radio-tile>
-          </div>
-          
-          <div class="action-buttons">
-            <cds-button
-              id="apply-button"
-              kind="primary"
-              aria-label="Apply charge threshold"
-            >
-              Apply Threshold
-            </cds-button>
-            <cds-button
-              id="restore-button"
-              kind="secondary"
-              aria-label="Restore threshold to 100%"
-            >
-              Restore to 100%
-            </cds-button>
-          </div>
-          
-          <div id="pending-indicator" class="pending-indicator" hidden>
-            <cds-inline-loading status="active">Applying...</cds-inline-loading>
+            <span id="floating-value-label" class="floating-label">80%</span>
+            <div class="preset-group" role="radiogroup" aria-label="Threshold presets">
+              <cds-radio-tile value="60" aria-label="60%">60%</cds-radio-tile>
+              <cds-radio-tile value="70" aria-label="70%">70%</cds-radio-tile>
+              <cds-radio-tile value="80" aria-label="80%">80%</cds-radio-tile>
+              <cds-radio-tile value="90" aria-label="90%">90%</cds-radio-tile>
+              <cds-radio-tile value="100" aria-label="100%">100%</cds-radio-tile>
+            </div>
+            <div class="button-group">
+              <cds-button id="apply-button" data-testid="apply-button">Apply Threshold</cds-button>
+              <cds-button id="restore-button" kind="secondary" data-testid="restore-button">Restore to 100%</cds-button>
+            </div>
+            <cds-inline-loading id="pending-indicator" hidden data-testid="pending-indicator">
+              Applying threshold...
+            </cds-inline-loading>
           </div>
         </div>
       </div>
-      
-      <div id="status-bar" class="cds-tile">
+
+      <!-- Error State (hidden by default) -->
+      <div id="error-state" class="cds-tile cds-tile--dark" hidden data-testid="error-state">
+        <h3>No Battery Detected</h3>
+        <p id="error-message" data-testid="error-message">No charge-threshold-capable battery was found on this system.</p>
+      </div>
+
+      <!-- Status Bar -->
+      <div id="status-bar" class="cds-tile status-bar" data-testid="status-bar">
         <p id="status-text">Connecting...</p>
       </div>
+
     </div>
   </main>
-  
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
-  
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
