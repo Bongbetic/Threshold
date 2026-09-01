@@ -70,45 +70,6 @@ html, body {
   letter-spacing: 0.02em;
 }
 
-.header-nav {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 0;
-  height: 100%;
-  -webkit-app-region: no-drag;
-}
-
-.nav-item {
-  background: transparent;
-  border: none;
-  color: #c6c6c6;
-  font-size: 0.875rem;
-  font-weight: 400;
-  padding: 0 1rem;
-  height: 100%;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-  border-bottom: 2px solid transparent;
-  font-family: inherit;
-}
-
-.nav-item:hover {
-  color: #f4f4f4;
-  background-color: #1c1c1c;
-}
-
-.nav-item[aria-current="page"] {
-  color: #ff832a;
-  border-bottom-color: #ff832a;
-}
-
-.nav-item:focus-visible {
-  outline: 2px solid #78a9ff;
-  outline-offset: -2px;
-}
-
 /* Window controls */
 .window-controls {
   position: absolute;
