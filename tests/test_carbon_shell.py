@@ -10,7 +10,7 @@ import pytest
 # Ensure src is importable
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from threshold.commands import CommandDispatcher
+from threshold.commands import CommandDispatcher, CommandResult
 from threshold.state import ThresholdState
 from threshold.battery import ControlMode
 
@@ -323,6 +323,10 @@ def _make_handler(state, config=None):
     handler._battery_path = state.battery_path
     handler._writing = False
     handler._polling_source_id = None
+    handler._tray = None
+    handler._alarm_armed = False
+    handler._alarm_fired = False
+    handler._gsettings_handler_ids = []
     return handler
 
 
@@ -636,9 +640,9 @@ class TestGSettingsListeners:
 
         handler.start_gsettings_listeners()
 
-        # Should have connected to 4 keys
-        assert len(handler._gsettings_handler_ids) == 4
-        assert config.connect.call_count == 4
+        # Should have connected to 7 keys (4 appearance + 3 preference)
+        assert len(handler._gsettings_handler_ids) == 7
+        assert config.connect.call_count == 7
 
     def test_stop_gsettings_listeners_clears_handlers(self):
         from threshold.carbon_shell import BridgeHandler
@@ -776,3 +780,394 @@ class TestAppearanceEvents:
         assert event["event"] == "title_update"
         assert event["data"]["title_percentage"] is True
         assert event["data"]["charge_percent"] == 82
+
+
+# ── Tray integration tests ──────────────────────────────────────────────────
+
+
+class TestTraySetup:
+    """Test tray icon creation and lifecycle in Carbon shell."""
+
+    def test_setup_tray_creates_icon_when_dbusmenu_available(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            charge_status="Charging",
+            active_threshold=80,
+            pending_threshold=80,
+        )
+        handler = _make_handler(state)
+        mock_tray = MagicMock()
+        mock_tray_mod = MagicMock()
+        mock_tray_mod.TrayIcon = MagicMock(return_value=mock_tray)
+        mock_tray_mod.HAS_DBUSMENU = True
+        with patch.dict("sys.modules", {"threshold.tray": mock_tray_mod}):
+            handler._setup_tray()
+        assert handler._tray is mock_tray
+        mock_tray.set_state.assert_called_once()
+
+    def test_setup_tray_noop_when_dbusmenu_unavailable(self):
+        handler = _make_handler(ThresholdState(battery_available=False))
+        mock_tray_mod = MagicMock()
+        mock_tray_mod.HAS_DBUSMENU = False
+        with patch.dict("sys.modules", {"threshold.tray": mock_tray_mod}):
+            handler._setup_tray()
+        assert handler._tray is None
+
+    def test_update_tray_syncs_icon_with_state(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            charge_status="Charging",
+            active_threshold=80,
+            pending_threshold=80,
+        )
+        handler = _make_handler(state)
+        handler._tray = MagicMock()
+        with patch("threshold.carbon_shell._battery_icon_name", return_value="battery-good-charging"):
+            handler._update_tray()
+        handler._tray.set_state.assert_called_once_with(
+            75, "Charging", "battery-good-charging", 80
+        )
+
+    def test_update_tray_noop_without_tray(self):
+        handler = _make_handler(ThresholdState(battery_available=False))
+        handler._tray = None
+        handler._update_tray()  # Should not raise
+
+    def test_cleanup_tray_unregisters(self):
+        handler = _make_handler(ThresholdState(battery_available=False))
+        mock_tray = MagicMock()
+        handler._tray = mock_tray
+        handler._cleanup_tray()
+        mock_tray.unregister.assert_called_once()
+        assert handler._tray is None
+
+    def test_on_tray_show_presents_window(self):
+        handler = _make_handler(ThresholdState(battery_available=False))
+        mock_window = MagicMock()
+        handler._window = mock_window
+        handler._on_tray_show()
+        mock_window.present.assert_called_once()
+
+    def test_on_tray_quit_stops_polling_and_quits(self):
+        handler = _make_handler(ThresholdState(battery_available=False))
+        mock_tray = MagicMock()
+        handler._tray = mock_tray
+        mock_window = MagicMock()
+        mock_app = MagicMock()
+        mock_window.get_application.return_value = mock_app
+        handler._window = mock_window
+        handler._polling_source_id = None  # no active polling to remove
+        handler._on_tray_quit()
+        mock_tray.unregister.assert_called_once()
+        mock_app.quit.assert_called_once()
+
+    def test_on_tray_threshold_applies_preset(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+        )
+        handler = _make_handler(state)
+        with patch.object(handler, "_build_state", return_value=state), \
+             patch.object(handler._dispatcher, "dispatch", return_value=CommandResult(success=True)) as mock_dispatch, \
+             patch.object(handler, "_push_to_js"):
+            handler._on_tray_threshold(70)
+        mock_dispatch.assert_called_once_with(
+            "apply_threshold", args={"threshold": 70}, state=state
+        )
+
+
+# ── Close-to-tray tests ────────────────────────────────────────────────────
+
+
+class TestCloseToTray:
+    """Test close-to-tray behavior in Carbon shell."""
+
+    def test_close_hides_window_when_tray_enabled(self):
+        handler = _make_handler(ThresholdState(battery_available=False))
+        handler._config.get_minimize_to_tray.return_value = True
+        mock_tray = MagicMock()
+        handler._tray = mock_tray
+        mock_window = MagicMock()
+        handler._window = mock_window
+        result = handler.handle_close_request()
+        assert result is True
+        mock_window.set_visible.assert_called_once_with(False)
+
+    def test_close_allows_destroy_when_tray_disabled(self):
+        handler = _make_handler(ThresholdState(battery_available=False))
+        handler._config.get_minimize_to_tray.return_value = False
+        handler._tray = MagicMock()
+        handler._window = MagicMock()
+        result = handler.handle_close_request()
+        assert result is False
+
+    def test_close_allows_destroy_when_no_tray(self):
+        handler = _make_handler(ThresholdState(battery_available=False))
+        handler._config.get_minimize_to_tray.return_value = True
+        handler._tray = None
+        handler._window = MagicMock()
+        result = handler.handle_close_request()
+        assert result is False
+
+
+# ── Preference sync tests ──────────────────────────────────────────────────
+
+
+class TestPreferenceSync:
+    """Test preference change events pushed to JS."""
+
+    def test_preference_changed_pushes_event(self):
+        state = ThresholdState(battery_available=False, show_notifications=True, minimize_to_tray=True)
+        handler = _make_handler(state)
+        with patch.object(handler, "_build_state", return_value=state):
+            handler._on_preference_changed(None, "show-notifications")
+        # Should have pushed preference + battery events
+        assert handler._web_view.evaluate_javascript.call_count >= 2
+
+    def test_preference_event_contains_key_and_values(self):
+        state = ThresholdState(
+            battery_available=False,
+            show_notifications=False,
+            minimize_to_tray=True,
+        )
+        handler = _make_handler(state)
+        with patch.object(handler, "_build_state", return_value=state):
+            handler._on_preference_changed(None, "minimize-to-tray")
+        calls = handler._web_view.evaluate_javascript.call_args_list
+        # First call is the preference event
+        first_js = calls[0][0][0]
+        start = first_js.index('window.threshold._handleMessage(') + len('window.threshold._handleMessage(')
+        end = first_js.rindex(')')
+        event = json.loads(json.loads(first_js[start:end]))
+        assert event["event"] == "preference"
+        assert event["data"]["key"] == "minimize-to-tray"
+        assert event["data"]["show_notifications"] is False
+        assert event["data"]["minimize_to_tray"] is True
+
+    def test_start_gsettings_listeners_connects_preference_keys(self):
+        handler = _make_handler(ThresholdState(battery_available=False))
+        handler._gsettings_handler_ids = []
+        handler.start_gsettings_listeners()
+        # 4 appearance + 3 preference = 7
+        assert len(handler._gsettings_handler_ids) == 7
+
+
+# ── State serialization preference fields ──────────────────────────────────
+
+
+class TestSerializedPreferences:
+    """Test that _serialize_state includes preference fields."""
+
+    def test_serialized_state_includes_preferences(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            show_notifications=False,
+            minimize_to_tray=True,
+        )
+        handler = _make_handler(state)
+        serialized = handler._serialize_state(state)
+        assert serialized["show_notifications"] is False
+        assert serialized["minimize_to_tray"] is True
+
+    def test_serialized_state_defaults(self):
+        state = ThresholdState(battery_available=False)
+        handler = _make_handler(state)
+        serialized = handler._serialize_state(state)
+        assert serialized["show_notifications"] is True
+        assert serialized["minimize_to_tray"] is True
+
+
+# ── Notification tests ─────────────────────────────────────────────────────
+
+
+class TestThresholdNotifications:
+    """Test that threshold commands trigger libnotify notifications."""
+
+    def test_apply_threshold_triggers_notification(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+        )
+        handler = _make_handler(state)
+        with patch.object(handler, "_show_notification") as mock_notif:
+            msg = MagicMock()
+            msg.to_string.return_value = json.dumps({
+                "id": "req-notif-1",
+                "cmd": "apply_threshold",
+                "args": {"threshold": 80},
+            })
+            with patch.object(handler._dispatcher, "_cmd_apply_threshold",
+                              return_value=CommandResult(
+                                  success=True,
+                                  data={"threshold": 80, "method": "direct", "ec_mismatch": False}
+                              )):
+                handler.on_message(None, msg)
+        mock_notif.assert_called_once()
+        # First arg is title, second is body
+        title_arg = mock_notif.call_args[0][0]
+        assert "80%" in title_arg
+
+    def test_restore_threshold_triggers_notification(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+        )
+        handler = _make_handler(state)
+        with patch.object(handler, "_show_notification") as mock_notif:
+            msg = MagicMock()
+            msg.to_string.return_value = json.dumps({
+                "id": "req-notif-2",
+                "cmd": "restore_threshold",
+                "args": {},
+            })
+            with patch.object(handler._dispatcher, "_cmd_restore_threshold",
+                              return_value=CommandResult(
+                                  success=True,
+                                  data={"threshold": 100, "method": "direct", "ec_mismatch": False}
+                              )):
+                handler.on_message(None, msg)
+        mock_notif.assert_called_once()
+        # First arg is title, second is body
+        title_arg = mock_notif.call_args[0][0]
+        assert "100%" in title_arg
+
+    def test_alarm_threshold_triggers_notification(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.NOTIFY_ONLY,
+            charge_percent=85,
+            active_threshold=None,
+        )
+        handler = _make_handler(state)
+        with patch.object(handler, "_show_notification") as mock_notif:
+            msg = MagicMock()
+            msg.to_string.return_value = json.dumps({
+                "id": "req-notif-3",
+                "cmd": "apply_threshold",
+                "args": {"threshold": 80},
+            })
+            with patch.object(handler._dispatcher, "_cmd_apply_threshold",
+                              return_value=CommandResult(
+                                  success=True,
+                                  data={"threshold": 80, "method": "alarm"}
+                              )):
+                handler.on_message(None, msg)
+        mock_notif.assert_called_once()
+        assert handler._alarm_armed is True
+        assert handler._alarm_fired is False
+
+    def test_notification_suppressed_when_disabled(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+            show_notifications=False,
+        )
+        handler = _make_handler(state)
+        handler._config.get_show_notifications.return_value = False
+        msg = MagicMock()
+        msg.to_string.return_value = json.dumps({
+            "id": "req-notif-4",
+            "cmd": "apply_threshold",
+            "args": {"threshold": 80},
+        })
+        with patch.object(handler._dispatcher, "_cmd_apply_threshold",
+                          return_value=CommandResult(
+                              success=True,
+                              data={"threshold": 80, "method": "direct", "ec_mismatch": False}
+                          )):
+            handler.on_message(None, msg)
+        # _show_notification was called but returned early (config check)
+        handler._config.get_show_notifications.assert_called()
+
+
+# ── Alarm evaluation tests ─────────────────────────────────────────────────
+
+
+class TestAlarmEvaluation:
+    """Test notification-only alarm logic in Carbon shell."""
+
+    def test_alarm_fires_when_threshold_reached(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.NOTIFY_ONLY,
+            charge_percent=80,
+            pending_threshold=80,
+            active_threshold=None,
+        )
+        handler = _make_handler(state)
+        handler._alarm_armed = True
+        handler._alarm_fired = False
+        with patch("threshold.battery.evaluate_alarm", return_value=True),              patch("threshold.battery.read_sysfs", return_value="Charging"),              patch.object(handler, "_show_notification") as mock_notif:
+            handler._evaluate_alarm()
+        assert handler._alarm_fired is True
+        mock_notif.assert_called_once()
+        assert "80%" in mock_notif.call_args[0][1]
+
+    def test_alarm_rearms_on_discharge(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.NOTIFY_ONLY,
+            charge_percent=60,
+            pending_threshold=80,
+        )
+        handler = _make_handler(state)
+        handler._alarm_armed = True
+        handler._alarm_fired = True
+        with patch("threshold.battery.read_sysfs", return_value="Discharging"):
+            handler._evaluate_alarm()
+        assert handler._alarm_fired is False
+
+    def test_alarm_skipped_when_not_notify_only(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+        )
+        handler = _make_handler(state)
+        handler._alarm_armed = True
+        handler._evaluate_alarm()  # Should return early, no error
+
+    def test_alarm_skipped_when_not_armed(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.NOTIFY_ONLY,
+            charge_percent=80,
+            pending_threshold=80,
+        )
+        handler = _make_handler(state)
+        handler._alarm_armed = False
+        handler._evaluate_alarm()  # Should return early
+
+    def test_alarm_skipped_when_no_battery_path(self):
+        state = ThresholdState(battery_available=False)
+        handler = _make_handler(state)
+        handler._alarm_armed = True
+        handler._evaluate_alarm()  # Should return early
+

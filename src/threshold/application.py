@@ -100,6 +100,12 @@ class ThresholdApplication(Adw.Application):
         if win is not None:
             if hasattr(win, '_stop_polling'):
                 win._stop_polling()
+            # Carbon shell: stop polling + clean up tray
+            if hasattr(win, '_handler'):
+                handler = win._handler
+                handler.stop_polling()
+                handler.stop_gsettings_listeners()
+                handler._cleanup_tray()
             if not self._use_carbon:
                 self._config.set_maximized(False)
                 self._config.set_window_width(TIGHT_WINDOW_WIDTH)

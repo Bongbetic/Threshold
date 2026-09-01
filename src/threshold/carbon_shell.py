@@ -56,6 +56,32 @@ def _carbon_requested() -> bool:
     return os.environ.get("THRESHOLD_CARBON", "0") == "1"
 
 
+# ── Icon helpers (avoids importing window.py and its GTK template deps) ────
+
+_CHARGING_SUFFIX = {
+    'Charging': '-charging',
+    'Full': '',
+    'Discharging': '',
+    'Not charging': '',
+}
+
+
+def _battery_icon_name(pct: int, status: str | None) -> str:
+    """Return a freedesktop battery icon name for the given charge level."""
+    if pct <= 10:
+        level = 'empty'
+    elif pct <= 30:
+        level = 'low'
+    elif pct <= 50:
+        level = 'medium'
+    elif pct <= 80:
+        level = 'good'
+    else:
+        level = 'full'
+    suffix = _CHARGING_SUFFIX.get(status, '')
+    return f'battery-{level}{suffix}'
+
+
 # ── Bridge handler (deferred GTK imports) ───────────────────────────────────
 
 
@@ -80,6 +106,9 @@ class BridgeHandler:
         self._polling_source_id = None
         self._gsettings_handler_ids: list[int] = []
         self._window = None
+        self._tray = None
+        self._alarm_armed = False
+        self._alarm_fired = False
 
     def set_window(self, window) -> None:
         """Set the window reference for window commands."""
@@ -92,7 +121,7 @@ class BridgeHandler:
         return build_state(self._config, battery_path=self._battery_path)
 
     def start_gsettings_listeners(self) -> None:
-        """Listen for GSettings appearance changes and push events to JS."""
+        """Listen for GSettings appearance and preference changes."""
         appearance_keys = [
             'dark-mode',
             'accent-color',
@@ -103,6 +132,18 @@ class BridgeHandler:
             handler_id = self._config.connect(
                 f'changed::{key}',
                 self._on_appearance_changed,
+            )
+            self._gsettings_handler_ids.append(handler_id)
+
+        preference_keys = [
+            'show-notifications',
+            'minimize-to-tray',
+            'autostart',
+        ]
+        for key in preference_keys:
+            handler_id = self._config.connect(
+                f'changed::{key}',
+                self._on_preference_changed,
             )
             self._gsettings_handler_ids.append(handler_id)
 
@@ -136,6 +177,26 @@ class BridgeHandler:
                     'charge_percent': self._state.charge_percent,
                 },
             })
+
+    def _on_preference_changed(self, settings, key) -> None:
+        """Handle a GSettings preference change — push updated state to JS."""
+        self._state = self._build_state()
+
+        # Push preference event so JS can update UI
+        self._push_to_js({
+            'event': 'preference',
+            'data': {
+                'key': key,
+                'show_notifications': self._state.show_notifications,
+                'minimize_to_tray': self._state.minimize_to_tray,
+            },
+        })
+
+        # Push full state so JS has current values
+        self._push_to_js({
+            'event': 'battery',
+            'data': self._serialize_state(self._state),
+        })
 
     def _is_write_command(self, cmd: str) -> bool:
         """Return True if the command initiates a threshold write."""
@@ -215,6 +276,30 @@ class BridgeHandler:
 
         self._push_to_js(response)
 
+        # Show notification for threshold results
+        if cmd in ("apply_threshold", "restore_threshold") and result.success:
+            threshold = result.data.get("threshold", 100)
+            method = result.data.get("method", "")
+            if method == "alarm":
+                self._show_notification(
+                    f"Threshold set to {threshold}%",
+                    "Alarm armed. You will be notified when capacity reaches the threshold.",
+                )
+                self._alarm_armed = True
+                self._alarm_fired = False
+            elif threshold == 100:
+                self._show_notification(
+                    "Threshold restored to 100%",
+                    "Written to EC firmware. Persists across reboots.",
+                )
+                self._alarm_armed = False
+                self._alarm_fired = False
+            else:
+                self._show_notification(
+                    f"Threshold set to {threshold}%",
+                    "Written to EC firmware. Persists across reboots.",
+                )
+
         # Clear write-in-flight flag after response sent
         if self._writing:
             self._writing = False
@@ -253,6 +338,12 @@ class BridgeHandler:
             "data": self._serialize_state(self._state),
         })
 
+        # Sync tray icon with live state
+        self._update_tray()
+
+        # Evaluate alarm for notification-only mode
+        self._evaluate_alarm()
+
         return GLib.SOURCE_CONTINUE
 
     def _sync_from_hardware(self) -> None:
@@ -284,6 +375,147 @@ class BridgeHandler:
                 )
                 self._config.set_charge_threshold(ec_value)
 
+    # ── Tray integration ──────────────────────────────────────────────────
+
+    def _setup_tray(self) -> None:
+        """Create the system tray indicator."""
+        try:
+            from threshold.tray import TrayIcon, HAS_DBUSMENU
+        except (ImportError, RuntimeError):
+            return
+        if not HAS_DBUSMENU:
+            return
+
+        self._tray = TrayIcon(
+            on_activate=self._on_tray_show,
+            on_threshold=self._on_tray_threshold,
+            on_quit=self._on_tray_quit,
+        )
+        if self._state:
+            self._update_tray()
+
+    def _update_tray(self) -> None:
+        """Update the tray icon, tooltip, and menu marks from current state."""
+        if self._tray is None or self._state is None:
+            return
+        pct = self._state.charge_percent or 0
+        status = self._state.charge_status
+        threshold = self._state.pending_threshold or self._state.active_threshold or 100
+        self._tray.set_state(
+            pct,
+            status,
+            _battery_icon_name(pct, status),
+            threshold,
+        )
+
+    def _on_tray_show(self, *_args) -> None:
+        """Restore the window from tray."""
+        if self._window is not None:
+            self._window.present()
+
+    def _on_tray_threshold(self, value) -> None:
+        """Apply a threshold preset from the tray menu."""
+        self._state = self._build_state()
+        result = self._dispatcher.dispatch(
+            'apply_threshold',
+            args={'threshold': value},
+            state=self._state,
+        )
+        if result.success:
+            self._state = self._build_state()
+            self._push_to_js({
+                'event': 'battery',
+                'data': self._serialize_state(self._state),
+            })
+
+    def _on_tray_quit(self, *_args) -> None:
+        """Quit the application from tray."""
+        self.stop_polling()
+        self.stop_gsettings_listeners()
+        self._cleanup_tray()
+        if self._window is not None:
+            app = self._window.get_application()
+            if app is not None:
+                app.quit()
+
+    def _cleanup_tray(self) -> None:
+        """Clean up the tray indicator."""
+        if self._tray is not None:
+            self._tray.unregister()
+            self._tray = None
+
+    def _evaluate_alarm(self) -> None:
+        """Fire or re-arm the threshold-reached alarm in notify-only mode."""
+        from threshold.battery import ControlMode, evaluate_alarm, read_sysfs
+
+        if self._state is None or self._battery_path is None:
+            return
+        if self._state.control_mode is not ControlMode.NOTIFY_ONLY:
+            return
+        if not self._alarm_armed:
+            return
+
+        threshold = self._state.pending_threshold or self._state.active_threshold
+        if threshold is None:
+            return
+        threshold = int(threshold)
+
+        status = read_sysfs(self._battery_path / 'status')
+        charge_pct = self._state.charge_percent
+
+        # Re-arm when the battery discharges below threshold
+        if status == 'Discharging' or (
+            charge_pct is not None
+            and charge_pct < threshold - 2
+        ):
+            self._alarm_fired = False
+            return
+
+        if evaluate_alarm(charge_pct, status, threshold, self._alarm_fired):
+            self._alarm_fired = True
+            self._show_notification(
+                f'Battery reached {threshold}%',
+                f'Charge has reached the {threshold}% limit you set. '
+                f'Unplug the charger to preserve battery lifespan.',
+                is_error=True,
+            )
+
+    def handle_close_request(self) -> bool:
+        """Handle window close: hide if minimize-to-tray, else allow close.
+
+        Returns True to prevent default close (window hidden), False to allow.
+        """
+        if (
+            self._config.get_minimize_to_tray()
+            and self._tray is not None
+            and self._window is not None
+        ):
+            self._window.set_visible(False)
+            return True
+        return False
+
+    # ── Notifications (libnotify) ─────────────────────────────────────────
+
+    def _show_notification(self, title: str, body: str, is_error: bool = False) -> None:
+        """Show a desktop notification via libnotify (if enabled)."""
+        if not self._config.get_show_notifications():
+            return
+        try:
+            import gi
+            gi.require_version('Notify', '0.7')
+            from gi.repository import Notify
+            if not Notify.is_initted():
+                return
+            notification = Notify.Notification.new(
+                f'Threshold \u2014 {title}',
+                body,
+            )
+            if is_error:
+                notification.set_urgency(Notify.Urgency.CRITICAL)
+            notification.show()
+        except Exception:
+            pass
+
     def _serialize_state(self, state) -> dict[str, Any]:
         """Serialize ThresholdState for the bridge."""
         return {
@@ -302,6 +534,8 @@ class BridgeHandler:
             "capacity_design_wh": state.capacity_design_wh,
             "alarm_armed": state.alarm_armed,
             "alarm_fired": state.alarm_fired,
+            "show_notifications": state.show_notifications,
+            "minimize_to_tray": state.minimize_to_tray,
             "dark_mode": state.dark_mode,
             "accent_color": state.accent_color,
             "compact_mode": state.compact_mode,
@@ -380,15 +614,24 @@ def create_carbon_window(application, config):
 
     # Wire window reference to handler and dispatcher
     handler.set_window(win)
+    win._handler = handler  # expose for application shutdown cleanup
 
     # Restore maximized state if saved
     if saved_maximized:
         win.maximize()
 
-    # Connect close request
+    # Set up native tray icon
+    handler._setup_tray()
+
+    # Connect close request — minimize-to-tray or normal close
     def on_close_request(*_args):
+        if handler.handle_close_request():
+            # Window hidden to tray — don't destroy
+            return True
+        # Normal close: save geometry, tear down
         handler.stop_polling()
         handler.stop_gsettings_listeners()
+        handler._cleanup_tray()
         if not win.is_maximized():
             config.set_window_width(win.get_width())
             config.set_window_height(win.get_height())
@@ -400,7 +643,7 @@ def create_carbon_window(application, config):
     # Start Python-owned 5-second poll
     handler.start_polling(5)
 
-    # Listen for GSettings appearance changes
+    # Listen for GSettings appearance + preference changes
     handler.start_gsettings_listeners()
 
     return win
