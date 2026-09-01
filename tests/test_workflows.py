@@ -59,3 +59,35 @@ def test_workflows_use_threshold_package_artifact_names():
     assert "msi-batteryguard_*.deb" not in release
     assert "threshold_*.deb" in release
     assert "msi-ec-dkms_*.deb" not in release
+
+
+def test_ci_has_web_job():
+    """CI must have a dedicated web job for TypeScript, lint, vitest, and build."""
+    text = CI_WORKFLOW.read_text(encoding="utf-8")
+    assert "  web:" in text
+    assert "npm ci" in text
+    assert "tsc --noEmit" in text
+    assert "vitest run" in text
+    assert "npm run build" in text
+
+
+def test_ci_has_bundle_verify_job():
+    """CI must have a bundle-verify job for offline safety and freshness."""
+    text = CI_WORKFLOW.read_text(encoding="utf-8")
+    assert "  bundle-verify:" in text
+    assert "test_web_bundle.py" in text
+    assert "test_carbon_xvfb.py" in text
+
+
+def test_ci_web_job_rejects_http_references():
+    """Web CI job must reject runtime HTTP/HTTPS references in the bundle."""
+    text = CI_WORKFLOW.read_text(encoding="utf-8")
+    assert "Reject runtime HTTP references" in text
+    assert "grep -rn" in text
+
+
+def test_ci_web_job_verifies_bundle_freshness():
+    """Web CI job must verify the committed bundle matches the build output."""
+    text = CI_WORKFLOW.read_text(encoding="utf-8")
+    assert "Verify bundle is committed" in text
+    assert "git status" in text

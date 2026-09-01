@@ -1,0 +1,28 @@
+/**
+ * Self-hosted IBM Plex Sans font declarations.
+ * Overrides the CDN references in @carbon/styles/css/styles.css.
+ * Only Latin subsets needed for English-only v1.
+ */
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url("../fonts/IBM Plex Sans Var-Roman.woff2") format("woff2-variations");
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: italic;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url("../fonts/IBM Plex Sans Var-Italic.woff2") format("woff2-variations");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: local("IBM Plex Mono");
+}
