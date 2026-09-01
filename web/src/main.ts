@@ -6,15 +6,22 @@ import '@carbon/web-components/es/components/ui-shell/header-nav-item.js';
 import '@carbon/web-components/es/components/button/button.js';
 import '@carbon/web-components/es/components/slider/index.js';
 import '@carbon/web-components/es/components/tile/radio-tile.js';
-import '@carbon/web-components/es/components/toggle/defs.js';
-import '@carbon/web-components/es/components/modal/defs.js';
-import '@carbon/web-components/es/components/notification/defs.js';
-import '@carbon/web-components/es/components/inline-loading/defs.js';
+import '@carbon/web-components/es/components/toggle/toggle.js';
+import '@carbon/web-components/es/components/modal/modal.js';
+import '@carbon/web-components/es/components/modal/modal-header.js';
+import '@carbon/web-components/es/components/modal/modal-heading.js';
+import '@carbon/web-components/es/components/modal/modal-body.js';
+import '@carbon/web-components/es/components/modal/modal-footer.js';
+import '@carbon/web-components/es/components/modal/modal-close-button.js';
+import '@carbon/web-components/es/components/notification/toast-notification.js';
+import '@carbon/web-components/es/components/notification/inline-notification.js';
+import '@carbon/web-components/es/components/inline-loading/inline-loading.js';
 
 // ── Carbon design tokens + self-hosted fonts ──────────────────────────────
 import './carbon-tokens.css';
 import './fonts.css';
 import './styles.css';
+
 
 /**
  * Threshold Carbon shell - entry point.
@@ -223,17 +230,23 @@ function renderBattery(state: BatteryState): void {
   if (powerEl) powerEl.textContent = state.power_source || '—';
   if (liveDot) liveDot.textContent = '●';
 
-  // Device Information card
-  const idEl = el('battery-identifier');
+  // Active Threshold card
+  const thresholdEl = el('active-threshold');
+    if (thresholdEl) thresholdEl.textContent = formatValue(state.active_threshold, '%');
+
+  // Threshold Mode card
   const modeEl = el('control-mode');
+  const idEl = el('battery-identifier');
+  if (modeEl) modeEl.textContent = controlModeLabel(state.control_mode);
+  if (idEl) idEl.textContent = state.battery_identifier || '—';
+
+  // Device Info tile (in settings row)
   const healthPctEl = el('health-percent');
   const healthGradeEl = el('health-grade');
   const cycleEl = el('cycle-count');
   const fullCapEl = el('capacity-full');
   const designCapEl = el('capacity-design');
 
-  if (idEl) idEl.textContent = state.battery_identifier || '—';
-  if (modeEl) modeEl.textContent = controlModeLabel(state.control_mode);
   if (healthPctEl && healthGradeEl) {
     const h = formatHealth(state.health_percent, state.health_grade);
     healthPctEl.textContent = h.percent;
@@ -243,17 +256,12 @@ function renderBattery(state: BatteryState): void {
   if (fullCapEl) fullCapEl.textContent = formatCapacity(state.capacity_full_wh);
   if (designCapEl) designCapEl.textContent = formatCapacity(state.capacity_design_wh);
 
-  // Threshold card
-  const thresholdEl = el('active-threshold');
+  // Threshold panel
   const alarmInfo = el('alarm-info');
   const alarmThreshold = el('alarm-threshold');
   const applyButton = el('apply-button');
   const restoreButton = el('restore-button');
-  const slider = document.querySelector('[data-testid="threshold-slider"]') as HTMLElement;
-
-  if (thresholdEl) {
-    thresholdEl.textContent = formatValue(state.active_threshold, '%');
-  }
+  const slider = document.getElementById('threshold-slider') as HTMLInputElement;
 
   // Notification-only: distinguish alarm threshold from hardware threshold
   const isNotifyOnly = state.control_mode === 'notify';
@@ -266,29 +274,31 @@ function renderBattery(state: BatteryState): void {
     }
   }
 
-  // No-battery error state
-  const errorState = el('error-state');
-  const errorMessage = el('error-message');
-  const batteryStatus = el('battery-status');
-  const deviceInfo = el('device-info');
-  const thresholdPanel = el('threshold-panel');
+  const controlStateTitle = el('control-state-title');
+  const controlStateMessage = el('control-state-message');
 
   if (!state.battery_available) {
-    errorState?.removeAttribute('hidden');
-    if (errorMessage) errorMessage.textContent = 'No charge-threshold-capable battery was found on this system.';
-    batteryStatus?.setAttribute('hidden', 'true');
-    deviceInfo?.setAttribute('hidden', 'true');
-    thresholdPanel?.setAttribute('hidden', 'true');
+    if (controlStateTitle) controlStateTitle.textContent = t('No Battery Detected');
+    if (controlStateMessage) {
+      controlStateMessage.textContent = t('No charge-threshold-capable battery was found.');
+    }
     if (statusText) statusText.textContent = t('No battery detected');
     return;
   }
 
-  // Battery available — hide error, show cards
-  errorState?.setAttribute('hidden', 'true');
-  batteryStatus?.removeAttribute('hidden');
-  deviceInfo?.removeAttribute('hidden');
-  thresholdPanel?.removeAttribute('hidden');
-  if (statusText) statusText.textContent = t('Connected');
+  if (isNotifyOnly) {
+    if (controlStateTitle) controlStateTitle.textContent = t('Notification only');
+    if (controlStateMessage) {
+      controlStateMessage.textContent = t('No hardware threshold control detected. Thresholds trigger charge notifications.');
+    }
+    if (statusText) statusText.textContent = t('Connected — Notification only');
+  } else {
+    if (controlStateTitle) controlStateTitle.textContent = t('Threshold control ready');
+    if (controlStateMessage) {
+      controlStateMessage.textContent = controlModeLabel(state.control_mode);
+    }
+    if (statusText) statusText.textContent = t('Connected');
+  }
 }
 
 /** Apply theme scheme to the document root. */
@@ -321,7 +331,7 @@ function applyCompactMode(compact: boolean): void {
 
 /** Update the Carbon header title based on title_percentage setting. */
 function updateHeaderTitle(titlePercentage: boolean, chargePercent: number | null): void {
-  const headerName = document.querySelector('cds-header-name');
+  const headerName = document.querySelector('.header-name');
   if (!headerName) return;
   if (titlePercentage && chargePercent !== null) {
     headerName.textContent = 'Threshold — ' + chargePercent + '%';
@@ -333,7 +343,7 @@ function updateHeaderTitle(titlePercentage: boolean, chargePercent: number | nul
 /** Sync appearance controls (toggles, radio group) with state. */
 function syncAppearanceControls(state: BatteryState): void {
   // Dark mode toggle
-  const darkToggle = document.querySelector('[data-testid="dark-mode-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
+  const darkToggle = document.getElementById('dark-mode-toggle-input') as HTMLInputElement | null;
   if (darkToggle) darkToggle.checked = state.dark_mode;
 
   // Accent radio group
@@ -344,11 +354,11 @@ function syncAppearanceControls(state: BatteryState): void {
   });
 
   // Compact mode toggle
-  const compactToggle = document.querySelector('[data-testid="compact-mode-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
+  const compactToggle = document.getElementById('compact-mode-toggle-input') as HTMLInputElement | null;
   if (compactToggle) compactToggle.checked = state.compact_mode;
 
   // Title percentage toggle
-  const titleToggle = document.querySelector('[data-testid="title-percentage-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
+  const titleToggle = document.getElementById('title-percentage-toggle-input') as HTMLInputElement | null;
   if (titleToggle) titleToggle.checked = state.title_percentage;
 }
 
@@ -376,24 +386,24 @@ function showToast(message: string, kind: 'success' | 'error' | 'info' = 'info')
 function syncPresets(value: number, presets: NodeListOf<HTMLElement>): void {
   presets.forEach(preset => {
     const presetValue = parseInt(preset.getAttribute('value') || '0');
-    preset.setAttribute('selected', presetValue === value ? 'true' : 'false');
+    preset.setAttribute('aria-pressed', presetValue === value ? 'true' : 'false');
   });
 }
 
 /** Set controls enabled/disabled state. */
 function setControlsEnabled(enabled: boolean): void {
-  const slider = document.querySelector('[data-testid="threshold-slider"]') as HTMLElement;
+  const slider = document.getElementById('threshold-slider') as HTMLInputElement;
   const applyButton = document.getElementById('apply-button');
   const restoreButton = document.getElementById('restore-button');
 
   if (enabled) {
-    slider?.removeAttribute('disabled');
-    applyButton?.removeAttribute('disabled');
-    restoreButton?.removeAttribute('disabled');
+    if (slider) (slider as HTMLInputElement).disabled = false;
+    if (applyButton) (applyButton as HTMLButtonElement).disabled = false;
+    if (restoreButton) (restoreButton as HTMLButtonElement).disabled = false;
   } else {
-    slider?.setAttribute('disabled', 'true');
-    applyButton?.setAttribute('disabled', 'true');
-    restoreButton?.setAttribute('disabled', 'true');
+    if (slider) (slider as HTMLInputElement).disabled = true;
+    if (applyButton) (applyButton as HTMLButtonElement).disabled = true;
+    if (restoreButton) (restoreButton as HTMLButtonElement).disabled = true;
   }
 }
 
@@ -462,18 +472,16 @@ async function init(): Promise<void> {
         pendingValue = stateData.state.pending_threshold;
       }
 
-      const slider = document.querySelector('[data-testid="threshold-slider"]') as HTMLElement;
+      const slider = document.getElementById('threshold-slider') as HTMLInputElement;
       const floatingLabel = document.getElementById('floating-value-label');
-      const presets = document.querySelectorAll<HTMLElement>('cds-radio-tile');
+      const presets = document.querySelectorAll<HTMLElement>('.preset-btn');
 
-      slider?.setAttribute('value', pendingValue.toString());
+      if (slider) (slider as HTMLInputElement).value = pendingValue.toString();
       syncPresets(pendingValue, presets);
       if (floatingLabel) floatingLabel.textContent = pendingValue + '%';
 
-      // Disable controls if no battery or no threshold capability
-      const canWrite = stateData.state.battery_available &&
-        stateData.state.control_mode !== 'notify';
-      setControlsEnabled(canWrite);
+      // Notification-only mode still accepts a threshold as an alarm.
+      setControlsEnabled(stateData.state.battery_available);
     }
 
     if (stateData.appearance) {
@@ -490,16 +498,15 @@ async function init(): Promise<void> {
     }
 
     // ── Slider change handler ──────────────────────────────────────────────
-    const slider = document.querySelector('[data-testid="threshold-slider"]') as HTMLElement;
+    const slider = document.getElementById('threshold-slider') as HTMLInputElement;
     const floatingLabel = document.getElementById('floating-value-label');
-    const presets = document.querySelectorAll<HTMLElement>('cds-radio-tile');
+    const presets = document.querySelectorAll<HTMLElement>('.preset-btn');
     const applyButton = document.getElementById('apply-button');
     const restoreButton = document.getElementById('restore-button');
     const pendingIndicator = document.getElementById('pending-indicator');
 
-    slider?.addEventListener('cds-slider-input', (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      const value = parseInt(detail?.value?.toString() || '80');
+    slider?.addEventListener('input', (e: Event) => {
+      const value = parseInt((e.currentTarget as HTMLInputElement).value, 10);
       pendingValue = value;
       if (floatingLabel) floatingLabel.textContent = value + '%';
       syncPresets(value, presets);
@@ -508,9 +515,9 @@ async function init(): Promise<void> {
     // Preset handlers
     presets.forEach(preset => {
       preset.addEventListener('click', () => {
-        const value = parseInt(preset.getAttribute('value') || '80');
+        const value = parseInt(preset.getAttribute('value') || preset.textContent?.trim() || '80');
         pendingValue = value;
-        slider?.setAttribute('value', value.toString());
+        if (slider) (slider as HTMLInputElement).value = value.toString();
         if (floatingLabel) floatingLabel.textContent = value + '%';
         syncPresets(value, presets);
       });
@@ -521,8 +528,8 @@ async function init(): Promise<void> {
       if (isApplying) return;
 
       isApplying = true;
-      applyButton.setAttribute('disabled', 'true');
-      restoreButton?.setAttribute('disabled', 'true');
+      (applyButton as HTMLButtonElement).disabled = true;
+      if (restoreButton) (restoreButton as HTMLButtonElement).disabled = true;
       pendingIndicator?.removeAttribute('hidden');
 
       try {
@@ -539,7 +546,7 @@ async function init(): Promise<void> {
         showToast(t('Failed to set threshold: {message}').replace('{message}', message), 'error');
       } finally {
         isApplying = false;
-        applyButton.removeAttribute('disabled');
+        (applyButton as HTMLButtonElement).disabled = false;
         restoreButton?.removeAttribute('disabled');
         pendingIndicator?.setAttribute('hidden', 'true');
       }
@@ -550,7 +557,7 @@ async function init(): Promise<void> {
       if (isApplying) return;
 
       isApplying = true;
-      applyButton?.setAttribute('disabled', 'true');
+      if (applyButton) (applyButton as HTMLButtonElement).disabled = true;
       restoreButton.setAttribute('disabled', 'true');
       pendingIndicator?.removeAttribute('hidden');
 
@@ -561,7 +568,7 @@ async function init(): Promise<void> {
           showToast(t('Threshold restored to 100%'), 'success');
 
           pendingValue = 100;
-          slider?.setAttribute('value', '100');
+          if (slider) (slider as HTMLInputElement).value = '100';
           if (floatingLabel) floatingLabel.textContent = '100%';
           syncPresets(100, presets);
 
@@ -574,7 +581,7 @@ async function init(): Promise<void> {
       } finally {
         isApplying = false;
         applyButton?.removeAttribute('disabled');
-        restoreButton.removeAttribute('disabled');
+        (restoreButton as HTMLButtonElement).disabled = false;
         pendingIndicator?.setAttribute('hidden', 'true');
       }
     });
