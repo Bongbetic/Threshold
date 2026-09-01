@@ -63,3 +63,20 @@ export function isBridgeResponse(msg: BridgeMessage): msg is BridgeResponse {
 export function isBridgeEvent(msg: BridgeMessage): msg is BridgeEvent {
   return 'event' in msg && !('id' in msg);
 }
+
+/** Threshold application result from Python. */
+export interface ThresholdResult {
+  threshold: number;
+  method: string;
+  ec_mismatch: boolean;
+}
+
+/** Error codes from Python command dispatcher. */
+export type ErrorCode = 
+  | 'unknown_command'
+  | 'invalid_args'
+  | 'threshold_out_of_range'
+  | 'no_battery'
+  | 'write_failed'
+  | 'permission_denied'
+  | 'ec_mismatch';

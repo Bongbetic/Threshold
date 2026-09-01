@@ -192,3 +192,10 @@ export async function getState(): Promise<Record<string, unknown>> {
 export async function applyThreshold(threshold: number): Promise<Record<string, unknown>> {
   return bridge.request('apply_threshold', { threshold });
 }
+
+/**
+ * Restore threshold to 100% via the bridge.
+ */
+export async function restoreThreshold(): Promise<Record<string, unknown>> {
+  return bridge.request('restore_threshold');
+}
