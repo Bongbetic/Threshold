@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Threshold</title>
+</head>
+<body>
+  <cds-header platform-name="Threshold" aria-label="Threshold">
+    <cds-header-name href="#">Threshold</cds-header-name>
+  </cds-header>
+  <main class="cds-content">
+    <div class="cds-grid" style="padding: 1rem;">
+      <div id="battery-status" class="cds-tile">
+        <h3>Battery</h3>
+        <p id="charge-percent">--%</p>
+        <p id="charge-status">Unknown</p>
+      </div>
+      <div id="threshold-panel" class="cds-tile">
+        <h3>Charge Threshold</h3>
+        <p id="active-threshold">--%</p>
+      </div>
+      <div id="status-bar" class="cds-tile">
+        <p id="status-text">Connecting...</p>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

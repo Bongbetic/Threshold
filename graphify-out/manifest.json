@@ -1,0 +1,398 @@
+{
+  ".gemini/settings.json": {
+    "mtime": 1788076475.1299832,
+    "seen": 1788099619.2819943,
+    "ast_hash": "d27f85ca6a3077440d17140c163d62ba",
+    "semantic_hash": "d27f85ca6a3077440d17140c163d62ba"
+  },
+  "msi-ec-src/ec_memory_configuration.h": {
+    "mtime": 1785605020.0,
+    "seen": 1788099619.2820039,
+    "ast_hash": "83cfd2eab986e0fb3cd361efcb45c699",
+    "semantic_hash": "83cfd2eab986e0fb3cd361efcb45c699"
+  },
+  "msi-ec-src/msi-ec.c": {
+    "mtime": 1787504377.9582307,
+    "seen": 1788099619.2820082,
+    "ast_hash": "eb1ce4cf6d56f5cb85054d4f3823be81",
+    "semantic_hash": "eb1ce4cf6d56f5cb85054d4f3823be81"
+  },
+  "msi-ec-src/universalDKMSModuleUninstaller.sh": {
+    "mtime": 1785605020.0,
+    "seen": 1788099619.2820108,
+    "ast_hash": "e5fcec8998d9d1b95d80e038d6acbb03",
+    "semantic_hash": "e5fcec8998d9d1b95d80e038d6acbb03"
+  },
+  "output/package.json": {
+    "mtime": 1786950868.3987136,
+    "seen": 1788099619.2820137,
+    "ast_hash": "a9c88bf202cf9d649a2baf9e095de549",
+    "semantic_hash": "a9c88bf202cf9d649a2baf9e095de549"
+  },
+  "prototype-gtk4-ui/prototype.py": {
+    "mtime": 1785360227.0,
+    "seen": 1788099619.282016,
+    "ast_hash": "46cbc349101803ba7ce42a8f7a5404c1",
+    "semantic_hash": "46cbc349101803ba7ce42a8f7a5404c1"
+  },
+  "prototype-gtk4-ui/scroll-free/prototype.py": {
+    "mtime": 1786954967.0507126,
+    "seen": 1788099619.2820187,
+    "ast_hash": "559a67ea86194743f39ce13a1fc07f40",
+    "semantic_hash": "559a67ea86194743f39ce13a1fc07f40"
+  },
+  "src/threshold/__init__.py": {
+    "mtime": 1786993796.99087,
+    "seen": 1788099619.2820208,
+    "ast_hash": "9656309a3da9ff36f733fe432c4746c8",
+    "semantic_hash": "9656309a3da9ff36f733fe432c4746c8"
+  },
+  "src/threshold/application.py": {
+    "mtime": 1787515134.0244446,
+    "seen": 1788099619.282024,
+    "ast_hash": "4f831f9a3fdbb2dce0222186db428ced",
+    "semantic_hash": "4f831f9a3fdbb2dce0222186db428ced"
+  },
+  "src/threshold/battery.py": {
+    "mtime": 1787492384.794877,
+    "seen": 1788099619.2820263,
+    "ast_hash": "7eef06b70170f36350be2d25de74347b",
+    "semantic_hash": "7eef06b70170f36350be2d25de74347b"
+  },
+  "src/threshold/config.py": {
+    "mtime": 1787492384.794877,
+    "seen": 1788099619.2820282,
+    "ast_hash": "8d5752e49b65b0b525e2e6dbf12880f1",
+    "semantic_hash": "8d5752e49b65b0b525e2e6dbf12880f1"
+  },
+  "src/threshold/main.py": {
+    "mtime": 1786993680.7254696,
+    "seen": 1788099619.2820313,
+    "ast_hash": "df68d064ac863eca7d98b7bd5a529281",
+    "semantic_hash": "df68d064ac863eca7d98b7bd5a529281"
+  },
+  "src/threshold/migration.py": {
+    "mtime": 1787427858.5012956,
+    "seen": 1788099619.2820327,
+    "ast_hash": "eaa0f1563450f3637eee87c079c4f3bf",
+    "semantic_hash": "eaa0f1563450f3637eee87c079c4f3bf"
+  },
+  "src/threshold/resources.py": {
+    "mtime": 1787492384.8988786,
+    "seen": 1788099619.2820337,
+    "ast_hash": "75ea0350225da50c59b9d372e634e897",
+    "semantic_hash": "75ea0350225da50c59b9d372e634e897"
+  },
+  "src/threshold/tray.py": {
+    "mtime": 1787493360.7990758,
+    "seen": 1788099619.2820349,
+    "ast_hash": "35cdfd9fd539b7732ce1eb36e7a9c785",
+    "semantic_hash": "35cdfd9fd539b7732ce1eb36e7a9c785"
+  },
+  "src/threshold/window.py": {
+    "mtime": 1787981179.9609702,
+    "seen": 1788099619.2820363,
+    "ast_hash": "b4aeac0b44fac0a49135bbf674fc371c",
+    "semantic_hash": "b4aeac0b44fac0a49135bbf674fc371c"
+  },
+  "tests/test_battery.py": {
+    "mtime": 1787492384.9028785,
+    "seen": 1788099619.2820373,
+    "ast_hash": "d28224a18a611fac2993aa063ffaf227",
+    "semantic_hash": "d28224a18a611fac2993aa063ffaf227"
+  },
+  "tests/test_config.py": {
+    "mtime": 1787492384.9028785,
+    "seen": 1788099619.2820385,
+    "ast_hash": "7b98c5747df5684d772eb41de16bde43",
+    "semantic_hash": "7b98c5747df5684d772eb41de16bde43"
+  },
+  "tests/test_install_layout.py": {
+    "mtime": 1787001440.3959167,
+    "seen": 1788099619.2820399,
+    "ast_hash": "77d7e2d1807b0db173ac1bc469e24bc6",
+    "semantic_hash": "77d7e2d1807b0db173ac1bc469e24bc6"
+  },
+  "tests/test_install_modules.py": {
+    "mtime": 1787427086.1430562,
+    "seen": 1788099619.2820408,
+    "ast_hash": "f05fcf96177e6f77e51bda568a7141fb",
+    "semantic_hash": "f05fcf96177e6f77e51bda568a7141fb"
+  },
+  "tests/test_metainfo.py": {
+    "mtime": 1787463385.5112767,
+    "seen": 1788099619.282042,
+    "ast_hash": "92cb9c2f4788e63c180e6b31a2a2d6b1",
+    "semantic_hash": "92cb9c2f4788e63c180e6b31a2a2d6b1"
+  },
+  "tests/test_migration.py": {
+    "mtime": 1787428037.9686103,
+    "seen": 1788099619.2820435,
+    "ast_hash": "844367e119c6de31da0100c0d347e0ed",
+    "semantic_hash": "844367e119c6de31da0100c0d347e0ed"
+  },
+  "tests/test_packaging_versions.py": {
+    "mtime": 1787504579.695576,
+    "seen": 1788099619.282045,
+    "ast_hash": "1d8f58c4fd8a34721ac206cab9acc941",
+    "semantic_hash": "1d8f58c4fd8a34721ac206cab9acc941"
+  },
+  "tests/test_scaffold.py": {
+    "mtime": 1786993755.582371,
+    "seen": 1788099619.2820466,
+    "ast_hash": "6fb439a05a000b7d0cca40deac0fc03b",
+    "semantic_hash": "6fb439a05a000b7d0cca40deac0fc03b"
+  },
+  "tests/test_window_ui.py": {
+    "mtime": 1787515154.6766443,
+    "seen": 1788099619.2820475,
+    "ast_hash": "4eac902600ab79bba21b4a88b08dac99",
+    "semantic_hash": "4eac902600ab79bba21b4a88b08dac99"
+  },
+  "tests/test_workflows.py": {
+    "mtime": 1787463202.5050917,
+    "seen": 1788099619.282049,
+    "ast_hash": "b2e7813656df3be305bc9c66ec93b815",
+    "semantic_hash": "b2e7813656df3be305bc9c66ec93b815"
+  },
+  ".agents/rules/graphify.md": {
+    "mtime": 1788076516.0403633,
+    "seen": 1788099619.2820504,
+    "ast_hash": "f1e53ecc9194573d3c28fc116c743a2e",
+    "semantic_hash": "f1e53ecc9194573d3c28fc116c743a2e"
+  },
+  ".agents/workflows/graphify.md": {
+    "mtime": 1788076516.040619,
+    "seen": 1788099619.2820516,
+    "ast_hash": "6d73634a678cf1e1c71930adf80bd1f0",
+    "semantic_hash": "6d73634a678cf1e1c71930adf80bd1f0"
+  },
+  ".github/workflows/ci.yml": {
+    "mtime": 1787899188.8185215,
+    "seen": 1788099619.2820528,
+    "ast_hash": "ef8ed587703a890a062398c0a82b1ab3",
+    "semantic_hash": "ef8ed587703a890a062398c0a82b1ab3"
+  },
+  ".github/workflows/release.yml": {
+    "mtime": 1787985319.9014904,
+    "seen": 1788099619.2820544,
+    "ast_hash": "5b80faff34376152d8066fe2dfafa449",
+    "semantic_hash": "5b80faff34376152d8066fe2dfafa449"
+  },
+  "CONTEXT.md": {
+    "mtime": 1788026382.7891955,
+    "seen": 1788099619.2820556,
+    "ast_hash": "73918d5c71fb617f068747f400ac282a",
+    "semantic_hash": "73918d5c71fb617f068747f400ac282a"
+  },
+  "GEMINI.md": {
+    "mtime": 1788076475.1295266,
+    "seen": 1788099619.2820568,
+    "ast_hash": "82efb97a359f5c7290bf2513d14686be",
+    "semantic_hash": "82efb97a359f5c7290bf2513d14686be"
+  },
+  "INSTALL.md": {
+    "mtime": 1788018041.7655501,
+    "seen": 1788099619.2820578,
+    "ast_hash": "a5cb4e450c877553792b7c099bf0cb0d",
+    "semantic_hash": "a5cb4e450c877553792b7c099bf0cb0d"
+  },
+  "README.md": {
+    "mtime": 1787984691.3689456,
+    "seen": 1788099619.282059,
+    "ast_hash": "a2f0d001a385bc895f74bca82d64d44d",
+    "semantic_hash": "a2f0d001a385bc895f74bca82d64d44d"
+  },
+  "docs/agents/domain.md": {
+    "mtime": 1785360227.0,
+    "seen": 1788099619.2820609,
+    "ast_hash": "35089ed6a70a657c91fd100ade31b642",
+    "semantic_hash": "35089ed6a70a657c91fd100ade31b642"
+  },
+  "docs/agents/issue-tracker.md": {
+    "mtime": 1785360227.0,
+    "seen": 1788099619.282063,
+    "ast_hash": "3cd8509285524d31a33279b8cb0870e5",
+    "semantic_hash": "3cd8509285524d31a33279b8cb0870e5"
+  },
+  "docs/agents/triage-labels.md": {
+    "mtime": 1785360227.0,
+    "seen": 1788099619.282065,
+    "ast_hash": "22add54cb98451c55b20e6b7992d4a85",
+    "semantic_hash": "22add54cb98451c55b20e6b7992d4a85"
+  },
+  "docs/fix-v3.md": {
+    "mtime": 1787504248.757379,
+    "seen": 1788099619.2820673,
+    "ast_hash": "33c6edc0ba5cca2bdced7a3ffb724b5a",
+    "semantic_hash": "33c6edc0ba5cca2bdced7a3ffb724b5a"
+  },
+  "docs/fixes-v2.md": {
+    "mtime": 1787494589.958878,
+    "seen": 1788099619.2820683,
+    "ast_hash": "f02cf29627fbc8ef24562f4098645803",
+    "semantic_hash": "f02cf29627fbc8ef24562f4098645803"
+  },
+  "docs/plans/bug-fix-plan.md": {
+    "mtime": 1787426869.5830638,
+    "seen": 1788099619.2820706,
+    "ast_hash": "e33d35476d0aa9a056cef7ea1bb30685",
+    "semantic_hash": "e33d35476d0aa9a056cef7ea1bb30685"
+  },
+  "docs/research/contribution-policies.md": {
+    "mtime": 1786950868.3947136,
+    "seen": 1788099619.2820718,
+    "ast_hash": "d7e2b11ab5e3b50aaf0bb9f701ca128f",
+    "semantic_hash": "d7e2b11ab5e3b50aaf0bb9f701ca128f"
+  },
+  "docs/research/deb-packaging.md": {
+    "mtime": 1785360227.0,
+    "seen": 1788099619.282074,
+    "ast_hash": "6057195571e6856d3ecddf6a7ca7efb0",
+    "semantic_hash": "6057195571e6856d3ecddf6a7ca7efb0"
+  },
+  "docs/research/debian-submission-process.md": {
+    "mtime": 1786950868.3987136,
+    "seen": 1788099619.282075,
+    "ast_hash": "4ffc59b68c5246e366521127bd79211b",
+    "semantic_hash": "4ffc59b68c5246e366521127bd79211b"
+  },
+  "docs/research/debian13-package-versions.md": {
+    "mtime": 1786950868.3987136,
+    "seen": 1788099619.282077,
+    "ast_hash": "13013b1e8f2925f202726473a1365aad",
+    "semantic_hash": "13013b1e8f2925f202726473a1365aad"
+  },
+  "docs/research/gtk4-pygobject-structure.md": {
+    "mtime": 1785360227.0,
+    "seen": 1788099619.2820785,
+    "ast_hash": "6106238a168afd9ff2b63a14a0391f8e",
+    "semantic_hash": "6106238a168afd9ff2b63a14a0391f8e"
+  },
+  "docs/research/ubuntu-2604-package-versions.md": {
+    "mtime": 1785360227.0,
+    "seen": 1788099619.2820795,
+    "ast_hash": "3fbdd1c2af7e28f59e461d9689fadba8",
+    "semantic_hash": "3fbdd1c2af7e28f59e461d9689fadba8"
+  },
+  "docs/verification/fedora-rpm.md": {
+    "mtime": 1788014598.6655722,
+    "seen": 1788099619.2820807,
+    "ast_hash": "78c1ca5b52ab9df34acd9d3b0dae1e3f",
+    "semantic_hash": "78c1ca5b52ab9df34acd9d3b0dae1e3f"
+  },
+  "meson_options.txt": {
+    "mtime": 1785360735.0,
+    "seen": 1788099619.2820818,
+    "ast_hash": "ccb2a82164163fe7401a58d38ba6185d",
+    "semantic_hash": "ccb2a82164163fe7401a58d38ba6185d"
+  },
+  "msi-ec-src/README.md": {
+    "mtime": 1785605026.0,
+    "seen": 1788099619.2820828,
+    "ast_hash": "5c35a672756dd29d608c3e4b7b7571cc",
+    "semantic_hash": "5c35a672756dd29d608c3e4b7b7571cc"
+  },
+  "prototype-gtk4-ui/Threshold \u2014 Industrial Grid UI Design Specification.md": {
+    "mtime": 1786952410.1333654,
+    "seen": 1788099619.2820868,
+    "ast_hash": "0ada205876ffb8032a61f826d0cf36a5",
+    "semantic_hash": "0ada205876ffb8032a61f826d0cf36a5"
+  },
+  "data/icons/hicolor/scalable/apps/com.bongbetic.threshold.svg": {
+    "mtime": 1785364852.0,
+    "seen": 1788099619.2820883,
+    "ast_hash": "353bced8ec87c48530b00e8b8c8f30d4",
+    "semantic_hash": "353bced8ec87c48530b00e8b8c8f30d4"
+  },
+  "data/icons/hicolor/symbolic/apps/com.bongbetic.threshold-symbolic.svg": {
+    "mtime": 1785364941.0,
+    "seen": 1788099619.2820895,
+    "ast_hash": "0bcf2502a2f9b8dce39d0bc1c9217ada",
+    "semantic_hash": "0bcf2502a2f9b8dce39d0bc1c9217ada"
+  },
+  "data/screenshots/main-window.png": {
+    "mtime": 1785364785.0,
+    "seen": 1788099619.2820904,
+    "ast_hash": "8ffb068cee6abca6787859834ec6ea5e",
+    "semantic_hash": "8ffb068cee6abca6787859834ec6ea5e"
+  },
+  "docs/brand/b_glyph.svg": {
+    "mtime": 1787502918.9662664,
+    "seen": 1788099619.2820914,
+    "ast_hash": "d598584d6b829f1fbf7c998faeb0555a",
+    "semantic_hash": "d598584d6b829f1fbf7c998faeb0555a"
+  },
+  "docs/brand/icon-dark-192.png": {
+    "mtime": 1787502918.9662664,
+    "seen": 1788099619.2820923,
+    "ast_hash": "ac698fd4a7c6395717e4a6fc1f0e4cca",
+    "semantic_hash": "ac698fd4a7c6395717e4a6fc1f0e4cca"
+  },
+  "docs/brand/icon-dark-512.png": {
+    "mtime": 1787502918.9662664,
+    "seen": 1788099619.2820933,
+    "ast_hash": "d36101f0adb464798f66a1e431786318",
+    "semantic_hash": "d36101f0adb464798f66a1e431786318"
+  },
+  "docs/brand/icon-light-192.png": {
+    "mtime": 1787502918.9662664,
+    "seen": 1788099619.2820942,
+    "ast_hash": "8469de63d5658b9fb61d2ec60b9f14bd",
+    "semantic_hash": "8469de63d5658b9fb61d2ec60b9f14bd"
+  },
+  "docs/brand/icon-light-512.png": {
+    "mtime": 1787502918.9662664,
+    "seen": 1788099619.2820957,
+    "ast_hash": "b03cc086b2c433e2973e539db0d3b0fe",
+    "semantic_hash": "b03cc086b2c433e2973e539db0d3b0fe"
+  },
+  "docs/brand/wordmark-dark.png": {
+    "mtime": 1787502918.9662664,
+    "seen": 1788099619.2820969,
+    "ast_hash": "fc06dea7f27e795233beaecd56871f89",
+    "semantic_hash": "fc06dea7f27e795233beaecd56871f89"
+  },
+  "docs/brand/wordmark-dark@2x.png": {
+    "mtime": 1787502918.9662664,
+    "seen": 1788099619.2820983,
+    "ast_hash": "d7711a3cd8caed6bfb6ef13e99b6260e",
+    "semantic_hash": "d7711a3cd8caed6bfb6ef13e99b6260e"
+  },
+  "docs/brand/wordmark-light.png": {
+    "mtime": 1787502918.9662664,
+    "seen": 1788099619.2820992,
+    "ast_hash": "631862b92e8f62cc7d10ebc3f07cde02",
+    "semantic_hash": "631862b92e8f62cc7d10ebc3f07cde02"
+  },
+  "docs/brand/wordmark-light@2x.png": {
+    "mtime": 1787502918.9662664,
+    "seen": 1788099619.2821002,
+    "ast_hash": "4fabeeca688e63cb3be1e115041667e5",
+    "semantic_hash": "4fabeeca688e63cb3be1e115041667e5"
+  },
+  "prototype-gtk4-ui/new-variant.png": {
+    "mtime": 1786950868.3987136,
+    "seen": 1788099619.2821014,
+    "ast_hash": "d266da6b1e319dbedc40c64dda41ed5f",
+    "semantic_hash": "d266da6b1e319dbedc40c64dda41ed5f"
+  },
+  "docs/adr/001-carbon-web-ui-architecture.md": {
+    "mtime": 1788157670.526739,
+    "seen": 1788262763.6167774,
+    "ast_hash": "5c628f9c2eebc994db228a8c6143047c",
+    "semantic_hash": ""
+  },
+  "docs/research/carbon-component-inventory.md": {
+    "mtime": 1788152467.1025984,
+    "seen": 1788262763.616787,
+    "ast_hash": "10906f6403decfa560c5ce175feba743",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260830_142229_query_it_says_that_charging_is_fair_on_the_ac_adap.md": {
+    "mtime": 1788099749.5173256,
+    "seen": 1788262763.6167967,
+    "ast_hash": "03af98bf7a4af8f11d7f7988fd90f5d7",
+    "semantic_hash": ""
+  }
+}
