@@ -41,6 +41,7 @@ class ErrorCode:
     WRITE_FAILED = "write_failed"
     PERMISSION_DENIED = "permission_denied"
     EC_MISMATCH = "ec_mismatch"
+    WINDOW_NOT_AVAILABLE = "window_not_available"
 
 
 # ── Valid values ──────────────────────────────────────────────────────────────
@@ -263,3 +264,93 @@ class CommandDispatcher:
 
         setter(value)
         return CommandResult(success=True, data={key: value})
+
+    # ── Window commands ─────────────────────────────────────────────────────
+
+    def _cmd_minimize(
+        self, args: dict, state: ThresholdState | None
+    ) -> CommandResult:
+        """Minimize the window. Requires window reference set externally."""
+        if not hasattr(self, '_window') or self._window is None:
+            return CommandResult(
+                success=False,
+                error_code=ErrorCode.WINDOW_NOT_AVAILABLE,
+                message="Window reference not set",
+            )
+        self._window.minimize()
+        return CommandResult(success=True, data={"minimized": True})
+
+    def _cmd_maximize(
+        self, args: dict, state: ThresholdState | None
+    ) -> CommandResult:
+        """Maximize the window."""
+        if not hasattr(self, '_window') or self._window is None:
+            return CommandResult(
+                success=False,
+                error_code=ErrorCode.WINDOW_NOT_AVAILABLE,
+                message="Window reference not set",
+            )
+        self._window.maximize()
+        return CommandResult(success=True, data={"maximized": True})
+
+    def _cmd_restore(
+        self, args: dict, state: ThresholdState | None
+    ) -> CommandResult:
+        """Restore (unmaximize) the window."""
+        if not hasattr(self, '_window') or self._window is None:
+            return CommandResult(
+                success=False,
+                error_code=ErrorCode.WINDOW_NOT_AVAILABLE,
+                message="Window reference not set",
+            )
+        self._window.unmaximize()
+        return CommandResult(success=True, data={"maximized": False})
+
+    def _cmd_toggle_maximize(
+        self, args: dict, state: ThresholdState | None
+    ) -> CommandResult:
+        """Toggle maximize/restore the window."""
+        if not hasattr(self, '_window') or self._window is None:
+            return CommandResult(
+                success=False,
+                error_code=ErrorCode.WINDOW_NOT_AVAILABLE,
+                message="Window reference not set",
+            )
+        if self._window.is_maximized():
+            self._window.unmaximize()
+            return CommandResult(success=True, data={"maximized": False})
+        else:
+            self._window.maximize()
+            return CommandResult(success=True, data={"maximized": True})
+
+    def _cmd_close(
+        self, args: dict, state: ThresholdState | None
+    ) -> CommandResult:
+        """Close the window."""
+        if not hasattr(self, '_window') or self._window is None:
+            return CommandResult(
+                success=False,
+                error_code=ErrorCode.WINDOW_NOT_AVAILABLE,
+                message="Window reference not set",
+            )
+        self._window.close()
+        return CommandResult(success=True, data={"closed": True})
+
+    def _cmd_begin_drag(
+        self, args: dict, state: ThresholdState | None
+    ) -> CommandResult:
+        """Begin window drag operation."""
+        if not hasattr(self, '_window') or self._window is None:
+            return CommandResult(
+                success=False,
+                error_code=ErrorCode.WINDOW_NOT_AVAILABLE,
+                message="Window reference not set",
+            )
+        # begin_move_drag takes (button, window_x, window_y, timestamp)
+        # Use -1 for timestamp to let GTK use current time
+        self._window.begin_move_drag(1, -1, -1, -1)
+        return CommandResult(success=True, data={"dragging": True})
+
+    def set_window(self, window) -> None:
+        """Set the window reference for window commands."""
+        self._window = window

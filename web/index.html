@@ -6,150 +6,238 @@
   <title>Threshold</title>
 </head>
 <body>
+  <!-- Header with drag region, window controls, and navigation -->
   <cds-header platform-name="Threshold" aria-label="Threshold">
-    <cds-header-name href="#">Threshold</cds-header-name>
+    <!-- Drag region: mousedown begins native move, double-click toggles maximize -->
+    <div class="header-drag-region" data-testid="header-drag-region" role="presentation"></div>
+    
+    <cds-header-name href="#" data-testid="header-name">Threshold</cds-header-name>
+    
+    <!-- Navigation items -->
+    <cds-header-nav aria-label="Main navigation" data-testid="main-nav">
+      <cds-header-nav-item 
+        href="#overview" 
+        is-active="true"
+        data-testid="nav-overview"
+        data-region="overview"
+        role="button"
+        tabindex="0">
+        Overview
+      </cds-header-nav-item>
+      <cds-header-nav-item 
+        href="#threshold" 
+        data-testid="nav-threshold"
+        data-region="threshold"
+        role="button"
+        tabindex="0">
+        Threshold
+      </cds-header-nav-item>
+      <cds-header-nav-item 
+        href="#settings" 
+        data-testid="nav-settings"
+        data-region="settings"
+        role="button"
+        tabindex="0">
+        Settings
+      </cds-header-nav-item>
+    </cds-header-nav>
+    
+    <!-- Window controls in trailing edge -->
+    <div class="window-controls" data-testid="window-controls">
+      <cds-button 
+        kind="ghost" 
+        size="sm"
+        data-testid="window-minimize"
+        data-command="minimize"
+        aria-label="Minimize"
+        title="Minimize">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <rect x="3" y="7" width="10" height="2" />
+        </svg>
+      </cds-button>
+      <cds-button 
+        kind="ghost" 
+        size="sm"
+        data-testid="window-maximize"
+        data-command="toggle_maximize"
+        aria-label="Maximize"
+        title="Maximize">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <rect x="3" y="3" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" />
+        </svg>
+      </cds-button>
+      <cds-button 
+        kind="ghost" 
+        size="sm"
+        data-testid="window-close"
+        data-command="close"
+        aria-label="Close"
+        title="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M12.2 3.8L8 8l4.2 4.2-1.4 1.4L6.6 9.4l-4.2 4.2-1.4-1.4L5.2 8 1 3.8 2.4 2.4l4.2 4.2 4.2-4.2z" />
+        </svg>
+      </cds-button>
+    </div>
   </cds-header>
+
   <main class="cds-content">
     <div class="cds-grid" style="padding: 1rem; gap: 1rem;">
 
-      <!-- Battery Status Card -->
-      <div id="battery-status" class="cds-tile" data-testid="battery-status">
-        <div class="card-header">
-          <h3>Battery Status</h3>
-          <span id="live-dot" class="live-dot">○</span>
-        </div>
-        <div class="card-body">
-          <div class="stat-row">
-            <span class="stat-label">Charge</span>
-            <span id="charge-percent" class="stat-value" data-testid="charge-percent">--%</span>
+      <!-- Overview Region -->
+      <section id="overview" class="content-region" data-testid="region-overview" tabindex="-1">
+        <!-- Battery Status Card -->
+        <div id="battery-status" class="cds-tile" data-testid="battery-status">
+          <div class="card-header">
+            <h3>Battery Status</h3>
+            <span id="live-dot" class="live-dot">○</span>
           </div>
-          <div class="stat-row">
-            <span class="stat-label">Status</span>
-            <span id="charge-status" class="stat-value" data-testid="charge-status">Unknown</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Power Source</span>
-            <span id="power-source" class="stat-value" data-testid="power-source">—</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Device Information Card -->
-      <div id="device-info" class="cds-tile" data-testid="device-info">
-        <h3>Device Information</h3>
-        <div class="card-body">
-          <div class="stat-row">
-            <span class="stat-label">Battery</span>
-            <span id="battery-identifier" class="stat-value" data-testid="battery-identifier">—</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Control Mode</span>
-            <span id="control-mode" class="stat-value" data-testid="control-mode">—</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Health</span>
-            <span class="stat-value">
-              <span id="health-percent" data-testid="health-percent">—</span>
-              <span id="health-grade" class="health-grade" data-testid="health-grade"></span>
-            </span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Cycle Count</span>
-            <span id="cycle-count" class="stat-value" data-testid="cycle-count">—</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Full Capacity</span>
-            <span id="capacity-full" class="stat-value" data-testid="capacity-full">—</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Design Capacity</span>
-            <span id="capacity-design" class="stat-value" data-testid="capacity-design">—</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Threshold Control Card -->
-      <div id="threshold-panel" class="cds-tile" data-testid="threshold-panel">
-        <h3>Charge Threshold</h3>
-        <div class="card-body">
-          <div class="stat-row">
-            <span class="stat-label">Active Threshold</span>
-            <span id="active-threshold" class="stat-value" data-testid="active-threshold">--%</span>
-          </div>
-          <div id="alarm-info" class="stat-row" hidden data-testid="alarm-info">
-            <span class="stat-label">Alarm Threshold</span>
-            <span id="alarm-threshold" class="stat-value" data-testid="alarm-threshold">—</span>
-          </div>
-          <div class="threshold-controls">
-            <cds-slider
-              label-text="Charge limit"
-              max="100"
-              min="20"
-              step="1"
-              value="80"
-              data-testid="threshold-slider">
-              <cds-slider-input aria-label="Charge limit" />
-            </cds-slider>
-            <span id="floating-value-label" class="floating-label">80%</span>
-            <div class="preset-group" role="radiogroup" aria-label="Threshold presets">
-              <cds-radio-tile value="60" aria-label="60%">60%</cds-radio-tile>
-              <cds-radio-tile value="70" aria-label="70%">70%</cds-radio-tile>
-              <cds-radio-tile value="80" aria-label="80%">80%</cds-radio-tile>
-              <cds-radio-tile value="90" aria-label="90%">90%</cds-radio-tile>
-              <cds-radio-tile value="100" aria-label="100%">100%</cds-radio-tile>
+          <div class="card-body">
+            <div class="stat-row">
+              <span class="stat-label">Charge</span>
+              <span id="charge-percent" class="stat-value" data-testid="charge-percent">--%</span>
             </div>
-            <div class="button-group">
-              <cds-button id="apply-button" data-testid="apply-button">Apply Threshold</cds-button>
-              <cds-button id="restore-button" kind="secondary" data-testid="restore-button">Restore to 100%</cds-button>
+            <div class="stat-row">
+              <span class="stat-label">Status</span>
+              <span id="charge-status" class="stat-value" data-testid="charge-status">Unknown</span>
             </div>
-            <cds-inline-loading id="pending-indicator" hidden data-testid="pending-indicator">
-              Applying threshold...
-            </cds-inline-loading>
-          </div>
-        </div>
-      </div>
-
-      <!-- Appearance Settings Card -->
-      <div id="appearance-panel" class="cds-tile" data-testid="appearance-panel">
-        <h3>Appearance</h3>
-        <div class="card-body appearance-controls">
-          <!-- Dark Mode Toggle -->
-          <div class="control-row">
-            <span class="control-label">Dark mode</span>
-            <cds-toggle id="dark-mode-toggle" label-text="Dark mode" data-testid="dark-mode-toggle">
-              <input type="checkbox" role="switch" aria-label="Dark mode" />
-            </cds-toggle>
-          </div>
-
-          <!-- Accent Color Radio Group -->
-          <div class="control-row">
-            <span class="control-label">Accent color</span>
-            <div class="accent-radio-group" role="radiogroup" aria-label="Accent color" data-testid="accent-radio-group">
-              <button class="accent-swatch accent-orange" role="radio" aria-checked="true" aria-label="Orange" value="orange" data-testid="accent-orange"></button>
-              <button class="accent-swatch accent-blue" role="radio" aria-checked="false" aria-label="Blue" value="blue" data-testid="accent-blue"></button>
-              <button class="accent-swatch accent-green" role="radio" aria-checked="false" aria-label="Green" value="green" data-testid="accent-green"></button>
-              <button class="accent-swatch accent-purple" role="radio" aria-checked="false" aria-label="Purple" value="purple" data-testid="accent-purple"></button>
-              <button class="accent-swatch accent-red" role="radio" aria-checked="false" aria-label="Red" value="red" data-testid="accent-red"></button>
+            <div class="stat-row">
+              <span class="stat-label">Power Source</span>
+              <span id="power-source" class="stat-value" data-testid="power-source">—</span>
             </div>
           </div>
+        </div>
 
-          <!-- Compact Mode Toggle -->
-          <div class="control-row">
-            <span class="control-label">Compact mode</span>
-            <cds-toggle id="compact-mode-toggle" label-text="Compact mode" data-testid="compact-mode-toggle">
-              <input type="checkbox" role="switch" aria-label="Compact mode" />
-            </cds-toggle>
-          </div>
-
-          <!-- Title Percentage Toggle -->
-          <div class="control-row">
-            <span class="control-label">Show percentage in title</span>
-            <cds-toggle id="title-percentage-toggle" label-text="Show percentage in title" data-testid="title-percentage-toggle">
-              <input type="checkbox" role="switch" aria-label="Show percentage in title" />
-            </cds-toggle>
+        <!-- Device Information Card -->
+        <div id="device-info" class="cds-tile" data-testid="device-info">
+          <h3>Device Information</h3>
+          <div class="card-body">
+            <div class="stat-row">
+              <span class="stat-label">Battery</span>
+              <span id="battery-identifier" class="stat-value" data-testid="battery-identifier">—</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Control Mode</span>
+              <span id="control-mode" class="stat-value" data-testid="control-mode">—</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Health</span>
+              <span class="stat-value">
+                <span id="health-percent" data-testid="health-percent">—</span>
+                <span id="health-grade" class="health-grade" data-testid="health-grade"></span>
+              </span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Cycle Count</span>
+              <span id="cycle-count" class="stat-value" data-testid="cycle-count">—</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Full Capacity</span>
+              <span id="capacity-full" class="stat-value" data-testid="capacity-full">—</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Design Capacity</span>
+              <span id="capacity-design" class="stat-value" data-testid="capacity-design">—</span>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <!-- Threshold Region -->
+      <section id="threshold" class="content-region" data-testid="region-threshold" tabindex="-1">
+        <div id="threshold-panel" class="cds-tile" data-testid="threshold-panel">
+          <h3>Charge Threshold</h3>
+          <div class="card-body">
+            <div class="stat-row">
+              <span class="stat-label">Active Threshold</span>
+              <span id="active-threshold" class="stat-value" data-testid="active-threshold">--%</span>
+            </div>
+            <div id="alarm-info" class="stat-row" hidden data-testid="alarm-info">
+              <span class="stat-label">Alarm Threshold</span>
+              <span id="alarm-threshold" class="stat-value" data-testid="alarm-threshold">—</span>
+            </div>
+            <div class="threshold-controls">
+              <cds-slider
+                label-text="Charge limit"
+                max="100"
+                min="20"
+                step="1"
+                value="80"
+                data-testid="threshold-slider">
+                <cds-slider-input aria-label="Charge limit" />
+              </cds-slider>
+              <span id="floating-value-label" class="floating-label">80%</span>
+              <div class="preset-group" role="radiogroup" aria-label="Threshold presets">
+                <cds-radio-tile value="60" aria-label="60%">60%</cds-radio-tile>
+                <cds-radio-tile value="70" aria-label="70%">70%</cds-radio-tile>
+                <cds-radio-tile value="80" aria-label="80%">80%</cds-radio-tile>
+                <cds-radio-tile value="90" aria-label="90%">90%</cds-radio-tile>
+                <cds-radio-tile value="100" aria-label="100%">100%</cds-radio-tile>
+              </div>
+              <div class="button-group">
+                <cds-button id="apply-button" data-testid="apply-button">Apply Threshold</cds-button>
+                <cds-button id="restore-button" kind="secondary" data-testid="restore-button">Restore to 100%</cds-button>
+              </div>
+              <cds-inline-loading id="pending-indicator" hidden data-testid="pending-indicator">
+                Applying threshold...
+              </cds-inline-loading>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings Region -->
+      <section id="settings" class="content-region" data-testid="region-settings" tabindex="-1">
+        <div id="appearance-panel" class="cds-tile" data-testid="appearance-panel">
+          <h3>Appearance</h3>
+          <div class="card-body appearance-controls">
+            <!-- Dark Mode Toggle -->
+            <div class="control-row">
+              <span class="control-label">Dark mode</span>
+              <cds-toggle id="dark-mode-toggle" label-text="Dark mode" data-testid="dark-mode-toggle">
+                <input type="checkbox" role="switch" aria-label="Dark mode" />
+              </cds-toggle>
+            </div>
+
+            <!-- Accent Color Radio Group -->
+            <div class="control-row">
+              <span class="control-label">Accent color</span>
+              <div class="accent-radio-group" role="radiogroup" aria-label="Accent color" data-testid="accent-radio-group">
+                <button class="accent-swatch accent-orange" role="radio" aria-checked="true" aria-label="Orange" value="orange" data-testid="accent-orange"></button>
+                <button class="accent-swatch accent-blue" role="radio" aria-checked="false" aria-label="Blue" value="blue" data-testid="accent-blue"></button>
+                <button class="accent-swatch accent-green" role="radio" aria-checked="false" aria-label="Green" value="green" data-testid="accent-green"></button>
+                <button class="accent-swatch accent-purple" role="radio" aria-checked="false" aria-label="Purple" value="purple" data-testid="accent-purple"></button>
+                <button class="accent-swatch accent-red" role="radio" aria-checked="false" aria-label="Red" value="red" data-testid="accent-red"></button>
+              </div>
+            </div>
+
+            <!-- Compact Mode Toggle -->
+            <div class="control-row">
+              <span class="control-label">Compact mode</span>
+              <cds-toggle id="compact-mode-toggle" label-text="Compact mode" data-testid="compact-mode-toggle">
+                <input type="checkbox" role="switch" aria-label="Compact mode" />
+              </cds-toggle>
+            </div>
+
+            <!-- Title Percentage Toggle -->
+            <div class="control-row">
+              <span class="control-label">Show percentage in title</span>
+              <cds-toggle id="title-percentage-toggle" label-text="Show percentage in title" data-testid="title-percentage-toggle">
+                <input type="checkbox" role="switch" aria-label="Show percentage in title" />
+              </cds-toggle>
+            </div>
+          </div>
+        </div>
+
+        <!-- About button -->
+        <div class="cds-tile" data-testid="about-tile">
+          <cds-button 
+            kind="secondary" 
+            data-testid="about-button"
+            aria-haspopup="dialog">
+            About Threshold
+          </cds-button>
+        </div>
+      </section>
 
       <!-- Error State (hidden by default) -->
       <div id="error-state" class="cds-tile cds-tile--dark" hidden data-testid="error-state">
@@ -164,6 +252,33 @@
 
     </div>
   </main>
+
+  <!-- About Modal -->
+  <cds-modal 
+    id="about-modal"
+    data-testid="about-modal"
+    aria-label="About Threshold"
+    size="sm">
+    <cds-modal-header>
+      <cds-modal-heading data-testid="about-modal-heading">About Threshold</cds-modal-heading>
+    </cds-modal-header>
+    <cds-modal-body>
+      <div class="about-content">
+        <p class="about-version" data-testid="about-version">Version 1.0.0</p>
+        <p class="about-description">Battery charge-threshold controller for Linux laptops.</p>
+        <p class="about-license">Licensed under the GNU General Public License v3.0</p>
+      </div>
+    </cds-modal-body>
+    <cds-modal-footer>
+      <cds-button 
+        kind="secondary" 
+        data-testid="about-close-button"
+        modal-close>
+        Close
+      </cds-button>
+    </cds-modal-footer>
+  </cds-modal>
+
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <script type="module" src="/src/main.ts"></script>

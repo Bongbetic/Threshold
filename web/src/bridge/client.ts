@@ -227,3 +227,45 @@ export async function setCompactMode(value: boolean): Promise<Record<string, unk
 export async function setTitlePercentage(value: boolean): Promise<Record<string, unknown>> {
   return bridge.request('set_title_percentage', { value });
 }
+
+/**
+ * Minimize the window via the bridge.
+ */
+export async function minimizeWindow(): Promise<Record<string, unknown>> {
+  return bridge.request('minimize');
+}
+
+/**
+ * Maximize the window via the bridge.
+ */
+export async function maximizeWindow(): Promise<Record<string, unknown>> {
+  return bridge.request('maximize');
+}
+
+/**
+ * Restore (unmaximize) the window via the bridge.
+ */
+export async function restoreWindow(): Promise<Record<string, unknown>> {
+  return bridge.request('restore');
+}
+
+/**
+ * Toggle maximize/restore the window via the bridge.
+ */
+export async function toggleMaximizeWindow(): Promise<Record<string, unknown>> {
+  return bridge.request('toggle_maximize');
+}
+
+/**
+ * Close the window via the bridge.
+ */
+export async function closeWindow(): Promise<Record<string, unknown>> {
+  return bridge.request('close');
+}
+
+/**
+ * Begin window drag operation via the bridge.
+ */
+export async function beginWindowDrag(): Promise<Record<string, unknown>> {
+  return bridge.request('begin_drag');
+}
