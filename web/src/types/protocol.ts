@@ -45,6 +45,8 @@ export interface BatteryState {
   alarm_fired: boolean;
   dark_mode: boolean;
   accent_color: string;
+  compact_mode: boolean;
+  title_percentage: boolean;
 }
 
 /** Theme appearance pushed by Python. */

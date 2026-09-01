@@ -1,0 +1,195 @@
+/**
+ * Threshold Carbon shell - appearance styles.
+ *
+ * Accent palettes: contrast-checked Carbon palette tones for White (light)
+ * and Gray 100 (dark) themes. Each accent maps to a primary token that
+ * passes WCAG AA on both backgrounds.
+ *
+ * Compact mode: reduces spacing while preserving operability.
+ */
+
+/* ── Accent color tokens ────────────────────────────────────────────────── */
+
+/* Light theme (cds--white) accent primaries */
+.accent-orange {
+  --accent-primary: #eb6200;
+  --accent-hover: #cc5200;
+  --accent-active: #a34200;
+  --accent-focus: #eb6200;
+  --accent-surface: #fff2e8;
+}
+
+.accent-blue {
+  --accent-primary: #0043ce;
+  --accent-hover: #002d9c;
+  --accent-active: #001d6c;
+  --accent-focus: #0043ce;
+  --accent-surface: #e8f0fe;
+}
+
+.accent-green {
+  --accent-primary: #198038;
+  --accent-hover: #116028;
+  --accent-active: #0e491f;
+  --accent-focus: #198038;
+  --accent-surface: #e6f4e8;
+}
+
+.accent-purple {
+  --accent-primary: #6929c4;
+  --accent-hover: #541da0;
+  --accent-active: #41167c;
+  --accent-focus: #6929c4;
+  --accent-surface: #f0e8ff;
+}
+
+.accent-red {
+  --accent-primary: #da1e28;
+  --accent-hover: #b81922;
+  --accent-active: #92151d;
+  --accent-focus: #da1e28;
+  --accent-surface: #fff1f1;
+}
+
+/* Dark theme (cds--g100) accent primaries — lighter tones for contrast */
+.cds--g100.accent-orange {
+  --accent-primary: #ff832a;
+  --accent-hover: #eb6200;
+  --accent-active: #cc5200;
+  --accent-focus: #ff832a;
+  --accent-surface: #33221a;
+}
+
+.cds--g100.accent-blue {
+  --accent-primary: #78a9ff;
+  --accent-hover: #4589ff;
+  --accent-active: #0043ce;
+  --accent-focus: #78a9ff;
+  --accent-surface: #1a2440;
+}
+
+.cds--g100.accent-green {
+  --accent-primary: #42be65;
+  --accent-hover: #24a148;
+  --accent-active: #198038;
+  --accent-focus: #42be65;
+  --accent-surface: #1a2e1c;
+}
+
+.cds--g100.accent-purple {
+  --accent-primary: #a56eff;
+  --accent-hover: #8a3ffc;
+  --accent-active: #6929c4;
+  --accent-focus: #a56eff;
+  --accent-surface: #261a3a;
+}
+
+.cds--g100.accent-red {
+  --accent-primary: #ff8389;
+  --accent-hover: #ff4d4d;
+  --accent-active: #da1e28;
+  --accent-focus: #ff8389;
+  --accent-surface: #3a1a1c;
+}
+
+/* ── Accent swatch styling ──────────────────────────────────────────────── */
+
+.accent-radio-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.accent-swatch {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  padding: 0;
+}
+
+.accent-swatch:focus-visible {
+  outline: 2px solid var(--accent-focus, #0043ce);
+  outline-offset: 2px;
+}
+
+.accent-swatch[aria-checked="true"] {
+  border-color: var(--text-primary, #161616);
+  box-shadow: 0 0 0 2px var(--app-background, #ffffff);
+}
+
+.cds--g100 .accent-swatch[aria-checked="true"] {
+  border-color: var(--text-primary, #f4f4f4);
+  box-shadow: 0 0 0 2px var(--app-background, #262626);
+}
+
+.accent-orange { background-color: #eb6200; }
+.accent-blue { background-color: #0043ce; }
+.accent-green { background-color: #198038; }
+.accent-purple { background-color: #6929c4; }
+.accent-red { background-color: #da1e28; }
+
+/* ── Appearance controls layout ─────────────────────────────────────────── */
+
+.appearance-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.control-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #525252);
+}
+
+.cds--g100 .control-label {
+  color: var(--text-secondary, #c6c6c6);
+}
+
+/* ── Compact mode ───────────────────────────────────────────────────────── */
+
+.compact-mode .cds-grid {
+  gap: 0.5rem !important;
+  padding: 0.5rem !important;
+}
+
+.compact-mode .cds-tile {
+  padding: 0.75rem !important;
+}
+
+.compact-mode .cds-tile h3 {
+  margin-bottom: 0.25rem !important;
+  font-size: 0.875rem !important;
+}
+
+.compact-mode .card-body {
+  gap: 0.25rem;
+}
+
+.compact-mode .stat-row {
+  padding: 0.125rem 0;
+}
+
+.compact-mode .control-row {
+  padding: 0.125rem 0;
+}
+
+.compact-mode .threshold-controls {
+  gap: 0.375rem;
+}
+
+.compact-mode .button-group {
+  gap: 0.375rem;
+}
+
+.compact-mode .preset-group {
+  gap: 0.25rem;
+}
