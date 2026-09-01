@@ -30,6 +30,7 @@ from threshold.battery import (  # noqa: E402
 )
 from threshold.config import Config  # noqa: E402
 from threshold.adapter import build_state  # noqa: E402
+from threshold.commands import CommandDispatcher  # noqa: E402
 from threshold.state import ThresholdState  # noqa: E402
 
 
@@ -156,6 +157,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
         super().__init__(**kwargs)
 
         self._config = config or Config()
+        self._dispatcher = CommandDispatcher(self._config)
         self._battery_path = find_battery_path()
         self._control_mode = detect_control_mode(self._battery_path)
         self._state = ThresholdState(battery_available=False)
@@ -546,21 +548,21 @@ class ThresholdWindow(Adw.ApplicationWindow):
         if not button.get_active():
             return
         self._set_accent(name)
-        self._config.set_accent_color(name)
+        self._dispatcher.dispatch("set_accent_color", {"value": name})
 
     def _on_tray_toggled(self, switch, _param):
-        self._config.set_minimize_to_tray(switch.get_active())
+        self._dispatcher.dispatch("set_minimize_to_tray", {"value": switch.get_active()})
 
     def _on_notifications_toggled(self, switch, _param):
-        self._config.set_show_notifications(switch.get_active())
+        self._dispatcher.dispatch("set_show_notifications", {"value": switch.get_active()})
 
     def _on_compact_toggled(self, switch, _param):
         active = switch.get_active()
         self._apply_compact(active)
-        self._config.set_compact_mode(active)
+        self._dispatcher.dispatch("set_compact_mode", {"value": active})
 
     def _on_title_percentage_toggled(self, switch, _param):
-        self._config.set_title_percentage(switch.get_active())
+        self._dispatcher.dispatch("set_title_percentage", {"value": switch.get_active()})
         self._update_title()
 
     def _on_apply(self, button):
@@ -573,36 +575,24 @@ class ThresholdWindow(Adw.ApplicationWindow):
         button.set_label(_('Applying…'))
 
         value = int(self.charge_scale.get_value())
-        bat_path = self._battery_path
-        notify_only = self._control_mode is ControlMode.NOTIFY_ONLY
 
         def worker():
-            if notify_only:
-                result = (True, 'alarm')
-            else:
-                result = write_threshold(bat_path, value)
+            cmd_result = self._dispatcher.dispatch(
+                "apply_threshold", {"threshold": value}, self._state
+            )
             if not self._closed:
                 self._pending_idle_id = GLib.idle_add(
-                    self._finish_apply, button, value, result, bat_path, notify_only
+                    self._finish_apply, button, value, cmd_result
                 )
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _finish_apply(self, button, value, result, bat_path, notify_only):
+    def _finish_apply(self, button, value, cmd_result):
         self._pending_idle_id = None
         if self._closed:
             return GLib.SOURCE_REMOVE
-        success, message = result
-        if success:
-            if not notify_only:
-                actual = read_sysfs(bat_path / 'charge_control_end_threshold')
-                if actual is not None and int(actual) != value:
-                    message = f'{message} (EC stored {actual}%)'
-                    print(
-                        f"Threshold: EC stored {actual}% differs from requested {value}%",
-                        file=sys.stderr,
-                    )
-            self._config.set_charge_threshold(value)
+        if cmd_result.success:
+            method = cmd_result.data.get("method", "")
             self._config.set_last_applied_time(int(datetime.now().timestamp()))
             self.last_changed_label.set_label(
                 _format_last_changed(self._config.get_last_applied_time())
@@ -616,7 +606,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
             self._alarm_fired = False
             self._set_status(
                 _('Threshold set to {value}% via {message}').format(
-                    value=value, message=message
+                    value=value, message=method
                 ),
                 is_success=True,
             )
@@ -626,7 +616,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
                     _(
                         'Written to EC firmware (via {message}). '
                         'Persists across reboots.'
-                    ).format(message=message),
+                    ).format(message=method),
                 )
             else:
                 self._show_notification(
@@ -637,6 +627,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
                     ).format(value=value),
                 )
         else:
+            message = cmd_result.message or _('Unknown error')
             self._set_status(_('Error: {message}').format(message=message), is_error=True)
             self._show_notification(
                 _('Failed to set threshold'),
@@ -660,39 +651,25 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self.apply_button.set_sensitive(False)
         button.set_label(_('Restoring…'))
 
-        bat_path = self._battery_path
-        notify_only = self._control_mode is ControlMode.NOTIFY_ONLY
-
         def worker():
-            if notify_only:
-                result = (True, 'alarm')
-            else:
-                result = write_threshold(bat_path, 100)
+            cmd_result = self._dispatcher.dispatch(
+                "restore_threshold", state=self._state
+            )
             if not self._closed:
                 self._pending_idle_id = GLib.idle_add(
-                    self._finish_restore, button, result, bat_path, notify_only
+                    self._finish_restore, button, cmd_result
                 )
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _finish_restore(self, button, result, bat_path, notify_only):
+    def _finish_restore(self, button, cmd_result):
         self._pending_idle_id = None
         if self._closed:
             return GLib.SOURCE_REMOVE
-        success, message = result
-        if success:
-            if not notify_only:
-                actual = read_sysfs(bat_path / 'charge_control_end_threshold')
-                if actual is not None and int(actual) != 100:
-                    message = f'{message} (EC stored {actual}%)'
-                    print(
-                        f"Threshold: EC stored {actual}% differs from requested 100%",
-                        file=sys.stderr,
-                    )
+        if cmd_result.success:
             self.charge_scale.set_value(100)
             self.charge_value_label.set_label('100%')
             self._sync_presets(100)
-            self._config.set_charge_threshold(100)
             self._config.set_last_applied_time(int(datetime.now().timestamp()))
             self.last_changed_label.set_label(
                 _format_last_changed(self._config.get_last_applied_time())
@@ -715,6 +692,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
                     _('Alarm disarmed.'),
                 )
         else:
+            message = cmd_result.message or _('Unknown error')
             self._set_status(_('Error: {message}').format(message=message), is_error=True)
             self._show_notification(
                 _('Failed to restore threshold'),
@@ -732,7 +710,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
     def _on_dark_mode_toggled(self, switch, _param):
         active = switch.get_active()
         self._apply_color_scheme(active)
-        self._config.set_dark_mode(active)
+        self._dispatcher.dispatch("set_dark_mode", {"value": active})
         self._sync_dark_class()
 
     def _on_launch_toggled(self, switch, _param):
