@@ -29,6 +29,8 @@ from threshold.battery import (  # noqa: E402
     write_threshold,
 )
 from threshold.config import Config  # noqa: E402
+from threshold.adapter import build_state  # noqa: E402
+from threshold.state import ThresholdState  # noqa: E402
 
 
 try:
@@ -156,6 +158,7 @@ class ThresholdWindow(Adw.ApplicationWindow):
         self._config = config or Config()
         self._battery_path = find_battery_path()
         self._control_mode = detect_control_mode(self._battery_path)
+        self._state = ThresholdState(battery_available=False)
         self._polling_id = None
         self._reset_dot_id = None
         self._pending_idle_id = None
@@ -312,54 +315,58 @@ class ThresholdWindow(Adw.ApplicationWindow):
             widget.set_active(preset_value == value)
 
     def _refresh_battery_data(self):
-        """Read current battery data from sysfs and update the UI."""
-        if self._battery_path is None:
+        """Build state from sysfs/config and render to UI."""
+        # Build presentation-neutral state snapshot
+        self._state = build_state(
+            self._config,
+            battery_path=self._battery_path,
+            pending_threshold=int(self.charge_scale.get_value()) if self._battery_path else None,
+            alarm_armed=self._alarm_armed,
+            alarm_fired=self._alarm_fired,
+        )
+        
+        state = self._state
+        
+        if not state.battery_available:
             self._show_error_state()
             return
 
-        pct = read_charge_percent(self._battery_path)
-        if pct is not None:
-            self._charge_pct = pct
-            self.current_charge_label.set_label(f'{pct}%')
+        # Render from state domain values
+        if state.charge_percent is not None:
+            self._charge_pct = state.charge_percent
+            self.current_charge_label.set_label(f'{state.charge_percent}%')
         else:
             self._charge_pct = 0
             self.current_charge_label.set_label('--%')
 
-        status = read_sysfs(self._battery_path / 'status')
-        if status:
-            self.current_status_label.set_label(status)
-            self._update_battery_icon(status)
+        if state.charge_status:
+            self.current_status_label.set_label(state.charge_status)
+            self._update_battery_icon(state.charge_status)
 
-        threshold = read_sysfs(
-            self._battery_path / 'charge_control_end_threshold'
-        )
-        if threshold is not None:
-            self.active_threshold_label.set_label(f'{threshold}%')
-        elif self._control_mode is ControlMode.NOTIFY_ONLY:
+        if state.active_threshold is not None:
+            self.active_threshold_label.set_label(f'{state.active_threshold}%')
+        elif state.control_mode is ControlMode.NOTIFY_ONLY:
             val = int(self.charge_scale.get_value())
             self.active_threshold_label.set_label(f'{val}% (alarm)')
         else:
             self.active_threshold_label.set_label('--%')
 
-        self.battery_name_label.set_label(self._battery_path.name)
-        self.power_source_label.set_label(read_power_source())
+        if state.battery_path:
+            self.battery_name_label.set_label(state.battery_path.name)
+        self.power_source_label.set_label(state.power_source or _('—'))
 
-        health_pct = battery_health_percent(self._battery_path)
-        self.health_label.set_label(health_grade(health_pct))
+        self.health_label.set_label(state.health_grade or _('—'))
         self.health_pct_label.set_label(
-            f'{health_pct}%' if health_pct is not None else _('—')
+            f'{state.health_percent}%' if state.health_percent is not None else _('—')
         )
 
-        cycles = read_cycle_count(self._battery_path)
         self.cycle_count_label.set_label(
-            str(cycles) if cycles is not None else _('—')
+            str(state.cycle_count) if state.cycle_count is not None else _('—')
         )
 
-        capacity = read_capacity_wh(self._battery_path)
-        if capacity is not None:
-            full_wh, design_wh = capacity
-            self.full_capacity_label.set_label(f'{full_wh:.1f} Wh')
-            self.design_capacity_label.set_label(f'{design_wh:.1f} Wh')
+        if state.capacity_full_wh is not None and state.capacity_design_wh is not None:
+            self.full_capacity_label.set_label(f'{state.capacity_full_wh:.1f} Wh')
+            self.design_capacity_label.set_label(f'{state.capacity_design_wh:.1f} Wh')
         else:
             self.full_capacity_label.set_label(_('—'))
             self.design_capacity_label.set_label(_('—'))
@@ -375,7 +382,8 @@ class ThresholdWindow(Adw.ApplicationWindow):
 
     def _update_title(self):
         """Show battery % in the window title when enabled."""
-        if self._config.get_title_percentage():
+        state = self._state
+        if state.title_percentage:
             self.set_title(_('Threshold — {pct}%').format(pct=self._charge_pct))
         else:
             self.set_title(_('Threshold'))
