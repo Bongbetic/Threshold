@@ -223,3 +223,71 @@ jobs:
           path: artifacts/*.rpm
           retention-days: 14
           if-no-files-found: error
+
+  web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        run: cd web && npm ci
+
+      - name: TypeScript check
+        run: cd web && npx tsc --noEmit
+
+      - name: Lint
+        run: cd web && npx eslint src/ test/
+
+      - name: Unit tests
+        run: cd web && npx vitest run
+
+      - name: Production build
+        run: cd web && npm run build
+
+      - name: Verify bundle is committed
+        run: |
+          if [ -n "$(git status --porcelain web/dist/)" ]; then
+            echo "::error::web/dist/ is stale. Rebuild with: cd web && npm run build"
+            git status --short web/dist/
+            exit 1
+          fi
+
+      - name: Reject runtime HTTP references
+        run: |
+          if grep -rn 'https\?://[^w]' web/dist/ --include='*.js' --include='*.css' --include='*.html' | grep -v 'w3.org'; then
+            echo "::error::Bundle contains runtime HTTP references"
+            exit 1
+          fi
+
+      - name: Verify fonts bundled
+        run: |
+          if ! ls web/dist/fonts/*.woff2 >/dev/null 2>&1; then
+            echo "::error::IBM Plex fonts not found in web/dist/fonts/"
+            exit 1
+          fi
+
+  bundle-verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pytest
+
+      - name: Verify bundle completeness
+        run: PYTHONPATH=src python3 -m pytest tests/test_web_bundle.py -v
+
+      - name: Xvfb smoke test
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb gir1.2-webkit-6.0
+          PYTHONPATH=src xvfb-run -a python3 -m pytest tests/test_carbon_xvfb.py -v

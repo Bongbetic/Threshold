@@ -1,3 +1,20 @@
+// ── Carbon Design System component registration ─────────────────────────────
+import '@carbon/web-components/es/components/ui-shell/header.js';
+import '@carbon/web-components/es/components/ui-shell/header-name.js';
+import '@carbon/web-components/es/components/ui-shell/header-nav.js';
+import '@carbon/web-components/es/components/ui-shell/header-nav-item.js';
+import '@carbon/web-components/es/components/button/button.js';
+import '@carbon/web-components/es/components/slider/index.js';
+import '@carbon/web-components/es/components/tile/radio-tile.js';
+import '@carbon/web-components/es/components/toggle/defs.js';
+import '@carbon/web-components/es/components/modal/defs.js';
+import '@carbon/web-components/es/components/notification/defs.js';
+import '@carbon/web-components/es/components/inline-loading/defs.js';
+
+// ── Carbon design tokens + self-hosted fonts ──────────────────────────────
+import './carbon-tokens.css';
+import './fonts.css';
+import './styles.css';
 
 /**
  * Threshold Carbon shell - entry point.
