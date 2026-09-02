@@ -1,0 +1,16 @@
+[Unit]
+Description=Threshold battery charge threshold boot reconciliation
+Documentation=https://github.com/Bongbetic/Threshold
+After=multi-user.target
+Before=graphical.target
+ConditionPathExists=/usr/sbin/threshold-ec-lifecycle
+
+[Service]
+Type=oneshot
+# Bounded and non-boot-critical: a failed reconciliation never blocks login.
+TimeoutStartSec=30
+ExecStart=/usr/sbin/threshold-ec-lifecycle reconcile
+RemainAfterExit=no
+
+[Install]
+WantedBy=graphical.target

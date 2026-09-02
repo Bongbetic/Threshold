@@ -17,6 +17,22 @@ from threshold.battery import (
 from threshold.config import Config
 from threshold.state import ThresholdState
 
+# Machine-wide threshold policy mirror read by the EC lifecycle authority's
+# boot reconciliation (written best-effort; unprivileged runs simply skip it).
+EC_THRESHOLD_FILE = "/var/lib/threshold/ec/charge-threshold"
+
+
+def _persist_machine_threshold(value: int) -> None:
+    """Best-effort machine-wide copy of the confirmed charge threshold."""
+    import pathlib
+
+    try:
+        path = pathlib.Path(EC_THRESHOLD_FILE)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"{value}\n")
+    except OSError:
+        pass
+
 
 # ── Result types ────────────────────────────────────────────────────────────
 
@@ -129,6 +145,7 @@ class CommandDispatcher:
         # Notification-only mode — alarm only, no sysfs write
         if state.control_mode == ControlMode.NOTIFY_ONLY:
             self._config.set_charge_threshold(threshold)
+            _persist_machine_threshold(threshold)
             return CommandResult(
                 success=True,
                 data={
@@ -170,6 +187,7 @@ class CommandDispatcher:
                 pass
 
         self._config.set_charge_threshold(threshold)
+        _persist_machine_threshold(threshold)
 
         return CommandResult(
             success=True,

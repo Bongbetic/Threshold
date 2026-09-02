@@ -62,6 +62,19 @@
     <content_attribute id="money-advertising">none</content_attribute>
   </content_rating>
   <releases>
+    <release version="2.0.0" date="2026-09-02">
+      <description>
+        <p>
+          Unified Linux packages: one complete DEB, one distribution-neutral
+          Unified RPM replacing the paired main plus msi-ec-dkms release, and
+          one self-contained x86-64 AppImage. A shared EC lifecycle authority
+          owns setup, update, repair, boot reconciliation, and removal; EC
+          setup is attempted only on MSI hardware and never fails package
+          installation. Notification-area readiness is evidence-based and
+          battery icons ship inside every artifact.
+        </p>
+      </description>
+    </release>
     <release version="1.4.2" date="2026-08-29">
       <description>
         <p>

@@ -1,0 +1,130 @@
+#!/bin/sh
+# Threshold AppImage EC bootstrap authority (issue #86).
+#
+# The one-time, explicitly user-initiated privileged entry point for the
+# AppImage. Run under fresh Polkit authorization (pkexec) per mutation.
+# It installs the fixed, root-owned EC lifecycle authority and its boot
+# reconciler unit from the AppImage's embedded, streamed EC bundle; no
+# privileged daemon remains running and no reusable privilege is retained.
+#
+# Verbs (one non-cached administrator authorization per gesture):
+#   install | update | repair | remove
+#
+# Input: the embedded EC bundle is streamed on stdin (canonical manifest
+# + msi-ec source tarball). Caller-selected paths are never accepted.
+set -u
+
+AUTHORITY_DIR=/var/lib/threshold/authority
+AUTHORITY_BIN=/usr/sbin/threshold-ec-lifecycle
+AUTHORITY_UNIT=/usr/lib/systemd/system/threshold-boot-reconcile.service
+STAGING=$AUTHORITY_DIR/staging
+
+# Protocol compatibility: the bundle stream begins with a canonical JSON
+# manifest line; the appimage embeds the matching protocol version.
+PROTOCOL=1
+MAX_BUNDLE_BYTES=$((16 * 1024 * 1024))
+
+fail() {
+    echo "threshold-appimage-bootstrap: $*" >&2
+    exit 1
+}
+
+case "${1:-}" in
+    install|update|repair) ;;
+    remove)
+        # Remove the provider claim; shared operational assets are removed
+        # by the authority's own ledger logic (package ownership respected).
+        if [ -x "$AUTHORITY_BIN" ]; then
+            "$AUTHORITY_BIN" remove || :
+        fi
+        if [ -x /usr/bin/systemctl ]; then
+            systemctl disable --now threshold-boot-reconcile.service >/dev/null 2>&1 || :
+        fi
+        rm -f "$AUTHORITY_UNIT"
+        rm -rf "$AUTHORITY_DIR"
+        exit 0
+        ;;
+    *)
+        echo "usage: $0 {install|update|repair|remove}" >&2
+        exit 2
+        ;;
+esac
+
+# ── Receive and validate the streamed bundle ───────────────────────────────
+mkdir -p "$STAGING" || fail "cannot create staging area"
+
+# Size bound before mutation: capture the whole stream, then bound it.
+cat > "$STAGING/stream" || fail "bundle stream unreadable"
+SIZE=$(wc -c < "$STAGING/stream")
+[ "$SIZE" -le "$MAX_BUNDLE_BYTES" ] || fail "bundle exceeds input-size bound"
+
+MANIFEST_FILE=$STAGING/manifest.json
+head -n 1 "$STAGING/stream" > "$MANIFEST_FILE" || fail "bundle manifest missing"
+tail -n +2 "$STAGING/stream" > "$STAGING/bundle.tar.gz" || fail "bundle payload missing"
+
+# Canonical manifest + protocol + architecture + checksum compatibility.
+command -v python3 >/dev/null 2>&1 || fail "python3 required for bundle validation"
+python3 - "$MANIFEST_FILE" "$PROTOCOL" <<'PYEOF' || fail "bundle manifest rejected"
+import json, sys
+manifest = json.loads(open(sys.argv[1]).read())
+assert manifest.get("protocol") == int(sys.argv[2]), "protocol mismatch"
+assert manifest.get("arch") == "x86_64", "architecture mismatch"
+assert manifest.get("schema") == 1, "manifest schema mismatch"
+for key in ("lifecycle", "dkms", "checksum", "bundle_checksum"):
+    assert key in manifest, f"manifest missing {key}"
+PYEOF
+
+# Payload authenticity: the streamed bundle must match the manifest's
+# declared checksum before any mutation.
+BUNDLE_SHA=$(sha256sum "$STAGING/bundle.tar.gz" | awk '{print $1}')
+python3 - "$MANIFEST_FILE" "$BUNDLE_SHA" <<'PYEOF' || fail "bundle checksum mismatch"
+import json, sys
+manifest = json.load(open(sys.argv[1]))
+assert manifest["bundle_checksum"] == sys.argv[2], "payload does not match manifest"
+PYEOF
+
+# Package-owned authority is never overwritten by the AppImage: an
+# installed DEB or Unified RPM owns /usr/sbin/threshold-ec-lifecycle.
+if [ -e /var/lib/threshold/ec/package-owned ]; then
+    fail "package-owned EC authority present; use the package's lifecycle instead"
+fi
+
+# ── Install / replace the authority atomically ────────────────────────────
+mkdir -p "$AUTHORITY_DIR"
+TMP_BIN=$AUTHORITY_DIR/threshold-ec-lifecycle.new
+
+# Preserve the currently active engine as last-known-good BEFORE switching.
+if [ -f "$AUTHORITY_BIN" ]; then
+    cp -f "$AUTHORITY_BIN" "$AUTHORITY_DIR/threshold-ec-lifecycle.last-known-good"
+fi
+
+tar -xzf "$STAGING/bundle.tar.gz" -C "$STAGING" lifecycle || fail "bundle payload invalid"
+
+# Offline validation before switching the active record: the staged
+# lifecycle script must parse and declare the manifest's DKMS identity.
+sh -n "$STAGING/lifecycle" || fail "staged lifecycle script malformed"
+grep -q "$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["dkms"]["name"])' "$MANIFEST_FILE")" \
+    "$STAGING/lifecycle" || fail "staged lifecycle does not match bundle identity"
+
+install -Dpm 0755 "$STAGING/lifecycle" "$TMP_BIN"
+mv -f "$TMP_BIN" "$AUTHORITY_BIN"
+chmod 0755 "$AUTHORITY_BIN"
+
+install -Dpm 0644 \
+    "$(dirname "$0")/../share/threshold/threshold-boot-reconcile.service" \
+    "$AUTHORITY_UNIT" 2>/dev/null || \
+    install -Dpm 0644 /usr/share/threshold/threshold-boot-reconcile.service "$AUTHORITY_UNIT" || \
+    fail "boot reconciler unit missing"
+
+# Keep the accepted bundle for evidence retention (bounded).
+cp -f "$MANIFEST_FILE" "$AUTHORITY_DIR/active-manifest.json"
+rm -rf "$STAGING"
+
+# Hand over to the installed authority for the actual EC work; the
+# bootstrap's install/update gestures map onto the lifecycle's
+# idempotent install-or-upgrade operation.
+case "$1" in
+    install|update) VERB=install-or-upgrade ;;
+    *) VERB=$1 ;;
+esac
+exec "$AUTHORITY_BIN" "$VERB" 2>&1

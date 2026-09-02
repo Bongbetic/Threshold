@@ -1,10 +1,17 @@
 #!/bin/sh
+# Threshold DEB removal hook (issue #86).
+# Removal invokes lifecycle removal before files disappear; upgrade paths
+# never reach this hook destructively (dpkg calls prerm with remove only
+# on actual removal, not upgrade, where the new postinst re-runs setup).
 set -e
 
 case "$1" in
-    remove|deconfigure)
-        if command -v dkms >/dev/null 2>&1; then
-            dkms remove -m msi-ec -v 0.13.112 --all || true
+    remove)
+        if [ -x /usr/sbin/threshold-ec-lifecycle ]; then
+            /usr/sbin/threshold-ec-lifecycle remove || true
+        fi
+        if [ -x /usr/bin/systemctl ]; then
+            systemctl disable threshold-boot-reconcile.service >/dev/null 2>&1 || true
         fi
         ;;
 esac

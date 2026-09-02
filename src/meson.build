@@ -10,6 +10,8 @@ python_sources = [
     'threshold/application.py',
     'threshold/migration.py',
     'threshold/state.py',
+    'threshold/ec_state.py',
+    'threshold/notification_area_readiness.py',
     'threshold/tray.py',
     'threshold/resources.py',
     'threshold/carbon_shell.py',

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from threshold.battery import ControlMode
+from threshold.ec_state import ECSetupState, ECSetupReason, ECMaintenanceStatus
 
 
 @dataclass(frozen=True)
@@ -66,6 +67,14 @@ class ThresholdState:
     # ── Threshold ─────────────────────────────────────────────────────────
     active_threshold: Optional[int] = None
     pending_threshold: Optional[int] = None
+    # Machine-wide charge threshold (latest user-confirmed value wins;
+    # persists across pending/unavailable EC setup states).
+    charge_threshold: Optional[int] = None
+
+    # ── EC setup / maintenance (independent of control mode) ──────────────
+    ec_setup_state: Optional[ECSetupState] = None
+    ec_setup_reason: Optional[ECSetupReason] = None
+    ec_maintenance_status: ECMaintenanceStatus = ECMaintenanceStatus.OK
     
     # ── Diagnostics ───────────────────────────────────────────────────────
     health_percent: Optional[int] = None

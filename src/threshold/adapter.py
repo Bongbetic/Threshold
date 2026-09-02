@@ -19,6 +19,7 @@ from threshold.battery import (
 )
 from threshold.config import Config
 from threshold.state import ThresholdState
+from threshold.ec_state import ECMaintenanceStatus
 
 
 def detect_system_theme_scheme() -> str:
@@ -56,6 +57,7 @@ def build_state(
     pending_threshold: Optional[int] = None,
     alarm_armed: bool = False,
     alarm_fired: bool = False,
+    ec_status=None,
 ) -> ThresholdState:
     """Build a ThresholdState snapshot from sysfs and config.
     
@@ -99,6 +101,12 @@ def build_state(
     
     system_theme = detect_system_theme_scheme()
 
+    ec_state = ec_status.state if ec_status is not None else None
+    ec_reason = ec_status.reason if ec_status is not None else None
+    ec_maintenance = (
+        ec_status.maintenance if ec_status is not None else None
+    )
+
     return ThresholdState(
         battery_available=battery_path is not None,
         battery_path=battery_path,
@@ -108,6 +116,10 @@ def build_state(
         power_source=power_source,
         active_threshold=active_threshold,
         pending_threshold=pending_threshold,
+        charge_threshold=config.get_charge_threshold(),
+        ec_setup_state=ec_state,
+        ec_setup_reason=ec_reason,
+        ec_maintenance_status=ec_maintenance or ECMaintenanceStatus.OK,
         health_percent=health_pct,
         health_grade=health_grade(health_pct),
         cycle_count=cycles,

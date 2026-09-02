@@ -63,7 +63,12 @@ _CHARGING_SUFFIX = {
 
 
 def _battery_icon_name(pct: int, status: str | None) -> str:
-    """Return a freedesktop battery icon name for the given charge level."""
+    """Return the artifact-owned Threshold battery icon name.
+
+    Namespaced empty/low/medium/good/full icons in charging and
+    non-charging forms ship inside every artifact, so the SNI icon name
+    always resolves without depending on the host icon theme.
+    """
     if pct <= 10:
         level = 'empty'
     elif pct <= 30:
@@ -75,7 +80,7 @@ def _battery_icon_name(pct: int, status: str | None) -> str:
     else:
         level = 'full'
     suffix = _CHARGING_SUFFIX.get(status, '')
-    return f'battery-{level}{suffix}'
+    return f'com.bongbetic.threshold-battery-{level}{suffix}'
 
 
 # ── Bridge handler (deferred GTK imports) ───────────────────────────────────
@@ -477,16 +482,30 @@ class BridgeHandler:
             )
 
     def handle_close_request(self) -> bool:
-        """Handle window close: hide if minimize-to-tray, else allow close.
+        """Handle window close per notification-area readiness.
 
-        Returns True to prevent default close (window hidden), False to allow.
+        Hides to the notification area only in `ready`. In every other
+        readiness state the window stays visible and the reason is pushed
+        to the UI. With the preference disabled, close exits normally.
+
+        Returns True to prevent default close (window kept/hidden), False to allow.
         """
         if (
             self._config.get_minimize_to_tray()
             and self._tray is not None
             and self._window is not None
         ):
-            self._window.set_visible(False)
+            from threshold.notification_area_readiness import ReadinessState
+
+            if self._tray.readiness is ReadinessState.READY:
+                self._window.set_visible(False)
+                return True
+            # Not ready: keep the window visible and explain why.
+            self._push_to_js({
+                'type': 'close_blocked',
+                'reason': 'notification_area_not_ready',
+                'readiness': self._tray.readiness.value,
+            })
             return True
         return False
 

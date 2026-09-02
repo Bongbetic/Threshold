@@ -57,8 +57,62 @@ def test_workflows_use_threshold_package_artifact_names():
     assert "threshold-build-" in ci
     assert "threshold-deb-" in ci
     assert "msi-batteryguard_*.deb" not in release
-    assert "threshold_*.deb" in release
-    assert "msi-ec-dkms_*.deb" not in release
+    assert "threshold_*_amd64.deb" in release
+    assert "msi-ec-dkms" not in release
+
+
+def test_release_workflow_is_concurrency_locked_and_tag_triggered():
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    assert "concurrency:" in text
+    assert "cancel-in-progress: false" in text
+    assert "tags: ['v*']" in text
+
+
+def test_release_workflow_builds_candidates_once_and_never_rebuilds():
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    # Candidate jobs produce checksums bound to the build
+    assert "candidate.sha256" in text
+    # Promotion step must not rebuild any artifact
+    promote = text.split("promote:", 1)[1]
+    for forbidden in ("dpkg-buildpackage", "rpmbuild", "build-appimage"):
+        assert forbidden not in promote
+    assert "environment: release-promotion" in text
+
+
+def test_release_workflow_generates_manifest_and_checksums():
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    assert "release-manifest.json" in text
+    assert "SHA256SUMS" in text
+    assert "sha256sum" in text
+    assert "source_revision" in text
+
+
+def test_release_workflow_promotes_protected_draft_unchanged():
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    assert "draft: true" in text
+    assert "make_latest: false" in text
+    assert "release-promotion" in text
+    assert "--draft=false" in text
+    assert "--clobber" in text or "clobber" in text
+
+
+def test_release_workflow_verifies_rpm_through_dnf_and_zypper():
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    assert "opensuse/tumbleweed" in text
+    assert "zypper" in text
+    assert "dnf" in text
+
+
+def test_release_workflow_verifies_appimage_candidate_startup():
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    assert "--appimage-extract" in text
+    assert "ec-bundle/manifest.json" in text
+
+
+def test_release_workflow_checks_appimage_reproducibility():
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    assert "not reproducible" in text
+    assert "SOURCE_DATE_EPOCH" in text
 
 
 def test_ci_has_web_job():
