@@ -1,3 +1,21 @@
+threshold (2.0.0-1) trixie; urgency=medium
+
+  * Unified packages (issue #86): one complete DEB, one distribution-neutral
+    Unified RPM (replaces the paired main + msi-ec-dkms release), and one
+    self-contained x86-64 AppImage
+  * Shared EC lifecycle authority owns setup, update, repair, boot
+    reconciliation, and removal; DEB/RPM hooks invoke it without
+    reimplementing lifecycle behavior
+  * MSI DMI preflight: non-MSI systems never build or load msi-ec; EC
+    failures never fail package installation
+  * Boot reconciliation systemd unit (bounded oneshot before graphical
+    login) with single-write readback reconciliation
+  * Notification-area readiness state machine: close-to-notification-area only when the
+    StatusNotifierItem is ready; artifact-owned battery icons + pixmap
+    fallback
+
+ -- Soubarna <Soubarna@live.in>  Tue, 02 Sep 2026 18:00:00 +0530
+
 threshold (1.4.2-1) trixie; urgency=medium
 
   * Packaging: release CI now builds a Fedora .rpm (main package + msi-ec DKMS

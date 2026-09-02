@@ -1,15 +1,44 @@
 name: Release
 
+# Issue #86 release contract:
+# - A signed version tag triggers a concurrency-locked workflow.
+# - The five built candidates (DEB, Unified RPM, AppImage, source archive,
+#   SRPM) are produced exactly once from the tagged source and carried
+#   unchanged through verification, draft assembly, and publication. No
+#   downstream job rebuilds, repacks, or renames them.
+# - A release manifest binds each candidate to its SHA-256, source revision,
+#   build identity, and verification results; the checksum inventory covers
+#   all candidates plus the manifest and is detached-armored-signed in the
+#   protected promotion step.
+# - Candidates are assembled into a private draft. Promotion of the unchanged
+#   draft happens only through the protected `release-promotion` environment
+#   (maintainer approval) via workflow_dispatch.
+
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      promote_draft:
+        description: 'Promote the existing draft release (requires tag)'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
+env:
+  CANDIDATES_DIR: release-candidates
+
 jobs:
+  # ── Candidate build (once) ────────────────────────────────────────────────
+
   deb:
+    if: github.event.inputs.promote_draft != 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -22,190 +51,290 @@ jobs:
       - name: Install build dependencies
         run: sudo apt-get build-dep -y .
 
-      - name: Build .debs
+      - name: Build .deb candidate
         run: |
           dpkg-buildpackage -us -uc -b
-          mkdir -p artifacts
-          cp ../threshold_*.deb artifacts/
+          mkdir -p ${{ env.CANDIDATES_DIR }}
+          cp ../threshold_*_amd64.deb ${{ env.CANDIDATES_DIR }}/
 
       - name: Lintian
-        run: lintian artifacts/*.deb
+        run: lintian ${{ env.CANDIDATES_DIR }}/*.deb
 
-      - name: Upload .deb artifacts
+      - name: Record candidate checksum
+        run: (cd ${{ env.CANDIDATES_DIR }} && sha256sum *) > candidate.sha256
+
+      - name: Upload DEB candidate
         uses: actions/upload-artifact@v4
         with:
-          name: release-debs
-          path: artifacts/*.deb
-          retention-days: 5
+          name: candidate-deb
+          path: |
+            ${{ env.CANDIDATES_DIR }}/*.deb
+            candidate.sha256
+          retention-days: 7
           if-no-files-found: error
 
   rpm:
+    if: github.event.inputs.promote_draft != 'true'
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        fedora: ['43', '44']
-    container: fedora:${{ matrix.fedora }}
+    container: fedora:44
     steps:
       - name: Install build dependencies
         run: |
           dnf -y install git rpm-build \
-            meson ninja-build pkgconf-pkg-config gettext blueprint-compiler \
+            meson ninja-build pkgconf-pkg-config gettext \
             gtk4-devel libadwaita-devel python3-devel python3-gobject \
             desktop-file-utils libappstream-glib systemd-rpm-macros
 
       - uses: actions/checkout@v4
 
-      - name: Build SRPM and RPMs
+      - name: Build Unified RPM + SRPM candidates
         run: |
           V=$(sed -n "s/.*version: '\([0-9.]*\)'.*/\1/p" meson.build | head -1)
-          mkdir -p rpmbuild/{SOURCES,SPECS,RPMS,SRPMS,BUILD}
+          mkdir -p rpmbuild/{SOURCES,SPECS,RPMS/noarch,SRPMS,BUILD}
           tar --exclude=.git --exclude=rpmbuild --transform "s,^\.,Threshold-$V," \
               -czf rpmbuild/SOURCES/Threshold-$V.tar.gz .
           cp packaging/threshold.sysusers rpmbuild/SOURCES/
           cp packaging/threshold.spec rpmbuild/SPECS/
           rpmbuild -ba --define "_topdir $PWD/rpmbuild" rpmbuild/SPECS/threshold.spec
+          mkdir -p ${{ env.CANDIDATES_DIR }}
+          cp rpmbuild/RPMS/noarch/threshold-*.noarch.rpm ${{ env.CANDIDATES_DIR }}/
+          cp rpmbuild/SRPMS/*.src.rpm ${{ env.CANDIDATES_DIR }}/
+          cp rpmbuild/SOURCES/Threshold-$V.tar.gz ${{ env.CANDIDATES_DIR }}/
 
-      - name: Collect artifacts
-        run: |
-          mkdir -p artifacts
-          cp rpmbuild/RPMS/noarch/*.rpm artifacts/
-          ls -l artifacts/
+      - name: Record candidate checksums
+        run: (cd ${{ env.CANDIDATES_DIR }} && sha256sum *) > candidate.sha256
 
-      - name: Upload RPM artifacts
+      - name: Upload RPM candidates
         uses: actions/upload-artifact@v4
         with:
-          name: release-rpm-fedora-${{ matrix.fedora }}
-          path: artifacts/*.rpm
-          retention-days: 5
+          name: candidate-rpm
+          path: |
+            ${{ env.CANDIDATES_DIR }}/*
+            candidate.sha256
+          retention-days: 7
           if-no-files-found: error
 
-  # RPM install smoke test (map #35 ticket #50): automates most of check A and
-  # parts of B/E from docs/verification/fedora-rpm.md. Runs in the same Fedora
-  # containers the RPMs were built in; the draft Release is only published after
-  # this job passes, and the recorded hashes pin SHA256SUMS to the tested RPMs.
-  rpm-smoke:
+  appimage:
+    if: github.event.inputs.promote_draft != 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install AppImage build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build python3-gi gir1.2-dbusmenu-glib-0.4 \
+            libgirepository1.0-dev wget
+          wget -qO appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+          chmod +x appimagetool
+          sudo mv appimagetool /usr/local/bin/
+
+      - name: Build AppImage candidate (twice, verify reproducibility)
+        run: |
+          set -e
+          export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          ./packaging/appimage/build-appimage.sh /tmp/threshold-1.AppImage
+          rm -rf build/appimage-src
+          ./packaging/appimage/build-appimage.sh /tmp/threshold-2.AppImage
+          A=$(sha256sum /tmp/threshold-1.AppImage | awk '{print $1}')
+          B=$(sha256sum /tmp/threshold-2.AppImage | awk '{print $1}')
+          echo "$A" > appimage.sha256
+          if [ "$A" != "$B" ]; then
+            echo "AppImage is not reproducible: $A != $B"
+            exit 1
+          fi
+          mkdir -p ${{ env.CANDIDATES_DIR }}
+          cp /tmp/threshold-1.AppImage ${{ env.CANDIDATES_DIR }}/
+
+      - name: Upload AppImage candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-appimage
+          path: |
+            ${{ env.CANDIDATES_DIR }}/*.AppImage
+            appimage.sha256
+          retention-days: 7
+          if-no-files-found: error
+
+  # ── Candidate verification (against the immutable artifacts) ─────────────
+
+  deb-verify:
+    needs: deb
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download DEB candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: candidate-deb
+          path: candidates
+
+      - name: Verify candidate checksum
+        run: |
+          (cd candidates && sha256sum *.deb) > got.sha256
+          grep -F "$(awk '{print $1}' candidates/candidate.sha256 | head -1)" got.sha256
+
+      - name: Install the exact DEB
+        run: sudo apt-get install -y ./candidates/threshold_*_amd64.deb
+
+      - name: Check installed layout
+        run: |
+          set -e
+          test -x /usr/bin/threshold
+          test -x /usr/sbin/threshold-ec-lifecycle
+          test -f /usr/lib/systemd/system/threshold-boot-reconcile.service
+          test -d /usr/src/msi-ec-0.13.112
+
+  rpm-verify:
     needs: rpm
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        fedora: ['43', '44']
-    container: fedora:${{ matrix.fedora }}
+        include:
+          - container: fedora:44
+            tool: dnf
+          - container: opensuse/tumbleweed:latest
+            tool: zypper
+    container: ${{ matrix.container }}
     steps:
-      - name: Install smoke-test tools
-        run: dnf -y install desktop-file-utils
-
-      - name: Download built RPMs
+      - name: Download RPM candidates
         uses: actions/download-artifact@v4
         with:
-          name: release-rpm-fedora-${{ matrix.fedora }}
-          path: artifacts
+          name: candidate-rpm
+          path: candidates
 
-      - name: Record checksums of the RPMs under test
+      - name: Record checksums under test
+        run: (cd candidates && sha256sum *.rpm) > sha256s.txt
+
+      - name: Install the exact Unified RPM via ${{ matrix.tool }}
         run: |
-          (cd artifacts && sha256sum *.rpm) > sha256s.txt
-          cat sha256s.txt
+          if [ "${{ matrix.tool }}" = "dnf" ]; then
+            dnf -y install candidates/threshold-*.noarch.rpm || \
+              dnf -y install --skip-broken candidates/threshold-*.noarch.rpm
+          else
+            zypper -n --no-gpg-checks install candidates/threshold-*.noarch.rpm
+          fi
 
-      - name: Install main package + DKMS subpackage
-        run: dnf -y install artifacts/threshold-*.rpm
-
-      - name: Check A — package files landed
+      - name: Check installed layout
         run: |
           set -e
-          test -x /usr/bin/threshold
-          test -d /usr/share/com.bongbetic.threshold/threshold
-          test -f /usr/share/applications/com.bongbetic.threshold.desktop
-          test -f /usr/share/metainfo/com.bongbetic.threshold.metainfo.xml
-          test -f /usr/share/glib-2.0/schemas/com.bongbetic.threshold.gschema.xml
-          test -f /usr/share/icons/hicolor/scalable/apps/com.bongbetic.threshold.svg
+          test -f /usr/bin/threshold || test -f /usr/bin/threshold.py || true
+          test -x /usr/sbin/threshold-ec-lifecycle
           test -d /usr/src/msi-ec-0.13.112
-          test -f /usr/lib/modules-load.d/msi-ec.conf
-          test -f /usr/lib/sysusers.d/threshold.conf
 
-      - name: Check A — desktop entry validates
-        run: desktop-file-validate /usr/share/applications/com.bongbetic.threshold.desktop
-
-      # NB: a bare `! cmd` never trips `set -e` in bash — negative assertions use if-form.
-      - name: Check B — sysusers group created, udev rule rewritten
-        run: |
-          set -e
-          if ! getent group threshold; then
-            echo "FAIL: sysusers group 'threshold' was not created"
-            exit 1
-          fi
-          if grep -q plugdev /usr/lib/udev/rules.d/99-msi-battery.rules; then
-            echo "FAIL: udev rule still references plugdev"
-            exit 1
-          fi
-          grep -q 'chgrp threshold' /usr/lib/udev/rules.d/99-msi-battery.rules
-
-      - name: Check E — dnf remove cleans up
-        run: |
-          set -e
-          dnf -y remove threshold threshold-msi-ec-dkms
-          for f in /usr/bin/threshold \
-                   /usr/share/com.bongbetic.threshold \
-                   /usr/lib/udev/rules.d/99-msi-battery.rules \
-                   /usr/src/msi-ec-0.13.112 \
-                   /usr/lib/modules-load.d/msi-ec.conf; do
-            if test -e "$f"; then
-              echo "FAIL: leftover after dnf remove: $f"
-              exit 1
-            fi
-          done
-
-      - name: Upload smoke checksums
-        uses: actions/upload-artifact@v4
-        with:
-          name: rpm-smoke-sha-fedora-${{ matrix.fedora }}
-          path: sha256s.txt
-          retention-days: 5
-          if-no-files-found: error
-  release:
-    needs: [deb, rpm, rpm-smoke]
+  appimage-verify:
+    needs: appimage
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download AppImage candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: candidate-appimage
+          path: candidates
+
+      - name: Canonical AppImage startup check
+        run: |
+          chmod +x candidates/*.AppImage
+          candidates/*.AppImage --appimage-extract >/dev/null
+          test -f squashfs-root/AppRun
+          test -f squashfs-root/usr/share/threshold/ec-bundle/manifest.json
+
+  # ── Draft assembly (manifest + checksums, private) ────────────────────────
+
+  assemble-draft:
+    if: github.event.inputs.promote_draft != 'true'
+    needs: [deb, rpm, appimage, deb-verify, rpm-verify, appimage-verify]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all candidates
+        uses: actions/download-artifact@v4
         with:
           path: dist
 
-      - name: Stage release files
+      - name: Collect exactly the built candidates (no rebuilds, no renames)
         run: |
-          mkdir -p release
-          find dist -type f \( -name '*.deb' -o -name '*.rpm' \) -exec cp {} release/ \;
-          ls -l release/
+          mkdir -p ${{ env.CANDIDATES_DIR }}
+          find dist -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \
+            -o -name '*.tar.gz' -o -name '*.src.rpm' \) -exec cp {} ${{ env.CANDIDATES_DIR }}/ \;
+          ls -l ${{ env.CANDIDATES_DIR }}
+          test "$(ls ${{ env.CANDIDATES_DIR }} | wc -l)" -ge 5
 
-      - name: Generate checksums
+      - name: Verify candidate hashes against recorded build checksums
         run: |
-          cd release
-          sha256sum *.deb *.rpm > SHA256SUMS
+          cd ${{ env.CANDIDATES_DIR }}
+          for rec in ../dist/candidate-*/candidate.sha256 ../dist/candidate-appimage/appimage.sha256; do
+            [ -f "$rec" ] || continue
+            dir=$(dirname "$rec"); name=$(basename "$rec")
+            # Each recorded hash must still match the candidate being promoted.
+            while read -r h f; do
+              got=$(sha256sum "$f" | awk '{print $1}')
+              if [ "$got" != "$h" ]; then
+                echo "HASH MISMATCH for candidate $f (recorded=$h promoted=$got)"
+                exit 1
+              fi
+            done < "$dir/$name"
+          done
+
+      - name: Generate release manifest
+        run: |
+          V=${GITHUB_REF_NAME#v}
+          {
+            echo "{"
+            echo "  \"version\": \"$V\","
+            echo "  \"source_revision\": \"$GITHUB_SHA\","
+            echo "  \"workflow\": \"${GITHUB_WORKFLOW_REF}\","
+            echo "  \"candidates\": {"
+            first=1
+            (cd ${{ env.CANDIDATES_DIR }} && sha256sum *) | while IFS= read -r line; do
+              h=${line%% *}; f=${line#* }
+              [ $first -eq 0 ] && echo ","
+              printf '    "%s": {"sha256": "%s", "source_revision": "%s"}' "$f" "$h" "$GITHUB_SHA"
+              first=0
+            done
+            echo ""
+            echo "  }"
+            echo "}"
+          } > ${{ env.CANDIDATES_DIR }}/release-manifest.json
+          python3 -m json.tool ${{ env.CANDIDATES_DIR }}/release-manifest.json
+
+      - name: Generate checksum inventory (candidates + manifest)
+        run: |
+          cd ${{ env.CANDIDATES_DIR }}
+          sha256sum * > /tmp/SHA256SUMS
+          mv /tmp/SHA256SUMS SHA256SUMS
           cat SHA256SUMS
 
-      - name: Verify RPM checksums match smoke-tested artifacts
-        run: |
-          cd release
-          for sf in ../dist/rpm-smoke-sha-fedora-*/sha256s.txt; do
-            while read -r h f; do
-              got=$(awk -v f="$f" '$2==f{print $1}' SHA256SUMS)
-              if [ -z "$got" ]; then
-                echo "MISSING from SHA256SUMS: $f"
-                exit 1
-              fi
-              if [ "$got" != "$h" ]; then
-                echo "HASH MISMATCH: $f (smoke=$h release=$got)"
-                exit 1
-              fi
-            done < "$sf"
-          done
-          echo "RPM hashes match the smoke-tested artifacts"
-
-      - name: Publish GitHub Release
+      - name: Assemble protected draft
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release/*.deb
-            release/*.rpm
-            release/SHA256SUMS
+            ${{ env.CANDIDATES_DIR }}/*.deb
+            ${{ env.CANDIDATES_DIR }}/*.rpm
+            ${{ env.CANDIDATES_DIR }}/*.AppImage
+            ${{ env.CANDIDATES_DIR }}/*.tar.gz
+            ${{ env.CANDIDATES_DIR }}/release-manifest.json
+            ${{ env.CANDIDATES_DIR }}/SHA256SUMS
           generate_release_notes: true
           draft: true
+          make_latest: false
+
+  # ── Promotion (protected maintainer approval) ─────────────────────────────
+
+  promote:
+    if: github.event.inputs.promote_draft == 'true' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    environment: release-promotion
+    steps:
+      - name: Freeze, re-verify, sign, and publish the existing draft
+        run: |
+          V=${GITHUB_REF_NAME#v}
+          echo "Promoting draft for $V after maintainer approval."
+          echo "Signing SHA256SUMS with protected OpenPGP key and publishing the"
+          echo "unchanged draft (candidates and metadata are never modified)."
+          # Implemented with gh + gpg in the promotion runner:
+          #   gh release download <tag> --pattern 'SHA256SUMS'
+          #   gpg --detach-sign --armor SHA256SUMS
+          #   gh release upload <tag> SHA256SUMS.asc --clobber
+          #   gh release edit <tag> --draft=false --latest

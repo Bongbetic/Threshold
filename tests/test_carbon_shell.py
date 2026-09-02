@@ -869,16 +869,31 @@ class TestTraySetup:
 class TestCloseToTray:
     """Test close-to-tray behavior in Carbon shell."""
 
-    def test_close_hides_window_when_tray_enabled(self):
+    def test_close_hides_window_when_tray_ready(self):
         handler = _make_handler(ThresholdState(battery_available=False))
         handler._config.get_minimize_to_tray.return_value = True
         mock_tray = MagicMock()
+        from threshold.notification_area_readiness import ReadinessState
+        mock_tray.readiness = ReadinessState.READY
         handler._tray = mock_tray
         mock_window = MagicMock()
         handler._window = mock_window
         result = handler.handle_close_request()
         assert result is True
         mock_window.set_visible.assert_called_once_with(False)
+
+    def test_close_keeps_window_visible_when_tray_not_ready(self):
+        handler = _make_handler(ThresholdState(battery_available=False))
+        handler._config.get_minimize_to_tray.return_value = True
+        mock_tray = MagicMock()
+        from threshold.notification_area_readiness import ReadinessState
+        mock_tray.readiness = ReadinessState.REGISTERING
+        handler._tray = mock_tray
+        mock_window = MagicMock()
+        handler._window = mock_window
+        result = handler.handle_close_request()
+        assert result is True
+        mock_window.set_visible.assert_not_called()
 
     def test_close_allows_destroy_when_tray_disabled(self):
         handler = _make_handler(ThresholdState(battery_available=False))

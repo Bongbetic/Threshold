@@ -1,0 +1,348 @@
+#!/bin/sh
+# Threshold shared EC lifecycle authority (issue #86).
+#
+# Single owner of EC setup, update, repair, boot reconciliation,
+# diagnostics, and removal for every artifact (DEB, Unified RPM,
+# AppImage bootstrap). Package hooks invoke this script; they never
+# reimplement lifecycle behavior.
+#
+# Verbs:
+#   install-or-upgrade  Setup after install/upgrade (idempotent, repair-capable)
+#   repair              Prepare a named failing kernel while booted into another
+#   reconcile           Boot reconciliation: once, bounded, single write + readback
+#   remove              Remove Threshold-managed EC assets, keep charge threshold
+#   diagnostics         Emit structured machine-readable status records
+#
+# State layout (root-owned):
+#   /var/lib/threshold/ec/state            setup_state / reason / maintenance
+#   /var/lib/threshold/ec/ledger           ownership ledger of managed assets
+#   /var/lib/threshold/ec/kernels/         per-kernel lifecycle records
+#   /var/lib/threshold/ec/pending-reboot   boot identity + pending action
+#
+# Guarantees:
+# - MSI DMI preflight gates all msi-ec work; non-MSI systems never build or load.
+# - No package manager is ever invoked from lifecycle code.
+# - Failures never fail the enclosing package transaction.
+# - Removal never unloads a currently loaded working module and never
+#   touches the machine-wide charge threshold (GSettings).
+
+set -u
+
+EC_STATE_DIR=/var/lib/threshold/ec
+EC_STATE_FILE=$EC_STATE_DIR/state
+EC_LEDGER=$EC_STATE_DIR/ledger
+EC_KERNEL_DIR=$EC_STATE_DIR/kernels
+EC_PENDING=$EC_STATE_DIR/pending-reboot
+EC_LOG=$EC_STATE_DIR/lifecycle.log
+
+MSI_VENDOR_PATTERN='Micro-Star|MSI'
+MSI_EC_VERSION='0.13.112'
+DKMS_NAME=msi-ec
+DKMS_SRC=/usr/src/$DKMS_NAME-$MSI_EC_VERSION
+MODULES_LOAD=/usr/lib/modules-load.d/msi-ec.conf
+
+# ── Helpers ───────────────────────────────────────────────────────────────
+
+log() {
+    echo "threshold-ec: $*" >&2
+    mkdir -p "$EC_STATE_DIR"
+    echo "$(date -Iseconds) $*" >> "$EC_LOG" 2>/dev/null || :
+}
+
+boot_id() {
+    if [ -r /proc/sys/kernel/random/boot_id ]; then
+        cat /proc/sys/kernel/random/boot_id
+    else
+        uname -r
+    fi
+}
+
+running_kernel() {
+    uname -r
+}
+
+set_setup_state() {
+    # set_setup_state <state> [reason]
+    mkdir -p "$EC_STATE_DIR"
+    {
+        echo "setup_state=$1"
+        [ $# -ge 2 ] && echo "reason=$2"
+        echo "maintenance=${3:-ok}"
+        echo "boot_id=$(boot_id)"
+        echo "kernel=$(running_kernel)"
+    } > "$EC_STATE_FILE"
+}
+
+record_pending_reboot() {
+    # record_pending_reboot <action>
+    mkdir -p "$EC_STATE_DIR"
+    {
+        echo "boot_id=$(boot_id)"
+        echo "target_kernel=$(running_kernel)"
+        echo "action=$1"
+    } > "$EC_PENDING"
+}
+
+clear_pending_reboot() {
+    rm -f "$EC_PENDING"
+}
+
+is_msi_hardware() {
+    [ -r /sys/class/dmi/id/sys_vendor ] && \
+        grep -Eq "$MSI_VENDOR_PATTERN" /sys/class/dmi/id/sys_vendor
+}
+
+kernel_headers_present() {
+    [ -d "/lib/modules/$(running_kernel)/build" ]
+}
+
+ledger_add() {
+    mkdir -p "$EC_STATE_DIR"
+    grep -qxF "$1" "$EC_LEDGER" 2>/dev/null || echo "$1" >> "$EC_LEDGER"
+}
+
+record_kernel_event() {
+    # record_kernel_event <kernel> <event> <outcome>
+    mkdir -p "$EC_KERNEL_DIR"
+    echo "$(date -Iseconds) module=$DKMS_NAME-$MSI_EC_VERSION dkms=$1 trust=$2 load=$3 live=$4 reconciliation=$5" \
+        >> "$EC_KERNEL_DIR/$1.log"
+}
+
+# ── MSI EC setup (shared by install-or-upgrade and repair) ────────────────
+
+do_setup() {
+    # MSI preflight: non-MSI hardware never builds or loads msi-ec.
+    if ! is_msi_hardware; then
+        set_setup_state unavailable not_msi_hardware
+        log "Non-MSI hardware; skipping EC setup entirely."
+        return 0
+    fi
+
+    if ! command -v dkms >/dev/null 2>&1; then
+        set_setup_state unavailable dkms_missing
+        log "dkms not found; EC setup unavailable."
+        return 0
+    fi
+
+    # Absence of the running kernel's build tree is a structured,
+    # repairable reason — never an automatic header install.
+    if ! kernel_headers_present; then
+        set_setup_state unavailable kernel_headers_missing
+        log "Kernel build tree for $(running_kernel) missing; EC setup repairable."
+        return 0
+    fi
+
+    if ! dkms add -m "$DKMS_NAME" -v "$MSI_EC_VERSION" 2>&1; then
+        log "dkms add failed (may already be registered)."
+    fi
+    if ! dkms build -m "$DKMS_NAME" -v "$MSI_EC_VERSION" 2>&1; then
+        set_setup_state unavailable build_failed
+        echo failed > "$EC_STATE_DIR/maintenance"
+        log "dkms build failed; older module (if any) remains in control."
+        return 0
+    fi
+    if ! dkms install -m "$DKMS_NAME" -v "$MSI_EC_VERSION" 2>&1; then
+        set_setup_state unavailable build_failed
+        echo failed > "$EC_STATE_DIR/maintenance"
+        log "dkms install failed; older module (if any) remains in control."
+        return 0
+    fi
+
+    # Autoload integration ( Threshold-owned, ledger-proven on removal).
+    mkdir -p "$(dirname "$MODULES_LOAD")"
+    echo msi-ec > "$MODULES_LOAD"
+
+    ledger_add "$DKMS_SRC"
+    ledger_add "$MODULES_LOAD"
+
+    # Try to load now; Secure Boot failure is a structured reason with a
+    # known reboot-completable path (enroll MOK, reboot completes it).
+    if ! modprobe "$DKMS_NAME" 2>/dev/null; then
+        if mokutil --sb-state 2>/dev/null | grep -q "SecureBoot enabled"; then
+            set_setup_state unavailable load_failed_secure_boot
+            record_pending_reboot setup
+        else
+            set_setup_state unavailable load_failed
+        fi
+        record_kernel_event "$(running_kernel)" built unsigned noload none
+        log "modprobe msi-ec failed (possibly Secure Boot); pending reboot not assumed."
+        return 0
+    fi
+
+    # Live verification: the expected threshold interface must work.
+    if verify_live_interface; then
+        set_setup_state available
+        echo ok > "$EC_STATE_DIR/maintenance"
+        record_kernel_event "$(running_kernel)" built signed loaded yes verified
+        log "EC setup available and verified."
+    else
+        set_setup_state unavailable threshold_interface_missing
+        record_kernel_event "$(running_kernel)" built signed loaded no failed
+        log "Module loaded but threshold interface not verified."
+    fi
+}
+
+find_threshold_battery() {
+    # Print the first battery sysfs path exposing the threshold interface.
+    for d in /sys/class/power_supply/*; do
+        [ -f "$d/type" ] && [ "$(cat "$d/type" 2>/dev/null)" = "Battery" ] || continue
+        if [ -f "$d/charge_control_end_threshold" ]; then
+            echo "$d"
+            return 0
+        fi
+    done
+    return 1
+}
+
+verify_live_interface() {
+    find_threshold_battery >/dev/null
+}
+
+# ── Boot reconciliation (once, bounded, single write + readback) ──────────
+
+do_reconcile() {
+    # Consume pending_reboot on the first different boot.
+    if [ -f "$EC_PENDING" ]; then
+        PENDING_BOOT=$(sed -n 's/^boot_id=//p' "$EC_PENDING")
+        if [ "$PENDING_BOOT" != "$(boot_id)" ]; then
+            # Different boot: the attempt was consumed. Outcome is decided
+            # by live verification below.
+            rm -f "$EC_PENDING"
+        fi
+    fi
+
+    # Delayed rescan for transient sysfs timing (once).
+    udevadm trigger --subsystem-match=power_supply 2>/dev/null || :
+    sleep 2
+
+    BAT=$(find_threshold_battery || true)
+
+    if [ -z "$BAT" ]; then
+        # No live EC control: leave machine-wide threshold policy intact.
+        if [ -f "$EC_STATE_FILE" ] && grep -q '^setup_state=available' "$EC_STATE_FILE"; then
+            set_setup_state unavailable threshold_interface_missing
+        fi
+        record_kernel_event "$(running_kernel)" - - - no nolive
+        log "No threshold interface at boot; notification-only mode remains usable."
+        return 0
+    fi
+
+    # Desired value is the machine-wide charge threshold recorded by the
+    # application; fall back to the current active value.
+    DESIRED_FILE=$EC_STATE_DIR/charge-threshold
+    ACTIVE=$(cat "$BAT/charge_control_end_threshold" 2>/dev/null)
+    if [ -r "$DESIRED_FILE" ]; then
+        DESIRED=$(cat "$DESIRED_FILE")
+    else
+        DESIRED=$ACTIVE
+    fi
+
+    if [ -n "$DESIRED" ] && [ "$ACTIVE" != "$DESIRED" ]; then
+        # Write at most once, then verify by one readback. No retry loop.
+        if echo "$DESIRED" > "$BAT/charge_control_end_threshold" 2>/dev/null; then
+            sleep 1
+            VERIFY=$(cat "$BAT/charge_control_end_threshold" 2>/dev/null)
+            if [ "$VERIFY" = "$DESIRED" ]; then
+                # EC setup state must stay independent of control mode:
+                # vendor-sysfs reconciliation never claims EC setup.
+                if is_msi_hardware; then
+                    set_setup_state available
+                fi
+                record_kernel_event "$(running_kernel)" - - loaded yes reconciled
+                log "Reconciled threshold to ${DESIRED}% (verified)."
+            else
+                set_setup_state unavailable verification_failed
+                record_kernel_event "$(running_kernel)" - - loaded no readback_failed
+                log "Reconciliation readback mismatch (${VERIFY:-none} != $DESIRED)."
+            fi
+        else
+            set_setup_state unavailable verification_failed
+            record_kernel_event "$(running_kernel)" - - loaded no write_failed
+            log "Reconciliation write failed; charge threshold preserved."
+        fi
+    else
+        if is_msi_hardware; then
+            set_setup_state available
+        fi
+        record_kernel_event "$(running_kernel)" - - loaded yes noop
+        log "Active and desired thresholds agree; no write needed."
+    fi
+}
+
+# ── Removal ───────────────────────────────────────────────────────────────
+
+do_remove() {
+    # Never unload a currently loaded working module.
+    if [ -d /sys/devices/platform/msi-ec ] && grep -qw msi_ec /proc/modules 2>/dev/null; then
+        log "msi_ec module loaded and working; leaving it in place."
+    fi
+
+    # Remove only ledger-proven Threshold assets.
+    if [ -f "$EC_LEDGER" ]; then
+        while IFS= read -r asset; do
+            case "$asset" in
+                $DKMS_SRC)
+                    command -v dkms >/dev/null 2>&1 && \
+                        dkms remove -m "$DKMS_NAME" -v "$MSI_EC_VERSION" --all 2>/dev/null || :
+                    rm -rf "$DKMS_SRC"
+                    ;;
+                $MODULES_LOAD)
+                    rm -f "$MODULES_LOAD"
+                    ;;
+            esac
+        done < "$EC_LEDGER"
+        rm -f "$EC_LEDGER"
+    fi
+
+    rm -rf "$EC_KERNEL_DIR" "$EC_PENDING"
+    rm -f "$EC_STATE_FILE"
+    log "EC lifecycle removed; charge threshold policy and foreign assets preserved."
+}
+
+# ── Diagnostics ───────────────────────────────────────────────────────────
+
+do_diagnostics() {
+    echo "setup_state:"
+    cat "$EC_STATE_FILE" 2>/dev/null || echo "  (none)"
+    echo "pending_reboot:"
+    cat "$EC_PENDING" 2>/dev/null || echo "  (none)"
+    echo "kernel_records:"
+    ls "$EC_KERNEL_DIR" 2>/dev/null || echo "  (none)"
+    echo "msi_hardware=$(is_msi_hardware && echo yes || echo no)"
+    echo "module_loaded=$(grep -qw msi_ec /proc/modules 2>/dev/null && echo yes || echo no)"
+}
+
+# ── Verb dispatch ─────────────────────────────────────────────────────────
+
+case "${1:-}" in
+    install-or-upgrade)
+        # Marker: a package owns this authority; the AppImage bootstrap
+        # must never overwrite a package-owned EC authority.
+        mkdir -p "$EC_STATE_DIR"
+        touch "$EC_STATE_DIR/package-owned"
+        do_setup
+        # Refresh udev after setup attempts (udev rule ownership is the package's).
+        udevadm control --reload 2>/dev/null || :
+        udevadm trigger --subsystem-match=power_supply 2>/dev/null || :
+        ;;
+    repair)
+        # May prepare a named kernel while booted into another; that kernel
+        # remains verification-pending until booted and reconciled.
+        do_setup
+        ;;
+    reconcile)
+        do_reconcile
+        ;;
+    remove)
+        do_remove
+        ;;
+    diagnostics)
+        do_diagnostics
+        ;;
+    *)
+        echo "usage: $0 {install-or-upgrade|repair|reconcile|remove|diagnostics}" >&2
+        exit 2
+        ;;
+esac
+
+exit 0
