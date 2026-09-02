@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prototype:ec": "vite --open /prototype-ec-setup.html",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",

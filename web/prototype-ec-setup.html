@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Threshold EC setup prototype</title>
+  <style>
+    /* THROWAWAY PROTOTYPE: three EC setup/recovery variants on the existing dashboard. */
+    :root {
+      color-scheme: dark;
+      font-family: "IBM Plex Sans", Inter, system-ui, sans-serif;
+      --bg: #000;
+      --panel: #161616;
+      --panel-2: #262626;
+      --line: #393939;
+      --muted: #a8a8a8;
+      --text: #f4f4f4;
+      --accent: #ff832a;
+      --blue: #4589ff;
+      --green: #42be65;
+      --yellow: #f1c21b;
+      --red: #fa4d56;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 840px; min-height: 100vh; background: var(--bg); color: var(--text); }
+    button { font: inherit; }
+    .app-header { height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
+    .logo { width: 24px; height: 24px; object-fit: contain; }
+    .app-title { font-size: 14px; font-weight: 600; }
+    .prototype-flag { margin-left: auto; color: var(--yellow); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+    .scenario-bar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: #101010; overflow-x: auto; }
+    .scenario-bar strong { margin-right: 6px; white-space: nowrap; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .chip { border: 1px solid #525252; background: var(--panel); color: var(--text); padding: 7px 11px; border-radius: 999px; cursor: pointer; white-space: nowrap; font-size: 12px; }
+    .chip:hover, .chip[aria-pressed="true"] { border-color: var(--accent); background: #3a1d0c; }
+    .workspace { min-height: calc(100vh - 105px); padding-bottom: 82px; }
+    .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); }
+    .tile { min-height: 142px; padding: 18px 20px; background: var(--panel); }
+    .tile h2, .eyebrow { margin: 0 0 16px; color: #8d8d8d; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+    .stat { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #2d2d2d; font-size: 13px; }
+    .stat:last-child { border: 0; }
+    .stat span:first-child { color: var(--muted); }
+    .big { margin-top: 13px; color: var(--accent); font-size: 42px; font-weight: 300; }
+    .limit { grid-column: 1 / -1; min-height: 170px; }
+    .track { height: 5px; margin: 26px 0 12px; background: linear-gradient(90deg, var(--accent) 0 75%, #525252 75%); }
+    .presets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .preset { padding: 10px; text-align: center; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); }
+    .setting-tile { min-height: 132px; }
+    .status-dot { display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--green); }
+    .status-dot.pending { background: var(--yellow); }
+    .status-dot.bad { background: var(--red); }
+    .status-dot.neutral { background: #8d8d8d; }
+    .button { border: 0; padding: 11px 16px; background: var(--accent); color: #000; font-weight: 600; cursor: pointer; }
+    .button.secondary { background: #393939; color: var(--text); }
+    .button.ghost { background: transparent; border: 1px solid #6f6f6f; color: var(--text); }
+    .button-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; line-height: 1.5; }
+    .mode-line { font-weight: 600; }
+    .mode-note { margin-top: 6px; color: var(--muted); font-size: 12px; }
+    .hidden { display: none !important; }
+
+    /* Variant A: lifecycle information embedded in the dashboard. */
+    .inline-banner { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 24px; padding: 14px 20px; border-left: 4px solid var(--yellow); border-bottom: 1px solid var(--line); background: #282000; }
+    .inline-banner.bad { border-left-color: var(--red); background: #2b1012; }
+    .inline-banner.good { border-left-color: var(--green); background: #102416; }
+    .inline-banner.neutral { border-left-color: #8d8d8d; background: #202020; }
+    .inline-banner h1 { margin: 0 0 4px; font-size: 16px; }
+    .inline-banner p { margin: 0; color: #d6d6d6; font-size: 13px; }
+    .setup-card { position: relative; }
+    .setup-card .state-name { margin: 0 0 8px; font-size: 17px; }
+
+    /* Variant B: setup center owns a persistent right rail. */
+    .rail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: calc(100vh - 105px); }
+    .rail-layout .dashboard { grid-template-columns: repeat(2, 1fr); align-content: start; }
+    .rail-layout .mode-tile { grid-column: 1 / -1; }
+    .setup-rail { border-left: 1px solid var(--line); background: #111; padding: 24px; }
+    .setup-rail h1 { margin: 4px 0 8px; font-size: 24px; font-weight: 400; }
+    .rail-summary { padding: 14px; margin: 18px 0; border: 1px solid var(--line); background: var(--panel); }
+    .steps { list-style: none; padding: 0; margin: 22px 0; }
+    .steps li { position: relative; margin-left: 12px; padding: 0 0 22px 28px; border-left: 1px solid #525252; color: var(--muted); font-size: 13px; }
+    .steps li:last-child { border-left-color: transparent; }
+    .steps li::before { content: ""; position: absolute; left: -6px; top: 0; width: 10px; height: 10px; border-radius: 50%; background: #525252; }
+    .steps li.done { color: var(--text); }
+    .steps li.done::before { background: var(--green); }
+    .steps li.current { color: var(--text); font-weight: 600; }
+    .steps li.current::before { background: var(--yellow); box-shadow: 0 0 0 4px #4b3d00; }
+
+    /* Variant C: preserve the dashboard; open a focused action sheet on demand. */
+    .status-strip { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 10px 18px; background: var(--panel-2); border-bottom: 1px solid var(--line); font-size: 13px; }
+    .status-strip button { border: 0; background: transparent; color: var(--accent); cursor: pointer; }
+    .sheet-backdrop { position: fixed; inset: 105px 0 0; z-index: 20; display: flex; align-items: flex-end; background: rgba(0,0,0,.62); }
+    .action-sheet { width: 100%; min-height: 320px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 1px; border-top: 2px solid var(--accent); background: var(--line); box-shadow: 0 -18px 60px rgba(0,0,0,.7); }
+    .sheet-pane { padding: 28px 36px; background: var(--panel); }
+    .sheet-pane h1 { margin: 4px 0 10px; max-width: 700px; font-size: 28px; font-weight: 400; }
+    .sheet-pane h2 { margin: 4px 0 16px; font-size: 16px; }
+    .fact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); }
+    .fact { padding: 14px; background: var(--panel-2); }
+    .fact b { display: block; margin-top: 4px; font-size: 14px; }
+    .close-sheet { position: absolute; right: 20px; margin-top: -14px; border: 0; background: transparent; color: var(--text); font-size: 24px; cursor: pointer; }
+
+    .prototype-switcher { position: fixed; z-index: 50; left: 50%; bottom: 18px; transform: translateX(-50%); display: grid; grid-template-columns: 42px minmax(220px, auto) 42px; align-items: center; border: 1px solid #8d8d8d; border-radius: 999px; background: #f4f4f4; color: #161616; box-shadow: 0 8px 28px rgba(0,0,0,.55); overflow: hidden; }
+    .prototype-switcher button { height: 42px; border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 20px; }
+    .prototype-switcher button:hover { background: #dcdcdc; }
+    .variant-label { padding: 0 14px; text-align: center; font-size: 13px; font-weight: 600; }
+    @media (max-width: 980px) {
+      .rail-layout { grid-template-columns: 1fr 300px; }
+      .action-sheet { grid-template-columns: 1fr; max-height: 75vh; overflow: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <img class="logo" src="./bongbetic-icon-dark.png" alt="Bongbetic">
+    <span class="app-title">Threshold</span>
+    <span class="prototype-flag">Throwaway prototype</span>
+  </header>
+  <nav class="scenario-bar" aria-label="Prototype scenarios">
+    <strong>Scenario</strong>
+    <button class="chip" data-scenario="first-run">First run</button>
+    <button class="chip" data-scenario="pending">Pending reboot</button>
+    <button class="chip" data-scenario="unavailable">Build failed</button>
+    <button class="chip" data-scenario="recovered">Recovered</button>
+    <button class="chip" data-scenario="vendor">Vendor sysfs</button>
+    <button class="chip" data-scenario="notify">Notification only</button>
+  </nav>
+  <div id="app" class="workspace"></div>
+  <div class="prototype-switcher" aria-label="Prototype variant switcher">
+    <button id="previous" aria-label="Previous variant">←</button>
+    <div id="variant-label" class="variant-label"></div>
+    <button id="next" aria-label="Next variant">→</button>
+  </div>
+
+  <script>
+    // Three variants of the existing dashboard, switchable via ?variant= and ?scenario=.
+    const variants = [
+      { key: 'A', name: 'Embedded guidance' },
+      { key: 'B', name: 'Setup center rail' },
+      { key: 'C', name: 'Quiet status + action sheet' },
+    ];
+    const scenarios = {
+      'first-run': {
+        title: 'Set up EC control', summary: 'Threshold is using notifications until MSI EC setup is approved.',
+        setup: 'Unavailable', reason: 'Setup not started', mode: 'Notification only', maintenance: 'No maintenance pending',
+        tone: 'pending', primary: 'Set up EC control', secondary: 'Not now', detail: 'Your 80% charge threshold is saved. Setup requires one administrator approval and will not run automatically.', step: 1,
+      },
+      pending: {
+        title: 'Restart to finish EC setup', summary: 'The module is installed. Complete MOK enrollment during the next boot.',
+        setup: 'Pending reboot', reason: 'MOK enrollment required', mode: 'Notification only', maintenance: 'Verification pending reboot',
+        tone: 'pending', primary: 'Show enrollment steps', secondary: 'Reboot', detail: 'Threshold stays usable and will verify EC control once after a different boot.', step: 2,
+      },
+      unavailable: {
+        title: 'EC setup needs repair', summary: 'The module did not build for kernel 6.16.3-1-default.',
+        setup: 'Unavailable', reason: 'DKMS build failed', mode: 'Notification only', maintenance: 'Update failed; diagnostics retained',
+        tone: 'bad', primary: 'Repair EC setup', secondary: 'View diagnostics', detail: 'Your 80% charge threshold remains saved. Repair is explicit and may request administrator approval.', step: 2,
+      },
+      recovered: {
+        title: 'EC control is available', summary: 'Threshold verified live control and reconciled the saved 80% charge threshold.',
+        setup: 'Available', reason: 'Live capability verified', mode: 'EC control — msi-ec', maintenance: 'Healthy on kernel 6.16.3-1-default',
+        tone: 'good', primary: 'Done', secondary: 'View diagnostics', detail: 'The active threshold and saved charge threshold now match.', step: 4,
+      },
+      vendor: {
+        title: 'Vendor control is available', summary: 'This laptop already exposes a charge-threshold interface; MSI EC setup is not used.',
+        setup: 'MSI EC setup not required', reason: 'Non-MSI hardware', mode: 'Vendor sysfs control', maintenance: 'Not applicable',
+        tone: 'neutral', primary: 'Done', secondary: 'View diagnostics', detail: 'Threshold can apply the charge threshold directly through the vendor interface.', step: 4,
+      },
+      notify: {
+        title: 'Notification-only mode', summary: 'No writable threshold interface is available. Threshold will alert you at 80%.',
+        setup: 'Unavailable', reason: 'Threshold interface not detected', mode: 'Notification only', maintenance: 'No maintenance pending',
+        tone: 'neutral', primary: 'Check again', secondary: 'View diagnostics', detail: 'The charge threshold remains editable and is used as the notification target.', step: 1,
+      },
+    };
+    let params = new URLSearchParams(location.search);
+    let variant = variants.some(v => v.key === params.get('variant')) ? params.get('variant') : 'A';
+    let scenarioKey = scenarios[params.get('scenario')] ? params.get('scenario') : 'first-run';
+    let sheetOpen = scenarioKey !== 'vendor';
+
+    const dashboard = (s, includeSetupCard = true) => `
+      <div class="dashboard">
+        <section class="tile"><h2>Battery status</h2><div class="stat"><span>Charge</span><b>64%</b></div><div class="stat"><span>Status</span><b>Charging</b></div><div class="stat"><span>Power source</span><b>AC adapter</b></div></section>
+        <section class="tile"><h2>Active threshold</h2><div class="big">${s.mode.startsWith('Notification') ? '—' : '80%'}</div><p class="small muted">Saved charge threshold: 80%</p></section>
+        <section class="tile mode-tile"><h2>Control mode</h2><p class="mode-line">${s.mode}</p><p class="mode-note">Live control mode, checked now</p></section>
+        <section class="tile limit"><h2>Charge limit</h2><div class="track"></div><div class="presets"><div class="preset">60%<br><small>Daily</small></div><div class="preset">70%<br><small>Balanced</small></div><div class="preset">80%<br><small>Recommended</small></div><div class="preset">90%<br><small>Extended</small></div><div class="preset">100%<br><small>Travel</small></div></div></section>
+        <section class="tile setting-tile"><h2>Appearance</h2><div class="stat"><span>Dark mode</span><b>On</b></div><div class="stat"><span>Accent</span><b>Orange</b></div></section>
+        <section class="tile setting-tile"><h2>Device info</h2><div class="stat"><span>Health</span><b>93% Good</b></div><div class="stat"><span>Battery</span><b>BAT1</b></div></section>
+        ${includeSetupCard ? `<section class="tile setting-tile setup-card"><h2>EC setup</h2><p class="state-name"><span class="status-dot ${s.tone}"></span>${s.setup}</p><p class="small muted">${s.reason}</p></section>` : ''}
+      </div>`;
+
+    const actions = s => `<div class="button-row"><button class="button" data-action="primary">${s.primary}</button><button class="button secondary" data-action="secondary">${s.secondary}</button></div>`;
+
+    function renderA(s) {
+      const guidance = scenarioKey === 'vendor' ? '' : `<section class="inline-banner ${s.tone}"><div><h1>${s.title}</h1><p>${s.summary}</p></div>${actions(s)}</section>`;
+      return `${guidance}${dashboard(s)}`;
+    }
+
+    function renderB(s) {
+      const labels = ['Eligibility checked', 'Setup authorized', 'Restart and verify', 'Control reconciled'];
+      const steps = labels.map((label, index) => `<li class="${index + 1 < s.step ? 'done' : index + 1 === s.step ? 'current' : ''}">${label}</li>`).join('');
+      const progress = scenarioKey === 'vendor' ? '' : `<ol class="steps">${steps}</ol>`;
+      return `<div class="rail-layout">${dashboard(s, false)}<aside class="setup-rail"><p class="eyebrow">${scenarioKey === 'vendor' ? 'Battery control' : 'EC setup center'}</p><h1>${s.title}</h1><p class="small muted">${s.summary}</p><div class="rail-summary"><div class="stat"><span>Setup readiness</span><b>${s.setup}</b></div><div class="stat"><span>Live control</span><b>${s.mode}</b></div><div class="stat"><span>Maintenance</span><b>${s.maintenance}</b></div></div>${progress}<p class="small">${s.detail}</p>${actions(s)}</aside></div>`;
+    }
+
+    function renderC(s) {
+      return `<section class="status-strip"><div><span class="status-dot ${s.tone}"></span><b>${s.title}</b> <span class="muted">— ${s.mode}</span></div><button data-action="toggle-sheet">${sheetOpen ? 'Hide details' : 'Review and act'} ↑</button></section>${dashboard(s, false)}${sheetOpen ? `<div class="sheet-backdrop"><section class="action-sheet" role="dialog" aria-label="EC setup details"><button class="close-sheet" data-action="toggle-sheet" aria-label="Close">×</button><div class="sheet-pane"><p class="eyebrow">Recommended next step</p><h1>${s.title}</h1><p class="muted">${s.summary}</p><p class="small">${s.detail}</p>${actions(s)}</div><div class="sheet-pane"><h2>Why Threshold is showing this</h2><div class="fact-grid"><div class="fact"><span class="small muted">Setup readiness</span><b>${s.setup}</b></div><div class="fact"><span class="small muted">Reason</span><b>${s.reason}</b></div><div class="fact"><span class="small muted">Live control mode</span><b>${s.mode}</b></div><div class="fact"><span class="small muted">Maintenance</span><b>${s.maintenance}</b></div></div><p class="small muted">These are separate signals. A working older module can keep live control available while maintenance is pending or failed.</p></div></section></div>` : ''}`;
+    }
+
+    function setUrl() {
+      params.set('variant', variant);
+      params.set('scenario', scenarioKey);
+      history.replaceState(null, '', `?${params}`);
+    }
+
+    function render() {
+      const s = scenarios[scenarioKey];
+      document.getElementById('app').innerHTML = variant === 'A' ? renderA(s) : variant === 'B' ? renderB(s) : renderC(s);
+      document.getElementById('variant-label').textContent = `${variant} (${variants.find(v => v.key === variant).name})`;
+      document.querySelectorAll('[data-scenario]').forEach(button => button.setAttribute('aria-pressed', button.dataset.scenario === scenarioKey));
+      setUrl();
+    }
+
+    function cycle(delta) {
+      const index = variants.findIndex(v => v.key === variant);
+      variant = variants[(index + delta + variants.length) % variants.length].key;
+      sheetOpen = variant === 'C';
+      render();
+    }
+
+    document.addEventListener('click', event => {
+      const scenarioButton = event.target.closest('[data-scenario]');
+      if (scenarioButton) { scenarioKey = scenarioButton.dataset.scenario; sheetOpen = variant === 'C' && scenarioKey !== 'vendor'; render(); return; }
+      const action = event.target.closest('[data-action]')?.dataset.action;
+      if (action === 'toggle-sheet') { sheetOpen = !sheetOpen; render(); return; }
+      if (action === 'primary') {
+        if (scenarioKey === 'first-run') scenarioKey = 'pending';
+        else if (scenarioKey === 'pending' || scenarioKey === 'unavailable' || scenarioKey === 'notify') scenarioKey = 'recovered';
+        render();
+      }
+    });
+    document.getElementById('previous').addEventListener('click', () => cycle(-1));
+    document.getElementById('next').addEventListener('click', () => cycle(1));
+    document.addEventListener('keydown', event => {
+      if (event.target.matches('input, textarea, [contenteditable]')) return;
+      if (event.key === 'ArrowLeft') cycle(-1);
+      if (event.key === 'ArrowRight') cycle(1);
+    });
+    render();
+  </script>
+</body>
+</html>
