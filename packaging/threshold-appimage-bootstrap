@@ -14,9 +14,12 @@
 # + msi-ec source tarball). Caller-selected paths are never accepted.
 set -u
 
-AUTHORITY_DIR=/var/lib/threshold/authority
-AUTHORITY_BIN=/usr/sbin/threshold-ec-lifecycle
-AUTHORITY_UNIT=/usr/lib/systemd/system/threshold-boot-reconcile.service
+# Overridable for fake-system verification; installed contract is default.
+AUTHORITY_DIR=${THRESHOLD_AUTHORITY_DIR:-/var/lib/threshold/authority}
+AUTHORITY_BIN=${THRESHOLD_AUTHORITY_BIN:-/usr/sbin/threshold-ec-lifecycle}
+AUTHORITY_UNIT=${THRESHOLD_AUTHORITY_UNIT:-/usr/lib/systemd/system/threshold-boot-reconcile.service}
+TRUST_PUB=${THRESHOLD_TRUST_PUB:-/usr/share/threshold/trust/threshold-ec-trust.pub}
+PACKAGE_OWNED_MARKER=${THRESHOLD_EC_STATE_DIR:-/var/lib/threshold/ec}/package-owned
 STAGING=$AUTHORITY_DIR/staging
 
 # Protocol compatibility: the bundle stream begins with a canonical JSON
@@ -70,7 +73,7 @@ manifest = json.loads(open(sys.argv[1]).read())
 assert manifest.get("protocol") == int(sys.argv[2]), "protocol mismatch"
 assert manifest.get("arch") == "x86_64", "architecture mismatch"
 assert manifest.get("schema") == 1, "manifest schema mismatch"
-for key in ("lifecycle", "dkms", "checksum", "bundle_checksum"):
+for key in ("lifecycle", "dkms", "checksum", "bundle_checksum", "signature", "sequence"):
     assert key in manifest, f"manifest missing {key}"
 PYEOF
 
@@ -85,8 +88,44 @@ PYEOF
 
 # Package-owned authority is never overwritten by the AppImage: an
 # installed DEB or Unified RPM owns /usr/sbin/threshold-ec-lifecycle.
-if [ -e /var/lib/threshold/ec/package-owned ]; then
+if [ -e "$PACKAGE_OWNED_MARKER" ]; then
     fail "package-owned EC authority present; use the package's lifecycle instead"
+fi
+
+# ── Trust: Ed25519 signature + monotonic sequence (issue #86) ──────────────
+[ -r "$TRUST_PUB" ] || fail "pinned Threshold trust key missing"
+command -v openssl >/dev/null 2>&1 || fail "openssl required for trust verification"
+
+# Canonical encoding: strip the signature field, re-canonicalize, verify.
+CANON=$STAGING/manifest.canon
+SIG=$STAGING/manifest.sig
+python3 - "$MANIFEST_FILE" "$CANON" "$SIG" <<'PYEOF' || fail "bundle trust rejected"
+import base64, json, sys
+m = json.load(open(sys.argv[1]))
+sig = m.pop("signature", None)
+assert sig, "manifest is not signed"
+seq = m.get("sequence")
+assert isinstance(seq, int) and seq >= 0, "manifest sequence missing/invalid"
+open(sys.argv[2], "wb").write(
+    json.dumps(m, sort_keys=True, indent=1, separators=(",", ": ")).encode()
+)
+open(sys.argv[3], "wb").write(base64.b64decode(sig))
+PYEOF
+
+openssl pkeyutl -verify -pubin -inkey "$TRUST_PUB" -rawin \
+    -in "$CANON" -sigfile "$SIG" >/dev/null 2>&1 \
+    || fail "manifest signature failed against pinned Threshold trust"
+
+# Ordinary downgrades are refused: the sequence must be strictly newer
+# than the active bundle's sequence (first install has no active record).
+ACTIVE_MANIFEST=$AUTHORITY_DIR/active-manifest.json
+if [ -r "$ACTIVE_MANIFEST" ]; then
+    python3 - "$MANIFEST_FILE" "$ACTIVE_MANIFEST" <<'PYEOF' || fail "downgrade refused"
+import json, sys
+new = json.load(open(sys.argv[1]))["sequence"]
+old = json.load(open(sys.argv[2])).get("sequence", 0)
+assert new > old, f"sequence {new} not newer than active {old}"
+PYEOF
 fi
 
 # ── Install / replace the authority atomically ────────────────────────────
@@ -107,6 +146,7 @@ grep -q "$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["dkms"
     "$STAGING/lifecycle" || fail "staged lifecycle does not match bundle identity"
 
 install -Dpm 0755 "$STAGING/lifecycle" "$TMP_BIN"
+mkdir -p "$(dirname "$AUTHORITY_BIN")"
 mv -f "$TMP_BIN" "$AUTHORITY_BIN"
 chmod 0755 "$AUTHORITY_BIN"
 

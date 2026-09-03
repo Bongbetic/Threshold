@@ -36,7 +36,7 @@ def test_lifecycle_preflights_msi_dmi_before_building():
     text = _script()
     assert "dmi/id/sys_vendor" in text
     # Preflight must appear before the first dkms invocation
-    assert text.index("sys_vendor") < text.index("dkms")
+    assert text.index("sys_vendor") < text.index("dkms add")
 
 
 def test_lifecycle_never_invokes_package_managers():

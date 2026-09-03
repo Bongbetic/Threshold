@@ -33,7 +33,9 @@ jobs:
             appstream \
             libgtk-4-dev \
             libadwaita-1-dev \
-            gir1.2-notify-0.7
+            gir1.2-notify-0.7 \
+            gir1.2-dbusmenu-glib-0.4 \
+            dbus
 
       - name: Configure
         run: meson setup builddir

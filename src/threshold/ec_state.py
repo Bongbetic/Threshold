@@ -90,6 +90,21 @@ class ECStatus:
         return self.reason is None or self.reason.is_repairable
 
     @property
+    def recovery_actions(self) -> tuple[str, ...]:
+        """Actions the UI may offer, mapped from state; never automatic."""
+        if self.state == ECSetupState.PENDING_REBOOT:
+            return ("reboot",)
+        if self.state == ECSetupState.UNAVAILABLE:
+            if self.reason is not None and self.reason.is_repairable:
+                return ("repair", "diagnostics")
+            return ("diagnostics",)
+        if self.maintenance == ECMaintenanceStatus.FAILED:
+            return ("repair", "diagnostics")
+        if self.maintenance == ECMaintenanceStatus.PENDING:
+            return ("reboot", "diagnostics")
+        return ()
+
+    @property
     def presentation(self) -> str:
         """Which guidance family the UI shows (neutral | reboot | ...)."""
         if self.state == ECSetupState.PENDING_REBOOT:

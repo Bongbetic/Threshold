@@ -28,7 +28,21 @@
 
 set -u
 
-EC_STATE_DIR=/var/lib/threshold/ec
+# sysroot() lets fake-system tests substitute kernel sysfs/procfs views.
+sysroot() {
+    if [ -n "$FAKE_SYS" ]; then
+        echo "$FAKE_SYS$1"
+    else
+        echo "$1"
+    fi
+}
+
+
+# Paths are overridable for privileged fake-system verification; the
+# installed contract is the default. Fake-system tests also substitute
+# dkms/modprobe/mokutil/udevadm via PATH and the sysfs roots via
+# THRESHOLD_FAKE_SYS.
+EC_STATE_DIR=${THRESHOLD_EC_STATE_DIR:-/var/lib/threshold/ec}
 EC_STATE_FILE=$EC_STATE_DIR/state
 EC_LEDGER=$EC_STATE_DIR/ledger
 EC_KERNEL_DIR=$EC_STATE_DIR/kernels
@@ -38,8 +52,9 @@ EC_LOG=$EC_STATE_DIR/lifecycle.log
 MSI_VENDOR_PATTERN='Micro-Star|MSI'
 MSI_EC_VERSION='0.13.112'
 DKMS_NAME=msi-ec
-DKMS_SRC=/usr/src/$DKMS_NAME-$MSI_EC_VERSION
-MODULES_LOAD=/usr/lib/modules-load.d/msi-ec.conf
+DKMS_SRC=${THRESHOLD_EC_DKMS_SRC:-/usr/src/$DKMS_NAME-$MSI_EC_VERSION}
+MODULES_LOAD=${THRESHOLD_EC_MODULES_LOAD:-/usr/lib/modules-load.d/msi-ec.conf}
+FAKE_SYS=${THRESHOLD_FAKE_SYS:-}
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -50,15 +65,17 @@ log() {
 }
 
 boot_id() {
-    if [ -r /proc/sys/kernel/random/boot_id ]; then
-        cat /proc/sys/kernel/random/boot_id
+    if [ -r "$(sysroot /proc/sys/kernel/random/boot_id)" ]; then
+        cat "$(sysroot /proc/sys/kernel/random/boot_id)"
     else
         uname -r
     fi
 }
 
 running_kernel() {
-    uname -r
+    # Overridable so fake-system tests (and offline repair of a named
+    # kernel booted into another) can target a specific kernel.
+    echo "${THRESHOLD_EC_KERNEL:-$(uname -r)}"
 }
 
 set_setup_state() {
@@ -88,12 +105,12 @@ clear_pending_reboot() {
 }
 
 is_msi_hardware() {
-    [ -r /sys/class/dmi/id/sys_vendor ] && \
-        grep -Eq "$MSI_VENDOR_PATTERN" /sys/class/dmi/id/sys_vendor
+    [ -r "$(sysroot /sys/class/dmi/id/sys_vendor)" ] && \
+        grep -Eq "$MSI_VENDOR_PATTERN" "$(sysroot /sys/class/dmi/id/sys_vendor)"
 }
 
 kernel_headers_present() {
-    [ -d "/lib/modules/$(running_kernel)/build" ]
+    [ -d "$(sysroot /lib/modules/$(running_kernel)/build)" ]
 }
 
 ledger_add() {
@@ -136,14 +153,12 @@ do_setup() {
         log "dkms add failed (may already be registered)."
     fi
     if ! dkms build -m "$DKMS_NAME" -v "$MSI_EC_VERSION" 2>&1; then
-        set_setup_state unavailable build_failed
-        echo failed > "$EC_STATE_DIR/maintenance"
+        set_setup_state unavailable build_failed failed
         log "dkms build failed; older module (if any) remains in control."
         return 0
     fi
     if ! dkms install -m "$DKMS_NAME" -v "$MSI_EC_VERSION" 2>&1; then
-        set_setup_state unavailable build_failed
-        echo failed > "$EC_STATE_DIR/maintenance"
+        set_setup_state unavailable build_failed failed
         log "dkms install failed; older module (if any) remains in control."
         return 0
     fi
@@ -184,7 +199,7 @@ do_setup() {
 
 find_threshold_battery() {
     # Print the first battery sysfs path exposing the threshold interface.
-    for d in /sys/class/power_supply/*; do
+    for d in "$(sysroot /sys/class/power_supply)"/*; do
         [ -f "$d/type" ] && [ "$(cat "$d/type" 2>/dev/null)" = "Battery" ] || continue
         if [ -f "$d/charge_control_end_threshold" ]; then
             echo "$d"
@@ -273,7 +288,7 @@ do_reconcile() {
 
 do_remove() {
     # Never unload a currently loaded working module.
-    if [ -d /sys/devices/platform/msi-ec ] && grep -qw msi_ec /proc/modules 2>/dev/null; then
+    if [ -d "$(sysroot /sys/devices/platform/msi-ec)" ] && grep -qw msi_ec "$(sysroot /proc/modules)" 2>/dev/null; then
         log "msi_ec module loaded and working; leaving it in place."
     fi
 
@@ -309,17 +324,13 @@ do_diagnostics() {
     echo "kernel_records:"
     ls "$EC_KERNEL_DIR" 2>/dev/null || echo "  (none)"
     echo "msi_hardware=$(is_msi_hardware && echo yes || echo no)"
-    echo "module_loaded=$(grep -qw msi_ec /proc/modules 2>/dev/null && echo yes || echo no)"
+    echo "module_loaded=$(grep -qw msi_ec "$(sysroot /proc/modules)" 2>/dev/null && echo yes || echo no)"
 }
 
 # ── Verb dispatch ─────────────────────────────────────────────────────────
 
 case "${1:-}" in
     install-or-upgrade)
-        # Marker: a package owns this authority; the AppImage bootstrap
-        # must never overwrite a package-owned EC authority.
-        mkdir -p "$EC_STATE_DIR"
-        touch "$EC_STATE_DIR/package-owned"
         do_setup
         # Refresh udev after setup attempts (udev rule ownership is the package's).
         udevadm control --reload 2>/dev/null || :

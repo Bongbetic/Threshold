@@ -123,6 +123,8 @@ systemctl preset threshold-boot-reconcile.service >/dev/null 2>&1 || :
 # ownership while the old package is still installed; reconstruction of
 # managed DKMS state happens here. Never fails the transaction.
 %posttrans
+mkdir -p /var/lib/threshold/ec
+touch /var/lib/threshold/ec/package-owned
 if [ -x %{_sbindir}/threshold-ec-lifecycle ]; then
     %{_sbindir}/threshold-ec-lifecycle install-or-upgrade || :
 fi
