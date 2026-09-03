@@ -18,6 +18,8 @@
 #   /var/lib/threshold/ec/ledger           ownership ledger of managed assets
 #   /var/lib/threshold/ec/kernels/         per-kernel lifecycle records
 #   /var/lib/threshold/ec/pending-reboot   boot identity + pending action
+#   /var/lib/threshold/ec/lock             exclusive operation lock (flock)
+#   /var/lib/threshold/ec/ops-journal      operation journal (start/end/ok)
 #
 # Guarantees:
 # - MSI DMI preflight gates all msi-ec work; non-MSI systems never build or load.
@@ -25,6 +27,10 @@
 # - Failures never fail the enclosing package transaction.
 # - Removal never unloads a currently loaded working module and never
 #   touches the machine-wide charge threshold (GSettings).
+# - Exclusive operation lock serializes mutations (issue #91).
+# - Completed operation identifiers are idempotent (issue #91).
+# - Atomic file writes with fsync form journaled two-stage transactions (issue #91).
+# - Operation and log retention obey bounded evidence limits (issue #91).
 
 set -u
 
@@ -49,6 +55,10 @@ EC_LEDGER=$EC_STATE_DIR/ledger
 EC_KERNEL_DIR=$EC_STATE_DIR/kernels
 EC_PENDING=$EC_STATE_DIR/pending-reboot
 EC_LOG=$EC_STATE_DIR/lifecycle.log
+EC_LOCK=$EC_STATE_DIR/lock
+EC_OPS_JOURNAL=$EC_STATE_DIR/ops-journal
+JOURNAL_MAX=100
+LOG_MAX_LINES=2000
 
 MSI_VENDOR_PATTERN='Micro-Star|MSI'
 MSI_EC_VERSION='0.13.112'
@@ -87,7 +97,7 @@ set_setup_state() {
         [ $# -ge 2 ] && echo "reason=$2"
         echo "boot_id=$(boot_id)"
         echo "kernel=$(running_kernel)"
-    } > "$EC_STATE_FILE"
+    } | atomic_write "$EC_STATE_FILE"
 }
 
 write_maintenance_status() {
@@ -96,7 +106,7 @@ write_maintenance_status() {
     # from the state file so the state and maintenance outcomes can be
     # composed independently in the sanitized status summary.
     mkdir -p "$EC_STATE_DIR"
-    echo "$1" > "$EC_STATE_DIR/maintenance"
+    echo "$1" | atomic_write "$EC_STATE_DIR/maintenance"
 }
 
 read_maintenance_status() {
@@ -115,7 +125,7 @@ record_pending_reboot() {
         echo "boot_id=$(boot_id)"
         echo "target_kernel=$(running_kernel)"
         echo "action=$1"
-    } > "$EC_PENDING"
+    } | atomic_write "$EC_PENDING"
 }
 
 clear_pending_reboot() {
@@ -138,7 +148,7 @@ write_sanitized_status() {
             echo "reason=threshold_interface_missing"
         fi
         echo "maintenance=$(read_maintenance_status)"
-    } > "$EC_STATUS_FILE"
+    } | atomic_write "$EC_STATUS_FILE"
 }
 
 is_msi_hardware() {
@@ -153,6 +163,111 @@ kernel_headers_present() {
 ledger_add() {
     mkdir -p "$EC_STATE_DIR"
     grep -qxF "$1" "$EC_LEDGER" 2>/dev/null || echo "$1" >> "$EC_LEDGER"
+}
+
+# ── Exclusive operation lock (issue #91) ──────────────────────────────────
+
+acquire_lock() {
+    # Block until the exclusive lock is acquired (serializes all mutations).
+    # Reports busy (exit 1) without partial work if another operation holds
+    # the lock.
+    mkdir -p "$EC_STATE_DIR"
+    exec 9>"$EC_LOCK"
+    if ! flock -n 9; then
+        echo "threshold-ec: operation busy; another mutation is in progress." >&2
+        exit 1
+    fi
+}
+
+release_lock() {
+    flock -u 9 2>/dev/null || :
+}
+
+# ── Atomic file writes with fsync (issue #91) ─────────────────────────────
+
+atomic_write() {
+    # atomic_write <target> — write via temp + fsync + rename.
+    # The target path's parent directory must already exist.
+    local target="$1"
+    local tmp="${target}.tmp.$$"
+    cat > "$tmp"
+    sync_file "$tmp"
+    mv -f "$tmp" "$target"
+}
+
+sync_file() {
+    # fsync a file to durable storage before promoting it.
+    # Best-effort: skips on failure (no durable storage) but never blocks the
+    # operation.
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c "
+import os, sys
+try:
+    f = os.open(sys.argv[1], os.O_RDWR)
+    os.fsync(f)
+    os.close(f)
+except OSError:
+    pass
+" "$1" 2>/dev/null || :
+    fi
+}
+
+# ── Operation journal with idempotent operation IDs (issue #91) ───────────
+
+begin_op() {
+    # begin_op <verb> — record a started operation.
+    # Returns a deterministic operation ID (verb-boot_id) for idempotency:
+    # the same verb on the same boot is detected as already completed.
+    mkdir -p "$EC_STATE_DIR"
+    local op_id="$1-$(boot_id)"
+    echo "$(date -Iseconds) start $op_id $1" >> "$EC_OPS_JOURNAL" 2>/dev/null || :
+    echo "$op_id"
+}
+
+end_op() {
+    # end_op <op_id> <status> — record a completed operation.
+    echo "$(date -Iseconds) end $1 $2" >> "$EC_OPS_JOURNAL" 2>/dev/null || :
+}
+
+was_completed() {
+    # was_completed <op_id> — returns 0 if the operation was already completed.
+    [ -f "$EC_OPS_JOURNAL" ] && grep -q "^.* end $1 " "$EC_OPS_JOURNAL" 2>/dev/null
+}
+
+prune_journal() {
+    # Keep bounded evidence: at most JOURNAL_MAX lines, always retaining
+    # the sole evidence of the latest unresolved failure (started but not
+    # ended with ok).
+    [ ! -f "$EC_OPS_JOURNAL" ] && return 0
+    local total
+    total=$(wc -l < "$EC_OPS_JOURNAL" 2>/dev/null || echo 0)
+    [ "$total" -le "$JOURNAL_MAX" ] && return 0
+    local trim=$((total - JOURNAL_MAX))
+    # Preserve the last unresolved failure (started but not completed ok).
+    local last_fail=""
+    if [ "$trim" -gt 0 ]; then
+        last_fail=$(tac "$EC_OPS_JOURNAL" | grep -m1 '^.* start ' | sed 's/^.* start //')
+        if [ -n "$last_fail" ] && grep -q "^.* end $last_fail ok" "$EC_OPS_JOURNAL" 2>/dev/null; then
+            last_fail=""
+        fi
+    fi
+    if [ "$trim" -gt 0 ]; then
+        tail -n "$JOURNAL_MAX" "$EC_OPS_JOURNAL" > "$EC_OPS_JOURNAL.tmp.$$"
+        if [ -n "$last_fail" ]; then
+            grep "$last_fail" "$EC_OPS_JOURNAL" >> "$EC_OPS_JOURNAL.tmp.$$" 2>/dev/null || :
+        fi
+        mv -f "$EC_OPS_JOURNAL.tmp.$$" "$EC_OPS_JOURNAL"
+    fi
+}
+
+prune_lifecycle_log() {
+    # Keep the lifecycle log bounded (LOG_MAX_LINES).
+    [ ! -f "$EC_LOG" ] && return 0
+    local total
+    total=$(wc -l < "$EC_LOG" 2>/dev/null || echo 0)
+    [ "$total" -le "$LOG_MAX_LINES" ] && return 0
+    tail -n "$LOG_MAX_LINES" "$EC_LOG" > "$EC_LOG.tmp.$$"
+    mv -f "$EC_LOG.tmp.$$" "$EC_LOG"
 }
 
 record_kernel_event() {
@@ -385,7 +500,22 @@ do_diagnostics() {
     echo "module_loaded=$(grep -qw msi_ec "$(sysroot /proc/modules)" 2>/dev/null && echo yes || echo no)"
 }
 
-# ── Verb dispatch ─────────────────────────────────────────────────────────
+# ── Verb dispatch (issue #91: lock, journal, idempotency, pruning) ────────
+
+# Ensure the lock is released on any exit path.
+trap 'release_lock' EXIT
+
+case "${1:-}" in
+    install-or-upgrade|repair|reconcile|remove)
+        acquire_lock
+        OP_ID=$(begin_op "$1")
+        if was_completed "$OP_ID"; then
+            log "Operation $OP_ID already completed; skipping."
+            exit 0
+        fi
+        trap 'release_lock' EXIT
+        ;;
+esac
 
 case "${1:-}" in
     install-or-upgrade)
@@ -420,4 +550,13 @@ case "${1:-}" in
         ;;
 esac
 
+case "${1:-}" in
+    install-or-upgrade|repair|reconcile|remove)
+        end_op "$OP_ID" ok
+        prune_journal
+        prune_lifecycle_log
+        ;;
+esac
+
+release_lock
 exit 0

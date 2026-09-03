@@ -32,8 +32,52 @@ fail() {
     exit 1
 }
 
+# ── Recovery: clean interrupted state and restore last-known-good (issue #91)
+
+cleanup_interrupted_state() {
+    # Remove orphaned staging from a previous interrupted bootstrap.
+    if [ -d "$STAGING" ]; then
+        echo "threshold-appimage-bootstrap: cleaning orphaned staging" >&2
+        rm -rf "$STAGING"
+    fi
+}
+
+recover_last_known_good() {
+    # If the installed authority is broken after a failed replacement,
+    # restore the last-known-good Threshold-managed asset.  Never resume
+    # an interrupted authorized upgrade — only clean or restore.
+    local lkg="$AUTHORITY_DIR/threshold-ec-lifecycle.last-known-good"
+    if [ -x "$AUTHORITY_BIN" ] && sh -n "$AUTHORITY_BIN" 2>/dev/null; then
+        return 0  # authority is functional, nothing to recover
+    fi
+    if [ -r "$lkg" ]; then
+        echo "threshold-appimage-bootstrap: restoring last-known-good authority" >&2
+        cp -f "$lkg" "$AUTHORITY_BIN"
+        chmod 0755 "$AUTHORITY_BIN"
+    else
+        echo "threshold-appimage-bootstrap: no last-known-good available for recovery" >&2
+    fi
+}
+
+fsync_path() {
+    # fsync a file to durable storage (issue #91).
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c "
+import os, sys
+try:
+    f = os.open(sys.argv[1], os.O_RDWR)
+    os.fsync(f)
+    os.close(f)
+except OSError:
+    pass
+" "$1" 2>/dev/null || :
+    fi
+}
+
 case "${1:-}" in
-    install|update|repair) ;;
+    install|update|repair)
+        cleanup_interrupted_state
+        ;;
     remove)
         # Remove the provider claim; shared operational assets are removed
         # by the authority's own ledger logic (package ownership respected).
@@ -146,6 +190,7 @@ grep -q "$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["dkms"
     "$STAGING/lifecycle" || fail "staged lifecycle does not match bundle identity"
 
 install -Dpm 0755 "$STAGING/lifecycle" "$TMP_BIN"
+fsync_path "$TMP_BIN"
 mkdir -p "$(dirname "$AUTHORITY_BIN")"
 mv -f "$TMP_BIN" "$AUTHORITY_BIN"
 chmod 0755 "$AUTHORITY_BIN"
@@ -158,6 +203,7 @@ install -Dpm 0644 \
 
 # Keep the accepted bundle for evidence retention (bounded).
 cp -f "$MANIFEST_FILE" "$AUTHORITY_DIR/active-manifest.json"
+fsync_path "$AUTHORITY_DIR/active-manifest.json"
 rm -rf "$STAGING"
 
 # Hand over to the installed authority for the actual EC work; the
@@ -167,4 +213,9 @@ case "$1" in
     install|update) VERB=install-or-upgrade ;;
     *) VERB=$1 ;;
 esac
-exec "$AUTHORITY_BIN" "$VERB" 2>&1
+"$AUTHORITY_BIN" "$VERB" 2>&1
+AUTH_EXIT=$?
+if [ "$AUTH_EXIT" -ne 0 ]; then
+    recover_last_known_good || :
+fi
+exit "$AUTH_EXIT"

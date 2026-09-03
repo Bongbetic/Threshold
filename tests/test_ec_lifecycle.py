@@ -122,3 +122,65 @@ def test_status_summary_omits_boot_id():
 def test_lifecycle_removes_status_on_removal():
     text = _script()
     assert 'rm -f "$EC_STATE_FILE" "$EC_STATUS_FILE"' in text
+
+
+# ── Issue #91: exclusive operation lock, journaled transactions ─────────────
+
+
+def test_lifecycle_uses_flock_for_exclusive_lock():
+    text = _script()
+    assert "flock" in text
+    assert "acquire_lock" in text
+    assert "release_lock" in text
+
+
+def test_lifecycle_has_operations_journal():
+    text = _script()
+    assert "ops-journal" in text
+    assert "begin_op" in text
+    assert "end_op" in text
+
+
+def test_lifecycle_uses_atomic_file_writes():
+    text = _script()
+    assert "atomic_write" in text
+    assert "sync_file" in text
+
+
+def test_lifecycle_has_bounded_journal_retention():
+    text = _script()
+    assert "prune_journal" in text
+    assert "JOURNAL_MAX" in text
+
+
+def test_lifecycle_has_bounded_log_retention():
+    text = _script()
+    assert "prune_lifecycle_log" in text
+    assert "LOG_MAX_LINES" in text
+
+
+def test_lifecycle_dispatch_acquires_lock_for_mutations():
+    text = _script()
+    dispatch = text[text.index("Verb dispatch"):]
+    assert "acquire_lock" in dispatch
+    assert "begin_op" in dispatch
+    assert "end_op" in dispatch
+    # diagnostics is read-only and must appear after the lock acquisition
+    # section in the dispatch (it's handled by the second case block)
+    diag_block = dispatch.index("diagnostics)")
+    lock_block = dispatch.index("acquire_lock")
+    # The lock acquisition happens in the first case block, diagnostics
+    # is in the second case block — diagnostics must NOT acquire the lock
+    second_case = dispatch.index("case \"${1", dispatch.index("case \"${1") + 1)
+    assert diag_block > second_case
+
+
+def test_lifecycle_state_layout_includes_lock_and_journal():
+    text = _script()
+    assert "lock" in text
+    assert "ops-journal" in text
+
+
+def test_lifecycle_idempotency_check_present():
+    text = _script()
+    assert "was_completed" in text
