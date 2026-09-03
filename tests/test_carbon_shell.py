@@ -301,6 +301,49 @@ class TestCarbonShellModule:
         assert result is None or isinstance(result, Path)
 
 
+class TestBatteryIconName:
+    """Test artifact-owned icon name resolution for all level × suffix combos."""
+
+    def test_empty_below_10(self):
+        from threshold.carbon_shell import _battery_icon_name
+        assert _battery_icon_name(0, "Discharging") == "com.bongbetic.threshold-battery-empty"
+        assert _battery_icon_name(5, "Discharging") == "com.bongbetic.threshold-battery-empty"
+
+    def test_low_11_to_30(self):
+        from threshold.carbon_shell import _battery_icon_name
+        assert _battery_icon_name(11, "Discharging") == "com.bongbetic.threshold-battery-low"
+        assert _battery_icon_name(30, "Discharging") == "com.bongbetic.threshold-battery-low"
+
+    def test_medium_31_to_50(self):
+        from threshold.carbon_shell import _battery_icon_name
+        assert _battery_icon_name(31, "Discharging") == "com.bongbetic.threshold-battery-medium"
+        assert _battery_icon_name(50, "Discharging") == "com.bongbetic.threshold-battery-medium"
+
+    def test_good_51_to_80(self):
+        from threshold.carbon_shell import _battery_icon_name
+        assert _battery_icon_name(51, "Discharging") == "com.bongbetic.threshold-battery-good"
+        assert _battery_icon_name(80, "Discharging") == "com.bongbetic.threshold-battery-good"
+
+    def test_full_above_80(self):
+        from threshold.carbon_shell import _battery_icon_name
+        assert _battery_icon_name(81, "Discharging") == "com.bongbetic.threshold-battery-full"
+        assert _battery_icon_name(100, "Discharging") == "com.bongbetic.threshold-battery-full"
+
+    def test_charging_suffix(self):
+        from threshold.carbon_shell import _battery_icon_name
+        assert _battery_icon_name(75, "Charging") == "com.bongbetic.threshold-battery-good-charging"
+        assert _battery_icon_name(100, "Charging") == "com.bongbetic.threshold-battery-full-charging"
+
+    def test_full_and_not_charging_have_no_suffix(self):
+        from threshold.carbon_shell import _battery_icon_name
+        assert _battery_icon_name(100, "Full") == "com.bongbetic.threshold-battery-full"
+        assert _battery_icon_name(60, "Not charging") == "com.bongbetic.threshold-battery-good"
+
+    def test_unknown_status_has_no_suffix(self):
+        from threshold.carbon_shell import _battery_icon_name
+        assert _battery_icon_name(50, "Unknown") == "com.bongbetic.threshold-battery-medium"
+
+
 # ── Projected event tests ────────────────────────────────────────────────────
 # Covers: complete, partial, changed-hardware, notification-only, no-battery
 
@@ -879,6 +922,24 @@ class TestTraySetup:
             "apply_threshold", args={"threshold": 70}, state=state
         )
 
+    def test_on_tray_threshold_skipped_on_failure(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+        )
+        handler = _make_handler(state)
+        with patch.object(handler, "_build_state", return_value=state), \
+             patch.object(handler._dispatcher, "dispatch",
+                          return_value=CommandResult(success=False, error_code="write_failed")) as mock_dispatch, \
+             patch.object(handler, "_push_to_js") as mock_push:
+            handler._on_tray_threshold(70)
+        mock_dispatch.assert_called_once()
+        # State not rebuilt after failure; no push to JS.
+        mock_push.assert_not_called()
+
 
 # ── Close-to-tray tests ────────────────────────────────────────────────────
 
@@ -927,6 +988,46 @@ class TestCloseToTray:
         handler._window = MagicMock()
         result = handler.handle_close_request()
         assert result is False
+
+    def test_close_keeps_window_visible_when_tray_lost(self):
+        handler = _make_handler(ThresholdState(battery_available=False))
+        handler._config.get_minimize_to_tray.return_value = True
+        mock_tray = MagicMock()
+        from threshold.notification_area_readiness import ReadinessState
+        mock_tray.readiness = ReadinessState.LOST
+        handler._tray = mock_tray
+        mock_window = MagicMock()
+        handler._window = mock_window
+        result = handler.handle_close_request()
+        assert result is True
+        mock_window.set_visible.assert_not_called()
+
+    def test_close_keeps_window_visible_when_tray_unavailable(self):
+        handler = _make_handler(ThresholdState(battery_available=False))
+        handler._config.get_minimize_to_tray.return_value = True
+        mock_tray = MagicMock()
+        from threshold.notification_area_readiness import ReadinessState
+        mock_tray.readiness = ReadinessState.UNAVAILABLE
+        handler._tray = mock_tray
+        mock_window = MagicMock()
+        handler._window = mock_window
+        result = handler.handle_close_request()
+        assert result is True
+        mock_window.set_visible.assert_not_called()
+
+    def test_close_blocked_pushes_readiness_explanation(self):
+        handler = _make_handler(ThresholdState(battery_available=False))
+        handler._config.get_minimize_to_tray.return_value = True
+        mock_tray = MagicMock()
+        from threshold.notification_area_readiness import ReadinessState
+        mock_tray.readiness = ReadinessState.LOST
+        handler._tray = mock_tray
+        handler._window = MagicMock()
+        handler.handle_close_request()
+        event = _extract_pushed_event(handler)
+        assert event["type"] == "close_blocked"
+        assert event["reason"] == "notification_area_not_ready"
+        assert event["readiness"] == "lost"
 
 
 # ── Preference sync tests ──────────────────────────────────────────────────

@@ -94,17 +94,51 @@ _child = textwrap.dedent("""\
     pix = check("IconPixmap")
     results["pixmap_ok"] = pix is not None
 
-    # Watcher loss must revoke readiness immediately (evidence-based).
+    # Menu path must point to the dbusmenu server.
+    results["menu_path_ok"] = results["props"]["Menu"] == "/com/bongbetic/threshold/menu"
+
+    # ── Phase 1: Watcher loss revokes readiness immediately ───────────────
     Gio.bus_unown_name(watcher_id)
 
     def assert_lost():
         results["readiness_after_loss"] = tray.readiness.value
-        tray.unregister()
-        loop.quit()
+
+        # ── Phase 2: Watcher recovery re-registers automatically ──────────
+        # Re-own the watcher name — the tray's bus-watch should detect it
+        # and start a fresh registration attempt (event-driven, no polling).
+        def on_recovery_bus(conn2, _):
+            node = Gio.DBusNodeInfo.new_for_xml(watcher_xml)
+            conn2.register_object(
+                '/StatusNotifierWatcher',
+                node.lookup_interface('org.kde.StatusNotifierWatcher'),
+                watcher_register, lambda *a: None, None,
+            )
+
+        def on_recovery_name_lost(_conn):
+            pass
+
+        recovery_id = Gio.bus_own_name(
+            Gio.BusType.SESSION, 'org.kde.StatusNotifierWatcher',
+            Gio.BusNameOwnerFlags.NONE, on_recovery_bus, None,
+            on_recovery_name_lost,
+        )
+
+        def check_recovery():
+            results["readiness_after_recovery"] = tray.readiness.value
+            results["recovery_registered_items"] = len(results["registered_items"])
+
+            # ── Phase 3: Clean unregister ─────────────────────────────────
+            tray.unregister()
+            results["unregister_clean"] = True
+            Gio.bus_unown_name(recovery_id)
+            loop.quit()
+            return False
+
+        GLib.timeout_add(500, check_recovery)
         return False
 
     GLib.timeout_add(200, assert_lost)
-    GLib.timeout_add(5000, loop.quit)  # safety bound
+    GLib.timeout_add(8000, loop.quit)  # safety bound
     loop.run()
     print("PROBE:" + json.dumps(results))
 """)
@@ -139,16 +173,30 @@ def test_notification_area_service_probe(tmp_path):
     line = next(l for l in r.stdout.splitlines() if l.startswith("PROBE:"))
     results = json.loads(line[len("PROBE:"):])
 
-    # Registration evidence: the watcher saw the item register.
+    # ── Registration evidence ─────────────────────────────────────────────
     assert "/StatusNotifierItem" in results["registered_items"]
-    # Required SNI properties.
+
+    # ── Required SNI properties ───────────────────────────────────────────
     assert results["props"]["Id"] == "com.bongbetic.threshold"
     assert results["props"]["Category"] == "ApplicationStatus"
-    # Artifact-owned icon, never a host theme fallback.
+
+    # ── Artifact-owned icon ───────────────────────────────────────────────
     assert results["props"]["IconName"].startswith("com.bongbetic.threshold-battery-")
+
+    # ── Menu path resolves to dbusmenu server ─────────────────────────────
     assert results["props"]["Menu"] == "/com/bongbetic/threshold/menu"
+    assert results["menu_path_ok"] is True
     assert results["props"]["ItemIsMenu"] is False
-    # Pixmap fallback published alongside the icon name.
+
+    # ── Pixmap fallback alongside icon name ───────────────────────────────
     assert results["pixmap_ok"]
-    # Watcher loss revokes readiness immediately.
+
+    # ── Watcher loss revokes readiness immediately ────────────────────────
     assert results["readiness_after_loss"] == "lost"
+
+    # ── Watcher recovery re-registers automatically ───────────────────────
+    assert results["readiness_after_recovery"] == "ready"
+    assert results["recovery_registered_items"] >= 2
+
+    # ── Clean unregister succeeds without error ───────────────────────────
+    assert results["unregister_clean"] is True
