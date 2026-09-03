@@ -120,6 +120,9 @@ def build_state(
         ec_setup_state=ec_state,
         ec_setup_reason=ec_reason,
         ec_maintenance_status=ec_maintenance or ECMaintenanceStatus.OK,
+        ec_recovery_actions=(
+            ec_status.recovery_actions if ec_status is not None else ()
+        ),
         health_percent=health_pct,
         health_grade=health_grade(health_pct),
         cycle_count=cycles,

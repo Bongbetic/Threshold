@@ -75,6 +75,8 @@ class ThresholdState:
     ec_setup_state: Optional[ECSetupState] = None
     ec_setup_reason: Optional[ECSetupReason] = None
     ec_maintenance_status: ECMaintenanceStatus = ECMaintenanceStatus.OK
+    # Actions the UI may offer for current EC state (never automatic).
+    ec_recovery_actions: tuple = ()
     
     # ── Diagnostics ───────────────────────────────────────────────────────
     health_percent: Optional[int] = None

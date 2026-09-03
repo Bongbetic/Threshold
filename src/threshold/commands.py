@@ -57,6 +57,8 @@ class ErrorCode:
     WRITE_FAILED = "write_failed"
     PERMISSION_DENIED = "permission_denied"
     EC_MISMATCH = "ec_mismatch"
+    EC_NOT_AVAILABLE = "ec_not_available"
+    EC_OPERATION_FAILED = "ec_operation_failed"
     WINDOW_NOT_AVAILABLE = "window_not_available"
 
 
@@ -202,6 +204,107 @@ class CommandDispatcher:
         self, args: dict, state: ThresholdState | None
     ) -> CommandResult:
         return self._cmd_apply_threshold({"threshold": THRESHOLD_MAX}, state)
+
+    # ── EC lifecycle actions (explicit gestures only; never automatic) ────
+
+    PACKAGE_LIFECYCLE = "/usr/sbin/threshold-ec-lifecycle"
+    APPIMAGE_BOOTSTRAP = "threshold-appimage-bootstrap"
+    PACKAGE_OWNED_MARKER = "/var/lib/threshold/ec/package-owned"
+
+    _EC_VERBS = {
+        "setup": {"package": "install-or-upgrade", "appimage": "install"},
+        "repair": {"package": "repair", "appimage": "repair"},
+    }
+
+    def _cmd_ec_action(
+        self, args: dict, state: ThresholdState | None
+    ) -> CommandResult:
+        """Run one explicitly requested EC mutation via fresh Polkit auth."""
+        import os
+        import subprocess
+
+        action = args.get("action")
+        if action not in self._EC_VERBS:
+            return CommandResult(
+                success=False,
+                error_code=ErrorCode.INVALID_ARGS,
+                message="action must be one of: " + ", ".join(self._EC_VERBS),
+            )
+
+        import pathlib
+        package_owned = pathlib.Path(self.PACKAGE_OWNED_MARKER).exists()
+
+        if package_owned:
+            cmd = ["pkexec", self.PACKAGE_LIFECYCLE, self._EC_VERBS[action]["package"]]
+        elif os.environ.get("THRESHOLD_APPIMAGE"):
+            cmd = [
+                "pkexec", self.APPIMAGE_BOOTSTRAP, self._EC_VERBS[action]["appimage"],
+            ]
+        else:
+            return CommandResult(
+                success=False,
+                error_code=ErrorCode.EC_NOT_AVAILABLE,
+                message="No EC authority installed; nothing to set up or repair",
+            )
+
+        try:
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=600,
+            )
+        except FileNotFoundError:
+            return CommandResult(
+                success=False,
+                error_code=ErrorCode.EC_NOT_AVAILABLE,
+                message="pkexec or the EC authority command is not installed",
+            )
+        except subprocess.TimeoutExpired:
+            return CommandResult(
+                success=False,
+                error_code=ErrorCode.EC_OPERATION_FAILED,
+                message="EC operation timed out",
+            )
+
+        # Stable exit classes per the authority protocol.
+        if result.returncode == 0:
+            return CommandResult(
+                success=True,
+                data={"action": action, "exit_class": "success"},
+            )
+        return CommandResult(
+            success=False,
+            error_code=ErrorCode.EC_OPERATION_FAILED,
+            message=(result.stderr or result.stdout or "").strip()[-500:] or None,
+            data={"action": action, "exit_code": result.returncode},
+        )
+
+    def _cmd_ec_diagnostics(
+        self, args: dict, state: ThresholdState | None
+    ) -> CommandResult:
+        """Unprivileged diagnostics readout (no authorization required)."""
+        import subprocess
+        import pathlib
+        lifecycle = pathlib.Path(self.PACKAGE_LIFECYCLE)
+        if not lifecycle.exists():
+            return CommandResult(
+                success=False,
+                error_code=ErrorCode.EC_NOT_AVAILABLE,
+                message="No EC authority installed",
+            )
+        try:
+            result = subprocess.run(
+                [str(lifecycle), "diagnostics"],
+                capture_output=True, text=True, timeout=30,
+            )
+        except Exception as e:
+            return CommandResult(
+                success=False,
+                error_code=ErrorCode.EC_OPERATION_FAILED,
+                message=str(e),
+            )
+        return CommandResult(
+            success=True,
+            data={"diagnostics": result.stdout, "action": "diagnostics"},
+        )
 
     # ── Preferences ────────────────────────────────────────────────────────────
 

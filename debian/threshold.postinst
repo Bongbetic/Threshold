@@ -6,6 +6,10 @@ set -e
 
 case "$1" in
     configure)
+        # Marker: a package owns this authority; the AppImage bootstrap
+        # must never overwrite a package-owned EC authority.
+        mkdir -p /var/lib/threshold/ec
+        touch /var/lib/threshold/ec/package-owned
         if [ -x /usr/sbin/threshold-ec-lifecycle ]; then
             /usr/sbin/threshold-ec-lifecycle install-or-upgrade || true
         fi

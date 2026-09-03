@@ -125,6 +125,13 @@ def test_ci_has_web_job():
     assert "npm run build" in text
 
 
+def test_ci_installs_dbusmenu_for_notification_area_probe():
+    """CI must install Dbusmenu 0.4 + dbus so the dbus-run-session probe runs."""
+    text = CI_WORKFLOW.read_text(encoding="utf-8")
+    assert "gir1.2-dbusmenu-glib-0.4" in text
+    assert "dbus" in text
+
+
 def test_ci_has_bundle_verify_job():
     """CI must have a bundle-verify job for offline safety and freshness."""
     text = CI_WORKFLOW.read_text(encoding="utf-8")

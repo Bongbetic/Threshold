@@ -62,6 +62,28 @@ m["protocol"] = 1
 m["arch"] = "x86_64"
 json.dump(m, open(sys.argv[1], "w"), sort_keys=True, indent=1)
 PYEOF
+
+# ── Sign the manifest: Ed25519 over the canonical encoding (issue #86) ─────
+SIGNING_KEY=${THRESHOLD_EC_SIGNING_KEY:-}
+[ -n "$SIGNING_KEY" ] || die "THRESHOLD_EC_SIGNING_KEY (Ed25519 PEM) required to sign the EC bundle"
+command -v openssl >/dev/null 2>&1 || die "openssl required for EC bundle signing"
+SEQUENCE=${THRESHOLD_EC_SEQUENCE:-$EPOCH}
+python3 - "$STAGE/manifest.json" "$SEQUENCE" <<'PYEOF'
+import json, sys
+m = json.load(open(sys.argv[1]))
+m["sequence"] = int(sys.argv[2])
+m.pop("signature", None)
+json.dump(m, open(sys.argv[1], "w"), sort_keys=True, indent=1, separators=(",", ": "))
+PYEOF
+openssl pkeyutl -sign -inkey "$SIGNING_KEY" -rawin \
+    -in "$STAGE/manifest.json" -out "$STAGE/manifest.sig"
+SIG=$(base64 -w0 "$STAGE/manifest.sig")
+python3 - "$STAGE/manifest.json" "$SIG" <<'PYEOF'
+import json, sys
+m = json.load(open(sys.argv[1]))
+m["signature"] = sys.argv[2]
+json.dump(m, open(sys.argv[1], "w"), sort_keys=True, indent=1, separators=(",", ": "))
+PYEOF
 cp "$STAGE/manifest.json" "$BUNDLE_DIR/manifest.json"
 
 # ── AppStream metadata + desktop file + icons (already meson-installed) ────
