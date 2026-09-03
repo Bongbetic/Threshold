@@ -33,6 +33,7 @@ export interface BatteryState {
   charge_status: string | null;
   active_threshold: number | null;
   pending_threshold: number | null;
+  charge_threshold: number | null;
   control_mode: string | null;
   battery_identifier: string | null;
   health_percent: number | null;
@@ -47,6 +48,10 @@ export interface BatteryState {
   accent_color: string;
   compact_mode: boolean;
   title_percentage: boolean;
+  ec_setup_state: string | null;
+  ec_setup_reason: string | null;
+  ec_maintenance_status: string;
+  ec_recovery_actions: string[];
 }
 
 /** Theme appearance pushed by Python. */
@@ -81,11 +86,13 @@ export interface ThresholdResult {
 }
 
 /** Error codes from Python command dispatcher. */
-export type ErrorCode = 
+export type ErrorCode =
   | 'unknown_command'
   | 'invalid_args'
   | 'threshold_out_of_range'
   | 'no_battery'
   | 'write_failed'
   | 'permission_denied'
-  | 'ec_mismatch';
+  | 'ec_mismatch'
+  | 'ec_action_failed'
+  | 'ec_not_available';

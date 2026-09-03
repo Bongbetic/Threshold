@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { bridge, sendReady, getState, applyThreshold, restoreThreshold, setDarkMode, setAccentColor, setCompactMode, setTitlePercentage } from '../src/bridge/client';
+import { bridge, sendReady, getState, applyThreshold, restoreThreshold, setDarkMode, setAccentColor, setCompactMode, setTitlePercentage, ecAction, ecDiagnostics } from '../src/bridge/client';
 import fixtures from './fixtures/messages.json';
 
 /** Mock webkit.messageHandlers.threshold.postMessage. */
@@ -313,5 +313,32 @@ describe('Appearance events', () => {
     bridge._handleMessage(JSON.stringify(fixtures.appearance_push_event_dark));
 
     expect(callback).toHaveBeenCalledWith(fixtures.appearance_push_event_dark.data);
+  });
+});
+
+describe('EC actions', () => {
+  it('sends ec_action with correct args', async () => {
+    const { messages } = mockWebKit();
+    const promise = ecAction('repair');
+    resolvePending(fixtures.ec_action_response.data);
+
+    const result = await promise;
+    expect(messages).toHaveLength(1);
+    const sent = JSON.parse(messages[0]);
+    expect(sent.cmd).toBe('ec_action');
+    expect(sent.args).toEqual({ action: 'repair' });
+    expect(result.action).toBe('repair');
+  });
+
+  it('sends ec_diagnostics command', async () => {
+    const { messages } = mockWebKit();
+    const promise = ecDiagnostics();
+    resolvePending(fixtures.ec_diagnostics_response.data);
+
+    const result = await promise;
+    expect(messages).toHaveLength(1);
+    const sent = JSON.parse(messages[0]);
+    expect(sent.cmd).toBe('ec_diagnostics');
+    expect(result.diagnostics).toBeDefined();
   });
 });

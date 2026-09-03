@@ -24,6 +24,7 @@
         "charge_status": "Charging",
         "active_threshold": 80,
         "pending_threshold": 80,
+        "charge_threshold": 80,
         "control_mode": "msi-ec",
         "battery_identifier": "BAT0",
         "health_percent": 92,
@@ -37,7 +38,11 @@
         "dark_mode": false,
         "accent_color": "orange",
         "compact_mode": false,
-        "title_percentage": false
+        "title_percentage": false,
+        "ec_setup_state": "available",
+        "ec_setup_reason": null,
+        "ec_maintenance_status": "ok",
+        "ec_recovery_actions": []
       },
       "appearance": {
         "scheme": "light",
@@ -116,6 +121,7 @@
       "charge_status": "Charging",
       "active_threshold": 80,
       "pending_threshold": 80,
+      "charge_threshold": 80,
       "control_mode": "msi-ec",
       "battery_identifier": "BAT0",
       "health_percent": 92,
@@ -127,7 +133,11 @@
       "alarm_armed": false,
       "alarm_fired": false,
       "dark_mode": false,
-      "accent_color": "orange"
+      "accent_color": "orange",
+      "ec_setup_state": "available",
+      "ec_setup_reason": null,
+      "ec_maintenance_status": "ok",
+      "ec_recovery_actions": []
     }
   },
   "appearance_push_event": {
@@ -145,6 +155,7 @@
       "charge_status": null,
       "active_threshold": null,
       "pending_threshold": null,
+      "charge_threshold": null,
       "control_mode": null,
       "battery_identifier": null,
       "health_percent": null,
@@ -156,7 +167,11 @@
       "alarm_armed": false,
       "alarm_fired": false,
       "dark_mode": false,
-      "accent_color": "orange"
+      "accent_color": "orange",
+      "ec_setup_state": null,
+      "ec_setup_reason": null,
+      "ec_maintenance_status": "ok",
+      "ec_recovery_actions": []
     }
   },
   "notification_only_push_event": {
@@ -167,6 +182,7 @@
       "charge_status": "Charging",
       "active_threshold": null,
       "pending_threshold": 80,
+      "charge_threshold": 80,
       "control_mode": "notify",
       "battery_identifier": "BAT0",
       "health_percent": 78,
@@ -178,7 +194,11 @@
       "alarm_armed": true,
       "alarm_fired": false,
       "dark_mode": false,
-      "accent_color": "orange"
+      "accent_color": "orange",
+      "ec_setup_state": null,
+      "ec_setup_reason": null,
+      "ec_maintenance_status": "ok",
+      "ec_recovery_actions": []
     }
   },
   "partial_data_push_event": {
@@ -189,6 +209,7 @@
       "charge_status": "Discharging",
       "active_threshold": null,
       "pending_threshold": null,
+      "charge_threshold": null,
       "control_mode": "notify",
       "battery_identifier": "BAT0",
       "health_percent": null,
@@ -200,7 +221,11 @@
       "alarm_armed": false,
       "alarm_fired": false,
       "dark_mode": false,
-      "accent_color": "orange"
+      "accent_color": "orange",
+      "ec_setup_state": null,
+      "ec_setup_reason": null,
+      "ec_maintenance_status": "ok",
+      "ec_recovery_actions": []
     }
   },
   "changed_hardware_push_event": {
@@ -211,6 +236,7 @@
       "charge_status": "Full",
       "active_threshold": 65,
       "pending_threshold": 65,
+      "charge_threshold": 80,
       "control_mode": "msi-ec",
       "battery_identifier": "BAT0",
       "health_percent": 92,
@@ -222,7 +248,11 @@
       "alarm_armed": false,
       "alarm_fired": false,
       "dark_mode": false,
-      "accent_color": "orange"
+      "accent_color": "orange",
+      "ec_setup_state": "available",
+      "ec_setup_reason": null,
+      "ec_maintenance_status": "ok",
+      "ec_recovery_actions": []
     }
   },
   "set_dark_mode_request": {
@@ -299,5 +329,193 @@
     "id": "req-accent-14",
     "ok": false,
     "error": "Invalid accent color. Must be one of: blue, green, orange, purple, red"
+  },
+  "ec_action_request": {
+    "id": "req-ec-15",
+    "cmd": "ec_action",
+    "args": {
+      "action": "repair"
+    }
+  },
+  "ec_action_response": {
+    "id": "req-ec-15",
+    "ok": true,
+    "data": {
+      "action": "repair",
+      "status": "success"
+    }
+  },
+  "ec_diagnostics_request": {
+    "id": "req-ec-16",
+    "cmd": "ec_diagnostics"
+  },
+  "ec_diagnostics_response": {
+    "id": "req-ec-16",
+    "ok": true,
+    "data": {
+      "diagnostics": "EC module loaded, threshold interface available"
+    }
+  },
+  "ec_available_push_event": {
+    "event": "battery",
+    "data": {
+      "battery_available": true,
+      "charge_percent": 75,
+      "charge_status": "Charging",
+      "active_threshold": 80,
+      "pending_threshold": 80,
+      "charge_threshold": 80,
+      "control_mode": "msi-ec",
+      "battery_identifier": "BAT0",
+      "health_percent": 92,
+      "health_grade": "Good",
+      "power_source": "AC Adapter",
+      "cycle_count": 142,
+      "capacity_full_wh": 52.5,
+      "capacity_design_wh": 56,
+      "alarm_armed": false,
+      "alarm_fired": false,
+      "dark_mode": false,
+      "accent_color": "orange",
+      "ec_setup_state": "available",
+      "ec_setup_reason": null,
+      "ec_maintenance_status": "ok",
+      "ec_recovery_actions": []
+    }
+  },
+  "ec_pending_reboot_push_event": {
+    "event": "battery",
+    "data": {
+      "battery_available": true,
+      "charge_percent": 75,
+      "charge_status": "Charging",
+      "active_threshold": 80,
+      "pending_threshold": 80,
+      "charge_threshold": 80,
+      "control_mode": "msi-ec",
+      "battery_identifier": "BAT0",
+      "health_percent": 92,
+      "health_grade": "Good",
+      "power_source": "AC Adapter",
+      "cycle_count": 142,
+      "capacity_full_wh": 52.5,
+      "capacity_design_wh": 56,
+      "alarm_armed": false,
+      "alarm_fired": false,
+      "dark_mode": false,
+      "accent_color": "orange",
+      "ec_setup_state": "pending_reboot",
+      "ec_setup_reason": null,
+      "ec_maintenance_status": "pending",
+      "ec_recovery_actions": ["reboot"]
+    }
+  },
+  "ec_unavailable_repairable_push_event": {
+    "event": "battery",
+    "data": {
+      "battery_available": true,
+      "charge_percent": 75,
+      "charge_status": "Charging",
+      "active_threshold": 80,
+      "pending_threshold": 80,
+      "charge_threshold": 80,
+      "control_mode": "msi-ec",
+      "battery_identifier": "BAT0",
+      "health_percent": 92,
+      "health_grade": "Good",
+      "power_source": "AC Adapter",
+      "cycle_count": 142,
+      "capacity_full_wh": 52.5,
+      "capacity_design_wh": 56,
+      "alarm_armed": false,
+      "alarm_fired": false,
+      "dark_mode": false,
+      "accent_color": "orange",
+      "ec_setup_state": "unavailable",
+      "ec_setup_reason": "load_failed_secure_boot",
+      "ec_maintenance_status": "ok",
+      "ec_recovery_actions": ["repair", "diagnostics"]
+    }
+  },
+  "ec_unavailable_nonrepairable_push_event": {
+    "event": "battery",
+    "data": {
+      "battery_available": true,
+      "charge_percent": 75,
+      "charge_status": "Charging",
+      "active_threshold": null,
+      "pending_threshold": 80,
+      "charge_threshold": 80,
+      "control_mode": "notify",
+      "battery_identifier": "BAT0",
+      "health_percent": 92,
+      "health_grade": "Good",
+      "power_source": "AC Adapter",
+      "cycle_count": 142,
+      "capacity_full_wh": 52.5,
+      "capacity_design_wh": 56,
+      "alarm_armed": true,
+      "alarm_fired": false,
+      "dark_mode": false,
+      "accent_color": "orange",
+      "ec_setup_state": "unavailable",
+      "ec_setup_reason": "not_msi_hardware",
+      "ec_maintenance_status": "ok",
+      "ec_recovery_actions": ["diagnostics"]
+    }
+  },
+  "ec_maintenance_failed_push_event": {
+    "event": "battery",
+    "data": {
+      "battery_available": true,
+      "charge_percent": 75,
+      "charge_status": "Charging",
+      "active_threshold": 80,
+      "pending_threshold": 80,
+      "charge_threshold": 80,
+      "control_mode": "msi-ec",
+      "battery_identifier": "BAT0",
+      "health_percent": 92,
+      "health_grade": "Good",
+      "power_source": "AC Adapter",
+      "cycle_count": 142,
+      "capacity_full_wh": 52.5,
+      "capacity_design_wh": 56,
+      "alarm_armed": false,
+      "alarm_fired": false,
+      "dark_mode": false,
+      "accent_color": "orange",
+      "ec_setup_state": "available",
+      "ec_setup_reason": null,
+      "ec_maintenance_status": "failed",
+      "ec_recovery_actions": ["repair", "diagnostics"]
+    }
+  },
+  "charge_threshold_divergent_push_event": {
+    "event": "battery",
+    "data": {
+      "battery_available": true,
+      "charge_percent": 75,
+      "charge_status": "Charging",
+      "active_threshold": 65,
+      "pending_threshold": 80,
+      "charge_threshold": 80,
+      "control_mode": "msi-ec",
+      "battery_identifier": "BAT0",
+      "health_percent": 92,
+      "health_grade": "Good",
+      "power_source": "AC Adapter",
+      "cycle_count": 142,
+      "capacity_full_wh": 52.5,
+      "capacity_design_wh": 56,
+      "alarm_armed": false,
+      "alarm_fired": false,
+      "dark_mode": false,
+      "accent_color": "orange",
+      "ec_setup_state": "pending_reboot",
+      "ec_setup_reason": null,
+      "ec_maintenance_status": "pending",
+      "ec_recovery_actions": ["reboot"]
+    }
   }
 }

@@ -45,6 +45,7 @@ import {
   setDarkMode, setAccentColor, setTitlePercentage,
   minimizeWindow, maximizeWindow, restoreWindow, toggleMaximizeWindow,
   closeWindow, beginWindowDrag,
+  ecAction, ecDiagnostics,
 } from './bridge/client';
 import type { BatteryState, AppearanceState } from './types/protocol';
 import { t } from './i18n/t';
@@ -61,6 +62,38 @@ function controlModeLabel(mode: string | null): string {
   if (!mode) return '—';
   return CONTROL_MODE_LABELS[mode] || mode;
 }
+
+// ── EC status labels (project glossary) ───────────────────────────────────
+
+const EC_SETUP_STATE_LABELS: Record<string, string> = {
+  'available': 'Available',
+  'pending_reboot': 'Pending reboot',
+  'unavailable': 'Unavailable',
+};
+
+const EC_SETUP_REASON_LABELS: Record<string, string> = {
+  'not_msi_hardware': 'Not MSI hardware',
+  'dkms_missing': 'DKMS not installed',
+  'kernel_headers_missing': 'Kernel headers missing',
+  'build_failed': 'Module build failed',
+  'load_failed': 'Module failed to load',
+  'load_failed_secure_boot': 'Module blocked by Secure Boot',
+  'firmware_unsupported': 'Firmware not supported',
+  'verification_failed': 'Verification failed',
+  'threshold_interface_missing': 'Threshold interface missing',
+};
+
+const EC_MAINTENANCE_LABELS: Record<string, string> = {
+  'ok': 'OK',
+  'pending': 'Pending',
+  'failed': 'Failed',
+};
+
+const EC_RECOVERY_LABELS: Record<string, string> = {
+  'repair': 'Repair',
+  'diagnostics': 'Diagnostics',
+  'reboot': 'Reboot',
+};
 
 // ── Format helpers ──────────────────────────────────────────────────────────
 
@@ -232,7 +265,10 @@ function renderBattery(state: BatteryState): void {
 
   // Active Threshold card
   const thresholdEl = el('active-threshold');
-    if (thresholdEl) thresholdEl.textContent = formatValue(state.active_threshold, '%');
+  if (thresholdEl) thresholdEl.textContent = formatValue(state.active_threshold, '%');
+
+  const chargeThresholdEl = el('charge-threshold');
+  if (chargeThresholdEl) chargeThresholdEl.textContent = formatValue(state.charge_threshold, '%');
 
   // Threshold Mode card
   const modeEl = el('control-mode');
@@ -276,6 +312,13 @@ function renderBattery(state: BatteryState): void {
 
   const controlStateTitle = el('control-state-title');
   const controlStateMessage = el('control-state-message');
+  const ecStatus = el('ec-status');
+  const ecSetupState = el('ec-setup-state');
+  const ecReasonRow = el('ec-reason-row');
+  const ecSetupReason = el('ec-setup-reason');
+  const ecMaintenanceStatus = el('ec-maintenance-status');
+  const ecRecoveryActions = el('ec-recovery-actions');
+  const ecActionButtons = el('ec-action-buttons');
 
   if (!state.battery_available) {
     if (controlStateTitle) controlStateTitle.textContent = t('No Battery Detected');
@@ -283,6 +326,7 @@ function renderBattery(state: BatteryState): void {
       controlStateMessage.textContent = t('No charge-threshold-capable battery was found.');
     }
     if (statusText) statusText.textContent = t('No battery detected');
+    if (ecStatus) ecStatus.setAttribute('hidden', 'true');
     return;
   }
 
@@ -298,6 +342,82 @@ function renderBattery(state: BatteryState): void {
       controlStateMessage.textContent = controlModeLabel(state.control_mode);
     }
     if (statusText) statusText.textContent = t('Connected');
+  }
+
+  // EC status display
+  renderEcStatus(state);
+}
+
+/** Render EC setup/maintenance status and recovery actions. */
+function renderEcStatus(state: BatteryState): void {
+  const ecStatusEl = document.getElementById('ec-status');
+  const ecSetupStateEl = document.getElementById('ec-setup-state');
+  const ecReasonRowEl = document.getElementById('ec-reason-row');
+  const ecSetupReasonEl = document.getElementById('ec-setup-reason');
+  const ecMaintenanceEl = document.getElementById('ec-maintenance-status');
+  const ecRecoveryEl = document.getElementById('ec-recovery-actions');
+  const ecActionBtnsEl = document.getElementById('ec-action-buttons');
+
+  // EC fields are only meaningful when battery is available and control mode is not notify-only
+  const hasEcData = state.battery_available && state.ec_setup_state !== null;
+
+  if (!hasEcData || !ecStatusEl) {
+    if (ecStatusEl) ecStatusEl.setAttribute('hidden', 'true');
+    return;
+  }
+
+  ecStatusEl.removeAttribute('hidden');
+
+  // EC Setup state
+  if (ecSetupStateEl) {
+    ecSetupStateEl.textContent = EC_SETUP_STATE_LABELS[state.ec_setup_state!] || state.ec_setup_state || '—';
+  }
+
+  // EC Setup reason (only shown when unavailable)
+  if (ecReasonRowEl && ecSetupReasonEl) {
+    if (state.ec_setup_reason) {
+      ecReasonRowEl.removeAttribute('hidden');
+      ecSetupReasonEl.textContent = EC_SETUP_REASON_LABELS[state.ec_setup_reason] || state.ec_setup_reason;
+    } else {
+      ecReasonRowEl.setAttribute('hidden', 'true');
+    }
+  }
+
+  // EC Maintenance status
+  if (ecMaintenanceEl) {
+    ecMaintenanceEl.textContent = EC_MAINTENANCE_LABELS[state.ec_maintenance_status] || state.ec_maintenance_status;
+  }
+
+  // EC Recovery actions
+  if (ecRecoveryEl && ecActionBtnsEl) {
+    if (state.ec_recovery_actions.length > 0) {
+      ecRecoveryEl.removeAttribute('hidden');
+      ecActionBtnsEl.innerHTML = '';
+      for (const action of state.ec_recovery_actions) {
+        const btn = document.createElement('button');
+        btn.className = 'action-btn action-btn--secondary';
+        btn.textContent = EC_RECOVERY_LABELS[action] || action;
+        btn.setAttribute('data-ec-action', action);
+        btn.addEventListener('click', () => handleEcAction(action));
+        ecActionBtnsEl.appendChild(btn);
+      }
+    } else {
+      ecRecoveryEl.setAttribute('hidden', 'true');
+    }
+  }
+}
+
+/** Handle an EC recovery action button click. */
+async function handleEcAction(action: string): Promise<void> {
+  try {
+    if (action === 'diagnostics') {
+      await ecDiagnostics();
+    } else {
+      await ecAction(action);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : t('Unknown error');
+    showToast(t('EC action failed: {message}').replace('{message}', message), 'error');
   }
 }
 
