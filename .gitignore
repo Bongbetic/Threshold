@@ -24,3 +24,5 @@ debian/threshold/
 # Local tool state (fabric mesh/MCP cache, release downloads)
 /.pi/
 /web/node_modules/
+/graphify-out/
+.gitignore
