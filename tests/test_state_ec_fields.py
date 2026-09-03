@@ -95,3 +95,24 @@ def test_adapter_passes_ec_status_through(tmp_path):
         battery_path=None, config=config, ec_status=ec
     )
     assert state.ec_setup_state == ECSetupState.PENDING_REBOOT
+
+
+def test_adapter_reads_ec_status_from_file(tmp_path, monkeypatch):
+    from threshold.adapter import build_state
+    from threshold.ec_status import EC_STATUS_FILE
+
+    status_file = tmp_path / "status"
+    status_file.write_text(
+        "setup_state=unavailable\n"
+        "reason=not_msi_hardware\n"
+        "maintenance=ok\n"
+        "charge_threshold=75\n"
+    )
+    monkeypatch.setattr(
+        "threshold.ec_status.EC_STATUS_FILE", status_file
+    )
+    config = Config(settings=FakeGSettings())
+    state = build_state(battery_path=None, config=config)
+    assert state.ec_setup_state == ECSetupState.UNAVAILABLE
+    assert state.ec_setup_reason == ECSetupReason.NOT_MSI_HARDWARE
+    assert state.charge_threshold == 75

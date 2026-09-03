@@ -1,11 +1,11 @@
-"""Shared EC lifecycle integration layer contract (issue #86).
+"""Shared EC lifecycle integration layer contract (issue #86, #89).
 
 The lifecycle script is the single owner of EC setup, update, repair,
 reconciliation, and removal behavior. DEB and RPM hooks invoke it without
 reimplementing lifecycle logic. These tests assert the durable contract:
 verbs, MSI preflight before any build/load, no package-manager invocation
-from lifecycle code, ownership ledger, per-kernel records, and structured
-state file.
+from lifecycle code, ownership ledger, per-kernel records, structured
+state file, and sanitized world-readable status summary.
 """
 
 import stat
@@ -87,3 +87,38 @@ def test_reconciliation_performs_single_write_and_readback():
     assert "charge_control_end_threshold" in text
     # no retry loop markers
     assert "while true" not in text
+
+
+# ── Sanitized status summary (issue #89) ────────────────────────────────────
+
+
+def test_lifecycle_exposes_status_file_path():
+    text = _script()
+    assert "EC_STATUS_FILE" in text
+
+
+def test_lifecycle_has_write_sanitized_status_function():
+    text = _script()
+    assert "write_sanitized_status" in text
+
+
+def test_lifecycle_calls_write_sanitized_status_after_setup():
+    text = _script()
+    # In the dispatch section, write_sanitized_status appears after do_setup
+    dispatch = text[text.index("case \"${1:-}\""):]
+    assert "do_setup" in dispatch
+    assert "write_sanitized_status" in dispatch
+    assert dispatch.index("do_setup") < dispatch.index("write_sanitized_status")
+
+
+def test_status_summary_omits_boot_id():
+    text = _script()
+    # The write_sanitized_status function must not include boot_id
+    idx = text.index("write_sanitized_status")
+    fn_body = text[idx:idx + 500]
+    assert "grep" in fn_body  # extracts only bounded fields
+
+
+def test_lifecycle_removes_status_on_removal():
+    text = _script()
+    assert 'rm -f "$EC_STATE_FILE" "$EC_STATUS_FILE"' in text

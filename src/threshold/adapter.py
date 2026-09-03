@@ -20,6 +20,7 @@ from threshold.battery import (
 from threshold.config import Config
 from threshold.state import ThresholdState
 from threshold.ec_state import ECMaintenanceStatus
+from threshold.ec_status import read_ec_status
 
 
 def detect_system_theme_scheme() -> str:
@@ -100,6 +101,9 @@ def build_state(
     design_wh = capacity[1] if capacity else None
     
     system_theme = detect_system_theme_scheme()
+
+    if ec_status is None:
+        ec_status = read_ec_status()
 
     ec_state = ec_status.state if ec_status is not None else None
     ec_reason = ec_status.reason if ec_status is not None else None
