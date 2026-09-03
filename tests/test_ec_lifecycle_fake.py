@@ -714,3 +714,161 @@ class TestFakeSystemLifecycle:
         run_lifecycle(fake, "install-or-upgrade")
         run_lifecycle(fake, "remove", boot_id="boot-a")
         assert (fake.state / "charge-threshold").read_text() == "75\n"
+
+    # ── Issue #92: kernel-known-good tracking ────────────────────────────────
+
+    def test_successful_reconcile_marks_kernel_known_good(self, fake_system):
+        """Successful reconciliation marks the kernel as known-good."""
+        fake = fake_system
+        make_msi(fake)
+        add_threshold_interface(fake)
+        (fake.state / "charge-threshold").write_text("80\n")
+        run_lifecycle(fake, "reconcile", boot_id="boot-b")
+        kg_marker = fake.state / "kernels" / "fake-kernel.known-good"
+        assert kg_marker.exists()
+
+    def test_reconcile_noop_marks_kernel_known_good(self, fake_system):
+        """Reconciliation no-write (active matches desired) also marks kernel known-good."""
+        fake = fake_system
+        make_msi(fake)
+        add_threshold_interface(fake)
+        (fake.state / "charge-threshold").write_text("80\n")
+        (fake.battery / "charge_control_end_threshold").write_text("80\n")
+        run_lifecycle(fake, "reconcile", boot_id="boot-b")
+        kg_marker = fake.state / "kernels" / "fake-kernel.known-good"
+        assert kg_marker.exists()
+
+    def test_reconcile_readback_failure_does_not_mark_known_good(self, fake_system):
+        """Reconciliation readback mismatch does NOT mark kernel as known-good."""
+        fake = fake_system
+        make_msi(fake)
+        add_threshold_interface(fake)
+        (fake.state / "charge-threshold").write_text("70\n")
+        # Stub: sysfs writes silently do nothing (readback stays 80).
+        (fake.battery / "charge_control_end_threshold").write_text("80\n")
+        (fake.battery / "charge_control_end_threshold").chmod(0o444)
+        run_lifecycle(fake, "reconcile", boot_id="boot-b")
+        (fake.battery / "charge_control_end_threshold").chmod(0o644)
+        kg_marker = fake.state / "kernels" / "fake-kernel.known-good"
+        assert not kg_marker.exists()
+
+    def test_build_failure_preserves_older_known_good_markers(self, fake_system):
+        """A failed new-kernel build preserves older known-good kernel markers."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        # First: successful reconciliation creates a known-good marker
+        (fake.state / "charge-threshold").write_text("80\n")
+        run_lifecycle(fake, "reconcile", boot_id="boot-a")
+        kg_marker = fake.state / "kernels" / "fake-kernel.known-good"
+        assert kg_marker.exists()
+        # Now: simulate a failed upgrade — the old marker must survive
+        stub(Path(fake.env["PATH"].split(":")[0]) / "dkms", """\
+            #!/bin/sh
+            [ "$1" = build ] && exit 1
+            exit 0
+            """)
+        run_lifecycle(fake, "install-or-upgrade")
+        # Older known-good marker is preserved
+        assert kg_marker.exists()
+
+    def test_multiple_kernels_track_known_good_independently(self, fake_system):
+        """Different kernels have independent known-good markers."""
+        fake = fake_system
+        make_msi(fake)
+        add_threshold_interface(fake)
+        (fake.state / "charge-threshold").write_text("80\n")
+        # Kernel A: successful reconciliation
+        run_lifecycle(fake, "reconcile", boot_id="boot-a")
+        kg_a = fake.state / "kernels" / "fake-kernel.known-good"
+        assert kg_a.exists()
+        # Kernel B: different kernel with failed build
+        fake.env["THRESHOLD_EC_KERNEL"] = "new-kernel"
+        (fake.sysroot / "lib/modules/new-kernel").mkdir(parents=True)
+        stub(Path(fake.env["PATH"].split(":")[0]) / "dkms", """\
+            #!/bin/sh
+            [ "$1" = build ] && exit 1
+            exit 0
+            """)
+        run_lifecycle(fake, "install-or-upgrade")
+        kg_b = fake.state / "kernels" / "new-kernel.known-good"
+        assert not kg_b.exists()
+        # Kernel A's marker is still there
+        assert kg_a.exists()
+
+    # ── Issue #92: support export ────────────────────────────────────────────
+
+    def test_support_export_verb_succeeds(self, fake_system):
+        """The support-export verb runs successfully and produces output."""
+        fake = fake_system
+        make_msi(fake)
+        add_threshold_interface(fake)
+        r = run_lifecycle(fake, "support-export")
+        assert r.returncode == 0
+        assert "Threshold EC Support Export" in r.stdout
+
+    def test_support_export_excludes_boot_id(self, fake_system):
+        """Support export does not expose boot_id (privileged evidence)."""
+        fake = fake_system
+        make_msi(fake)
+        add_threshold_interface(fake)
+        (fake.state / "charge-threshold").write_text("80\n")
+        run_lifecycle(fake, "install-or-upgrade")
+        r = run_lifecycle(fake, "support-export")
+        # boot_id should not appear in the output (it's privileged)
+        assert "boot_id=" not in r.stdout
+
+    def test_support_export_excludes_dkms_source_paths(self, fake_system):
+        """Support export does not expose DKMS source locations."""
+        fake = fake_system
+        make_msi(fake)
+        add_threshold_interface(fake)
+        r = run_lifecycle(fake, "support-export")
+        assert fake.env["THRESHOLD_EC_DKMS_SRC"] not in r.stdout
+
+    def test_support_export_shows_known_good_kernels(self, fake_system):
+        """Support export includes known-good kernel information."""
+        fake = fake_system
+        make_msi(fake)
+        add_threshold_interface(fake)
+        (fake.state / "charge-threshold").write_text("80\n")
+        run_lifecycle(fake, "reconcile", boot_id="boot-b")
+        r = run_lifecycle(fake, "support-export")
+        assert "Known-Good Kernels" in r.stdout
+        assert "fake-kernel" in r.stdout
+
+    def test_support_export_shows_charge_threshold_policy(self, fake_system):
+        """Support export includes the machine-wide charge threshold policy."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.state / "charge-threshold").write_text("75\n")
+        r = run_lifecycle(fake, "support-export")
+        assert "charge_threshold=75" in r.stdout
+
+    def test_support_export_redacts_home_paths(self, fake_system):
+        """Support export redacts home directory paths for privacy."""
+        fake = fake_system
+        make_msi(fake)
+        # Write a lifecycle log with a home path
+        (fake.state / "lifecycle.log").write_text(
+            "2026-01-01 Installed by /home/user/threshold\n"
+        )
+        r = run_lifecycle(fake, "support-export")
+        assert "/home/user" not in r.stdout
+        assert "<redacted>" in r.stdout
+
+    def test_support_export_not_write_status(self, fake_system):
+        """Support export does not produce a sanitized status file."""
+        fake = fake_system
+        make_msi(fake)
+        r = run_lifecycle(fake, "support-export")
+        assert not (fake.state / "status").exists()
+
+    def test_support_export_not_acquire_lock(self, fake_system):
+        """Support export does not acquire the exclusive operation lock."""
+        fake = fake_system
+        make_msi(fake)
+        r = run_lifecycle(fake, "support-export")
+        # No journal entry should be created (read-only)
+        assert not (fake.state / "ops-journal").exists()
