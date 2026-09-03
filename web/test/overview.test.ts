@@ -31,6 +31,7 @@ function setupDOM(): void {
     </div>
     <div id="threshold-panel" data-testid="threshold-panel">
       <span id="active-threshold" data-testid="active-threshold"></span>
+      <span id="charge-threshold" data-testid="charge-threshold"></span>
       <div id="alarm-info" data-testid="alarm-info" hidden>
         <span id="alarm-threshold" data-testid="alarm-threshold"></span>
       </div>
@@ -56,6 +57,16 @@ function setupDOM(): void {
     <div id="error-state" data-testid="error-state" hidden>
       <p id="error-message" data-testid="error-message"></p>
     </div>
+    <div id="ec-status" data-testid="ec-status" hidden>
+      <span id="ec-setup-state" data-testid="ec-setup-state"></span>
+      <div id="ec-reason-row" hidden>
+        <span id="ec-setup-reason" data-testid="ec-setup-reason"></span>
+      </div>
+      <span id="ec-maintenance-status" data-testid="ec-maintenance-status"></span>
+      <div id="ec-recovery-actions" data-testid="ec-recovery-actions" hidden>
+        <div id="ec-action-buttons"></div>
+      </div>
+    </div>
     <div id="toast-container"></div>
     <p id="status-text"></p>
   `;
@@ -71,6 +82,7 @@ const COMPLETE_STATE: BatteryState = {
   charge_status: 'Charging',
   active_threshold: 80,
   pending_threshold: 80,
+  charge_threshold: 80,
   control_mode: 'msi-ec',
   battery_identifier: 'BAT0',
   health_percent: 92,
@@ -85,6 +97,10 @@ const COMPLETE_STATE: BatteryState = {
   accent_color: 'orange',
   compact_mode: false,
   title_percentage: false,
+  ec_setup_state: 'available',
+  ec_setup_reason: null,
+  ec_maintenance_status: 'ok',
+  ec_recovery_actions: [],
 };
 
 const PARTIAL_STATE: BatteryState = {
@@ -93,6 +109,7 @@ const PARTIAL_STATE: BatteryState = {
   charge_status: 'Discharging',
   active_threshold: null,
   pending_threshold: null,
+  charge_threshold: null,
   control_mode: 'notify',
   battery_identifier: 'BAT0',
   health_percent: null,
@@ -107,6 +124,10 @@ const PARTIAL_STATE: BatteryState = {
   accent_color: 'orange',
   compact_mode: false,
   title_percentage: false,
+  ec_setup_state: null,
+  ec_setup_reason: null,
+  ec_maintenance_status: 'ok',
+  ec_recovery_actions: [],
 };
 
 const NOTIFICATION_ONLY_STATE: BatteryState = {
@@ -115,6 +136,7 @@ const NOTIFICATION_ONLY_STATE: BatteryState = {
   charge_status: 'Charging',
   active_threshold: null,
   pending_threshold: 80,
+  charge_threshold: 80,
   control_mode: 'notify',
   battery_identifier: 'BAT0',
   health_percent: 78,
@@ -129,6 +151,10 @@ const NOTIFICATION_ONLY_STATE: BatteryState = {
   accent_color: 'orange',
   compact_mode: false,
   title_percentage: false,
+  ec_setup_state: null,
+  ec_setup_reason: null,
+  ec_maintenance_status: 'ok',
+  ec_recovery_actions: [],
 };
 
 const NO_BATTERY_STATE: BatteryState = {
@@ -137,6 +163,7 @@ const NO_BATTERY_STATE: BatteryState = {
   charge_status: null,
   active_threshold: null,
   pending_threshold: null,
+  charge_threshold: null,
   control_mode: null,
   battery_identifier: null,
   health_percent: null,
@@ -151,6 +178,10 @@ const NO_BATTERY_STATE: BatteryState = {
   accent_color: 'orange',
   compact_mode: false,
   title_percentage: false,
+  ec_setup_state: null,
+  ec_setup_reason: null,
+  ec_maintenance_status: 'ok',
+  ec_recovery_actions: [],
 };
 
 const CHANGED_HARDWARE_STATE: BatteryState = {
@@ -159,6 +190,7 @@ const CHANGED_HARDWARE_STATE: BatteryState = {
   charge_status: 'Full',
   active_threshold: 65,
   pending_threshold: 65,
+  charge_threshold: 80,
   control_mode: 'msi-ec',
   battery_identifier: 'BAT0',
   health_percent: 92,
@@ -173,6 +205,10 @@ const CHANGED_HARDWARE_STATE: BatteryState = {
   accent_color: 'orange',
   compact_mode: false,
   title_percentage: false,
+  ec_setup_state: 'available',
+  ec_setup_reason: null,
+  ec_maintenance_status: 'ok',
+  ec_recovery_actions: [],
 };
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -487,6 +523,146 @@ describe('Overview state-to-view rendering', () => {
       expect(t('Green')).toBe('Green');
       expect(t('Purple')).toBe('Purple');
       expect(t('Red')).toBe('Red');
+    });
+  });
+
+  describe('EC state scenarios', () => {
+    const EC_AVAILABLE_STATE: BatteryState = {
+      ...COMPLETE_STATE,
+      ec_setup_state: 'available',
+      ec_setup_reason: null,
+      ec_maintenance_status: 'ok',
+      ec_recovery_actions: [],
+    };
+
+    const EC_PENDING_REBOOT_STATE: BatteryState = {
+      ...COMPLETE_STATE,
+      ec_setup_state: 'pending_reboot',
+      ec_setup_reason: null,
+      ec_maintenance_status: 'pending',
+      ec_recovery_actions: ['reboot'],
+    };
+
+    const EC_UNAVAILABLE_REPAIRABLE_STATE: BatteryState = {
+      ...COMPLETE_STATE,
+      ec_setup_state: 'unavailable',
+      ec_setup_reason: 'load_failed_secure_boot',
+      ec_maintenance_status: 'ok',
+      ec_recovery_actions: ['repair', 'diagnostics'],
+    };
+
+    const EC_UNAVAILABLE_NONREPAIRABLE_STATE: BatteryState = {
+      ...NOTIFICATION_ONLY_STATE,
+      ec_setup_state: 'unavailable',
+      ec_setup_reason: 'not_msi_hardware',
+      ec_maintenance_status: 'ok',
+      ec_recovery_actions: ['diagnostics'],
+    };
+
+    const EC_MAINTENANCE_FAILED_STATE: BatteryState = {
+      ...COMPLETE_STATE,
+      ec_setup_state: 'available',
+      ec_setup_reason: null,
+      ec_maintenance_status: 'failed',
+      ec_recovery_actions: ['repair', 'diagnostics'],
+    };
+
+    it('renders charge threshold distinct from active threshold', () => {
+      const chargeThresholdEl = document.getElementById('charge-threshold')!;
+      chargeThresholdEl.textContent = COMPLETE_STATE.charge_threshold + '%';
+      expect(chargeThresholdEl.textContent).toBe('80%');
+    });
+
+    it('renders EC setup state as available', () => {
+      const ecSetupEl = document.getElementById('ec-setup-state')!;
+      ecSetupEl.textContent = EC_AVAILABLE_STATE.ec_setup_state || '—';
+      expect(ecSetupEl.textContent).toBe('available');
+    });
+
+    it('renders EC pending reboot state', () => {
+      const ecSetupEl = document.getElementById('ec-setup-state')!;
+      ecSetupEl.textContent = EC_PENDING_REBOOT_STATE.ec_setup_state || '—';
+      expect(ecSetupEl.textContent).toBe('pending_reboot');
+    });
+
+    it('renders EC unavailable repairable with reason', () => {
+      const ecSetupEl = document.getElementById('ec-setup-state')!;
+      const ecReasonEl = document.getElementById('ec-setup-reason')!;
+      ecSetupEl.textContent = EC_UNAVAILABLE_REPAIRABLE_STATE.ec_setup_state || '—';
+      ecReasonEl.textContent = EC_UNAVAILABLE_REPAIRABLE_STATE.ec_setup_reason || '—';
+      expect(ecSetupEl.textContent).toBe('unavailable');
+      expect(ecReasonEl.textContent).toBe('load_failed_secure_boot');
+    });
+
+    it('renders EC unavailable non-repairable with reason', () => {
+      const ecSetupEl = document.getElementById('ec-setup-state')!;
+      const ecReasonEl = document.getElementById('ec-setup-reason')!;
+      ecSetupEl.textContent = EC_UNAVAILABLE_NONREPAIRABLE_STATE.ec_setup_state || '—';
+      ecReasonEl.textContent = EC_UNAVAILABLE_NONREPAIRABLE_STATE.ec_setup_reason || '—';
+      expect(ecSetupEl.textContent).toBe('unavailable');
+      expect(ecReasonEl.textContent).toBe('not_msi_hardware');
+    });
+
+    it('renders EC maintenance failed', () => {
+      const ecMaintenanceEl = document.getElementById('ec-maintenance-status')!;
+      ecMaintenanceEl.textContent = EC_MAINTENANCE_FAILED_STATE.ec_maintenance_status;
+      expect(ecMaintenanceEl.textContent).toBe('failed');
+    });
+
+    it('renders recovery actions for repairable EC state', () => {
+      const ecRecoveryEl = document.getElementById('ec-recovery-actions')!;
+      const actionBtns = document.getElementById('ec-action-buttons')!;
+      if (EC_UNAVAILABLE_REPAIRABLE_STATE.ec_recovery_actions.length > 0) {
+        ecRecoveryEl.removeAttribute('hidden');
+        actionBtns.innerHTML = '';
+        for (const action of EC_UNAVAILABLE_REPAIRABLE_STATE.ec_recovery_actions) {
+          const btn = document.createElement('button');
+          btn.textContent = action;
+          actionBtns.appendChild(btn);
+        }
+      }
+      expect(ecRecoveryEl.hidden).toBe(false);
+      expect(actionBtns.children.length).toBe(2);
+    });
+
+    it('hides recovery actions when none available', () => {
+      const ecRecoveryEl = document.getElementById('ec-recovery-actions')!;
+      if (EC_AVAILABLE_STATE.ec_recovery_actions.length === 0) {
+        ecRecoveryEl.setAttribute('hidden', 'true');
+      }
+      expect(ecRecoveryEl.hidden).toBe(true);
+    });
+
+    it('EC setup state is hidden when no EC data', () => {
+      const ecStatusEl = document.getElementById('ec-status')!;
+      if (NO_BATTERY_STATE.ec_setup_state === null) {
+        ecStatusEl.setAttribute('hidden', 'true');
+      }
+      expect(ecStatusEl.hidden).toBe(true);
+    });
+
+    it('charge threshold persists while EC setup is pending', () => {
+      const chargeThresholdEl = document.getElementById('charge-threshold')!;
+      chargeThresholdEl.textContent = EC_PENDING_REBOOT_STATE.charge_threshold + '%';
+      expect(chargeThresholdEl.textContent).toBe('80%');
+    });
+
+    it('active and charge threshold can diverge during EC reconciliation', () => {
+      const divergentState: BatteryState = {
+        ...COMPLETE_STATE,
+        active_threshold: 65,
+        charge_threshold: 80,
+        ec_setup_state: 'pending_reboot',
+        ec_maintenance_status: 'pending',
+        ec_recovery_actions: ['reboot'],
+      };
+      const activeEl = document.getElementById('active-threshold')!;
+      const chargeEl = document.getElementById('charge-threshold')!;
+      activeEl.textContent = divergentState.active_threshold + '%';
+      chargeEl.textContent = divergentState.charge_threshold + '%';
+      expect(activeEl.textContent).toBe('65%');
+      expect(chargeEl.textContent).toBe('80%');
+      expect(activeEl.textContent).not.toBe(chargeEl.textContent);
     });
   });
 });

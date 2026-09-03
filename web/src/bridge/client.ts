@@ -279,3 +279,17 @@ export async function closeWindow(): Promise<Record<string, unknown>> {
 export async function beginWindowDrag(): Promise<Record<string, unknown>> {
   return bridge.request('begin_drag');
 }
+
+/**
+ * Perform an EC lifecycle action (setup, repair, diagnostics) via the bridge.
+ */
+export async function ecAction(action: string): Promise<Record<string, unknown>> {
+  return bridge.request('ec_action', { action });
+}
+
+/**
+ * Request EC diagnostics via the bridge.
+ */
+export async function ecDiagnostics(): Promise<Record<string, unknown>> {
+  return bridge.request('ec_diagnostics');
+}

@@ -539,6 +539,7 @@ class BridgeHandler:
             "charge_status": state.charge_status,
             "active_threshold": state.active_threshold,
             "pending_threshold": state.pending_threshold,
+            "charge_threshold": state.charge_threshold,
             "control_mode": state.control_mode.value if state.control_mode else None,
             "battery_identifier": state.battery_path.name if state.battery_path else None,
             "health_percent": state.health_percent,
@@ -555,6 +556,10 @@ class BridgeHandler:
             "accent_color": state.accent_color,
             "compact_mode": state.compact_mode,
             "title_percentage": state.title_percentage,
+            "ec_setup_state": state.ec_setup_state.value if state.ec_setup_state else None,
+            "ec_setup_reason": state.ec_setup_reason.value if state.ec_setup_reason else None,
+            "ec_maintenance_status": state.ec_maintenance_status.value,
+            "ec_recovery_actions": list(state.ec_recovery_actions),
         }
 
     def _serialize_appearance(self, state) -> dict[str, Any]:

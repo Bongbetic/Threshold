@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Threshold</title>
-  <script type="module" crossorigin src="./assets/index-C-QUMZhO.js"></script>
+  <script type="module" crossorigin src="./assets/index-DA-GOtzb.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/index-D-1xlsMH.css">
 </head>
 <body>
@@ -43,10 +43,13 @@
           <h3>Active Threshold</h3>
           <div class="card-body">
             <div class="stat-row">
-              <span class="stat-label">Threshold</span>
+              <span class="stat-label">Active</span>
               <span id="active-threshold" class="stat-value stat-value--large" data-testid="active-threshold">--%</span>
             </div>
-
+            <div class="stat-row">
+              <span class="stat-label">Charge Limit</span>
+              <span id="charge-threshold" class="stat-value" data-testid="charge-threshold">—</span>
+            </div>
           </div>
         </div>
 
@@ -170,6 +173,24 @@
         <div id="control-state-card" class="cds-tile" data-testid="control-state-card">
           <h3 id="control-state-title">Battery Control</h3>
           <p id="control-state-message" class="state-message">Checking battery control…</p>
+          <div id="ec-status" data-testid="ec-status" hidden>
+            <div class="stat-row">
+              <span class="stat-label">EC Setup</span>
+              <span id="ec-setup-state" class="stat-value" data-testid="ec-setup-state">—</span>
+            </div>
+            <div id="ec-reason-row" class="stat-row" hidden>
+              <span class="stat-label">Reason</span>
+              <span id="ec-setup-reason" class="stat-value" data-testid="ec-setup-reason">—</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Maintenance</span>
+              <span id="ec-maintenance-status" class="stat-value" data-testid="ec-maintenance-status">—</span>
+            </div>
+            <div id="ec-recovery-actions" data-testid="ec-recovery-actions" hidden>
+              <span class="control-label">Recovery</span>
+              <div id="ec-action-buttons" class="button-group"></div>
+            </div>
+          </div>
         </div>
       </section>
 

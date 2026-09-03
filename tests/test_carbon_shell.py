@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from threshold.commands import CommandDispatcher, CommandResult
 from threshold.state import ThresholdState
 from threshold.battery import ControlMode
+from threshold.ec_state import ECSetupState, ECSetupReason, ECMaintenanceStatus
 
 
 # ── Golden fixtures (mirrored from web/test/fixtures/messages.json) ────────
@@ -60,6 +61,7 @@ def ec_msi_state():
         charge_status="Charging",
         active_threshold=80,
         pending_threshold=80,
+        charge_threshold=80,
         cycle_count=142,
         capacity_full_wh=52.5,
         capacity_design_wh=56.0,
@@ -68,6 +70,9 @@ def ec_msi_state():
         power_source="AC Adapter",
         dark_mode=False,
         accent_color="orange",
+        ec_setup_state=ECSetupState.AVAILABLE,
+        ec_maintenance_status=ECMaintenanceStatus.OK,
+        ec_recovery_actions=(),
     )
 
 
@@ -94,6 +99,7 @@ class TestBridgeHandlerSerialization:
         assert serialized["charge_status"] == "Charging"
         assert serialized["active_threshold"] == 80
         assert serialized["pending_threshold"] == 80
+        assert serialized["charge_threshold"] == 80
         assert serialized["control_mode"] == "msi-ec"
         assert serialized["battery_identifier"] == "BAT0"
         assert serialized["health_percent"] == 92
@@ -106,6 +112,11 @@ class TestBridgeHandlerSerialization:
         assert serialized["alarm_fired"] is False
         assert serialized["dark_mode"] is False
         assert serialized["accent_color"] == "orange"
+        # EC fields
+        assert serialized["ec_setup_state"] == "available"
+        assert serialized["ec_setup_reason"] is None
+        assert serialized["ec_maintenance_status"] == "ok"
+        assert serialized["ec_recovery_actions"] == []
 
     def test_serialize_appearance(self, ec_msi_state):
         from threshold.carbon_shell import BridgeHandler
@@ -132,6 +143,7 @@ class TestBridgeHandlerSerialization:
         assert serialized["charge_status"] is None
         assert serialized["active_threshold"] is None
         assert serialized["pending_threshold"] is None
+        assert serialized["charge_threshold"] is None
         assert serialized["control_mode"] is None
         assert serialized["battery_identifier"] is None
         assert serialized["cycle_count"] is None
@@ -139,6 +151,11 @@ class TestBridgeHandlerSerialization:
         assert serialized["capacity_design_wh"] is None
         assert serialized["alarm_armed"] is False
         assert serialized["alarm_fired"] is False
+        # EC fields default to safe values
+        assert serialized["ec_setup_state"] is None
+        assert serialized["ec_setup_reason"] is None
+        assert serialized["ec_maintenance_status"] == "ok"
+        assert serialized["ec_recovery_actions"] == []
 
 
 class TestBridgeHandlerReadyCommand:
@@ -1173,3 +1190,320 @@ def test_shim_source_is_javascript_not_file_uri():
 
     assert 'window.threshold' in source
     assert not source.startswith('file://')
+
+
+# ── EC state scenario tests ─────────────────────────────────────────────────
+# Covers: available, pending-reboot, recoverable-unavailable,
+# non-repairable-unavailable, maintenance-failed, charge-threshold-divergent
+
+
+class TestEcStateSerialization:
+    """Test that EC state scenarios produce correct bridge payloads."""
+
+    def _make_handler(self, state):
+        return _make_handler(state)
+
+    def test_ec_available(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+            pending_threshold=80,
+            charge_threshold=80,
+            ec_setup_state=ECSetupState.AVAILABLE,
+            ec_maintenance_status=ECMaintenanceStatus.OK,
+            ec_recovery_actions=(),
+        )
+        handler = self._make_handler(state)
+        serialized = handler._serialize_state(state)
+        assert serialized["ec_setup_state"] == "available"
+        assert serialized["ec_setup_reason"] is None
+        assert serialized["ec_maintenance_status"] == "ok"
+        assert serialized["ec_recovery_actions"] == []
+
+    def test_ec_pending_reboot(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+            pending_threshold=80,
+            charge_threshold=80,
+            ec_setup_state=ECSetupState.PENDING_REBOOT,
+            ec_maintenance_status=ECMaintenanceStatus.PENDING,
+            ec_recovery_actions=("reboot",),
+        )
+        handler = self._make_handler(state)
+        serialized = handler._serialize_state(state)
+        assert serialized["ec_setup_state"] == "pending_reboot"
+        assert serialized["ec_maintenance_status"] == "pending"
+        assert serialized["ec_recovery_actions"] == ["reboot"]
+
+    def test_ec_unavailable_repairable(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+            pending_threshold=80,
+            charge_threshold=80,
+            ec_setup_state=ECSetupState.UNAVAILABLE,
+            ec_setup_reason=ECSetupReason.LOAD_FAILED_SECURE_BOOT,
+            ec_maintenance_status=ECMaintenanceStatus.OK,
+            ec_recovery_actions=("repair", "diagnostics"),
+        )
+        handler = self._make_handler(state)
+        serialized = handler._serialize_state(state)
+        assert serialized["ec_setup_state"] == "unavailable"
+        assert serialized["ec_setup_reason"] == "load_failed_secure_boot"
+        assert serialized["ec_maintenance_status"] == "ok"
+        assert serialized["ec_recovery_actions"] == ["repair", "diagnostics"]
+
+    def test_ec_unavailable_nonrepairable(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.NOTIFY_ONLY,
+            charge_percent=75,
+            active_threshold=None,
+            pending_threshold=80,
+            charge_threshold=80,
+            ec_setup_state=ECSetupState.UNAVAILABLE,
+            ec_setup_reason=ECSetupReason.NOT_MSI_HARDWARE,
+            ec_maintenance_status=ECMaintenanceStatus.OK,
+            ec_recovery_actions=("diagnostics",),
+        )
+        handler = self._make_handler(state)
+        serialized = handler._serialize_state(state)
+        assert serialized["ec_setup_state"] == "unavailable"
+        assert serialized["ec_setup_reason"] == "not_msi_hardware"
+        assert serialized["ec_recovery_actions"] == ["diagnostics"]
+
+    def test_ec_maintenance_failed(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+            pending_threshold=80,
+            charge_threshold=80,
+            ec_setup_state=ECSetupState.AVAILABLE,
+            ec_maintenance_status=ECMaintenanceStatus.FAILED,
+            ec_recovery_actions=("repair", "diagnostics"),
+        )
+        handler = self._make_handler(state)
+        serialized = handler._serialize_state(state)
+        assert serialized["ec_setup_state"] == "available"
+        assert serialized["ec_maintenance_status"] == "failed"
+        assert serialized["ec_recovery_actions"] == ["repair", "diagnostics"]
+
+    def test_charge_threshold_preserved_during_pending_reboot(self):
+        """Charge threshold remains visible while EC setup is pending."""
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+            pending_threshold=80,
+            charge_threshold=80,
+            ec_setup_state=ECSetupState.PENDING_REBOOT,
+            ec_maintenance_status=ECMaintenanceStatus.PENDING,
+            ec_recovery_actions=("reboot",),
+        )
+        handler = self._make_handler(state)
+        serialized = handler._serialize_state(state)
+        # Charge threshold persists regardless of EC setup state
+        assert serialized["charge_threshold"] == 80
+        assert serialized["active_threshold"] == 80
+
+    def test_charge_threshold_divergent_from_active(self):
+        """Active threshold differs from charge threshold during EC reconciliation."""
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=65,
+            pending_threshold=80,
+            charge_threshold=80,
+            ec_setup_state=ECSetupState.PENDING_REBOOT,
+            ec_maintenance_status=ECMaintenanceStatus.PENDING,
+            ec_recovery_actions=("reboot",),
+        )
+        handler = self._make_handler(state)
+        serialized = handler._serialize_state(state)
+        assert serialized["charge_threshold"] == 80
+        assert serialized["active_threshold"] == 65
+        # They differ: active is live sysfs, charge is user-confirmed
+        assert serialized["charge_threshold"] != serialized["active_threshold"]
+
+
+class TestEcStatePushEvents:
+    """Test EC state push events through the full serialization pipeline."""
+
+    def test_ec_available_push_event(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+            pending_threshold=80,
+            charge_threshold=80,
+            ec_setup_state=ECSetupState.AVAILABLE,
+            ec_maintenance_status=ECMaintenanceStatus.OK,
+            ec_recovery_actions=(),
+        )
+        handler = _make_handler(state)
+        handler._push_to_js({
+            "event": "battery",
+            "data": handler._serialize_state(state),
+        })
+        event = _extract_pushed_event(handler)
+        data = event["data"]
+        assert data["ec_setup_state"] == "available"
+        assert data["ec_maintenance_status"] == "ok"
+        assert data["ec_recovery_actions"] == []
+        assert data["charge_threshold"] == 80
+
+    def test_ec_pending_reboot_push_event(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+            pending_threshold=80,
+            charge_threshold=80,
+            ec_setup_state=ECSetupState.PENDING_REBOOT,
+            ec_maintenance_status=ECMaintenanceStatus.PENDING,
+            ec_recovery_actions=("reboot",),
+        )
+        handler = _make_handler(state)
+        handler._push_to_js({
+            "event": "battery",
+            "data": handler._serialize_state(state),
+        })
+        event = _extract_pushed_event(handler)
+        data = event["data"]
+        assert data["ec_setup_state"] == "pending_reboot"
+        assert data["ec_recovery_actions"] == ["reboot"]
+
+    def test_ec_unavailable_repairable_push_event(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+            pending_threshold=80,
+            charge_threshold=80,
+            ec_setup_state=ECSetupState.UNAVAILABLE,
+            ec_setup_reason=ECSetupReason.LOAD_FAILED_SECURE_BOOT,
+            ec_maintenance_status=ECMaintenanceStatus.OK,
+            ec_recovery_actions=("repair", "diagnostics"),
+        )
+        handler = _make_handler(state)
+        handler._push_to_js({
+            "event": "battery",
+            "data": handler._serialize_state(state),
+        })
+        event = _extract_pushed_event(handler)
+        data = event["data"]
+        assert data["ec_setup_state"] == "unavailable"
+        assert data["ec_setup_reason"] == "load_failed_secure_boot"
+        assert data["ec_recovery_actions"] == ["repair", "diagnostics"]
+
+    def test_ec_unavailable_nonrepairable_push_event(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.NOTIFY_ONLY,
+            charge_percent=75,
+            active_threshold=None,
+            pending_threshold=80,
+            charge_threshold=80,
+            ec_setup_state=ECSetupState.UNAVAILABLE,
+            ec_setup_reason=ECSetupReason.NOT_MSI_HARDWARE,
+            ec_maintenance_status=ECMaintenanceStatus.OK,
+            ec_recovery_actions=("diagnostics",),
+        )
+        handler = _make_handler(state)
+        handler._push_to_js({
+            "event": "battery",
+            "data": handler._serialize_state(state),
+        })
+        event = _extract_pushed_event(handler)
+        data = event["data"]
+        assert data["ec_setup_state"] == "unavailable"
+        assert data["ec_setup_reason"] == "not_msi_hardware"
+        assert data["ec_recovery_actions"] == ["diagnostics"]
+
+    def test_ec_maintenance_failed_push_event(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.EC_MSI,
+            charge_percent=75,
+            active_threshold=80,
+            pending_threshold=80,
+            charge_threshold=80,
+            ec_setup_state=ECSetupState.AVAILABLE,
+            ec_maintenance_status=ECMaintenanceStatus.FAILED,
+            ec_recovery_actions=("repair", "diagnostics"),
+        )
+        handler = _make_handler(state)
+        handler._push_to_js({
+            "event": "battery",
+            "data": handler._serialize_state(state),
+        })
+        event = _extract_pushed_event(handler)
+        data = event["data"]
+        assert data["ec_setup_state"] == "available"
+        assert data["ec_maintenance_status"] == "failed"
+        assert data["ec_recovery_actions"] == ["repair", "diagnostics"]
+
+    def test_no_battery_push_event_ec_fields(self):
+        state = ThresholdState(battery_available=False)
+        handler = _make_handler(state)
+        handler._push_to_js({
+            "event": "battery",
+            "data": handler._serialize_state(state),
+        })
+        event = _extract_pushed_event(handler)
+        data = event["data"]
+        assert data["ec_setup_state"] is None
+        assert data["ec_setup_reason"] is None
+        assert data["ec_maintenance_status"] == "ok"
+        assert data["ec_recovery_actions"] == []
+
+    def test_notification_only_push_event_ec_fields(self):
+        state = ThresholdState(
+            battery_available=True,
+            battery_path=Path("/sys/class/power_supply/BAT0"),
+            control_mode=ControlMode.NOTIFY_ONLY,
+            charge_percent=85,
+            active_threshold=None,
+            pending_threshold=80,
+            charge_threshold=80,
+            alarm_armed=True,
+        )
+        handler = _make_handler(state)
+        handler._push_to_js({
+            "event": "battery",
+            "data": handler._serialize_state(state),
+        })
+        event = _extract_pushed_event(handler)
+        data = event["data"]
+        assert data["control_mode"] == "notify"
+        assert data["charge_threshold"] == 80
+        # EC fields default to safe values for notification-only
+        assert data["ec_setup_state"] is None
+        assert data["ec_maintenance_status"] == "ok"
+        assert data["ec_recovery_actions"] == []
