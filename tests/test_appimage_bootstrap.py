@@ -193,3 +193,41 @@ class TestBootstrapTrust:
         unsigned = json.dumps(m).encode()
         r = run_bootstrap(e, unsigned + b"\n" + payload)
         assert r.returncode != 0
+
+
+# ── Issue #91: recovery and provenance contract ─────────────────────────────
+
+
+def _bootstrap_text() -> str:
+    return BOOTSTRAP.read_text(encoding="utf-8")
+
+
+def test_bootstrap_has_recovery_cleanup():
+    text = _bootstrap_text()
+    assert "cleanup_interrupted_state" in text
+    assert "recover_last_known_good" in text
+
+
+def test_bootstrap_cleans_orphaned_staging():
+    text = _bootstrap_text()
+    assert "rm -rf" in text
+    assert "orphaned staging" in text.lower() or "clean" in text.lower()
+
+
+def test_bootstrap_restores_last_known_good_on_failure():
+    text = _bootstrap_text()
+    assert "last-known-good" in text
+    assert "recover_last_known_good" in text
+    # Must attempt recovery when authority fails
+    assert "AUTH_EXIT" in text
+
+
+def test_bootstrap_fsyncs_staged_authority():
+    text = _bootstrap_text()
+    assert "fsync" in text.lower()
+
+
+def test_bootstrap_validates_staged_script_offline():
+    text = _bootstrap_text()
+    assert "sh -n" in text
+    assert "staged lifecycle" in text.lower() or "offline validation" in text.lower()

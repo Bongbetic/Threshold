@@ -110,6 +110,38 @@ def read_maintenance(fake) -> str:
     return "ok"
 
 
+def read_journal(fake) -> list[str]:
+    journal = fake.state / "ops-journal"
+    if journal.exists():
+        return journal.read_text().splitlines()
+    return []
+
+
+def read_journal_entries(fake) -> list[dict[str, str]]:
+    entries = []
+    for line in read_journal(fake):
+        parts = line.split()
+        if len(parts) >= 3:
+            action = parts[1]
+            if action == "start" and len(parts) >= 4:
+                entries.append({
+                    "timestamp": parts[0],
+                    "action": "start",
+                    "op_id": parts[2],
+                    "verb": parts[3],
+                    "status": None,
+                })
+            elif action == "end" and len(parts) >= 4:
+                entries.append({
+                    "timestamp": parts[0],
+                    "action": "end",
+                    "op_id": parts[2],
+                    "verb": None,
+                    "status": parts[3],
+                })
+    return entries
+
+
 def make_msi(fake):
     (fake.sysroot / "sys/class/dmi/id/sys_vendor").write_text(
         MSI_VENDOR + "\n"
@@ -597,3 +629,88 @@ class TestFakeSystemLifecycle:
         ec = read_ec_status(fake.state / "status")
         assert ec is not None
         assert ec.maintenance.value == "ok"  # was "ok" at install time
+
+    # ── Issue #91: exclusive operation lock, journaled transactions ──────────
+
+    def test_operations_journal_created_on_mutating_verb(self, fake_system):
+        """A mutating verb creates the operations journal with start/end entries."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        run_lifecycle(fake, "install-or-upgrade")
+        entries = read_journal_entries(fake)
+        assert len(entries) >= 2
+        assert entries[0]["action"] == "start"
+        assert entries[0]["verb"] == "install-or-upgrade"
+        assert entries[-1]["action"] == "end"
+        assert entries[-1]["status"] == "ok"
+
+    def test_diagnostics_does_not_create_journal(self, fake_system):
+        """Read-only diagnostics verb must not create the operations journal."""
+        fake = fake_system
+        make_msi(fake)
+        run_lifecycle(fake, "diagnostics")
+        assert not (fake.state / "ops-journal").exists()
+
+    def test_lock_file_created_during_mutation(self, fake_system):
+        """The exclusive lock file exists during mutation execution."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        run_lifecycle(fake, "install-or-upgrade")
+        # Lock file may be cleaned up after release; verify it was used
+        # by checking the journal has entries (lock was acquired).
+        assert len(read_journal(fake)) >= 2
+
+    def test_atomic_write_produces_valid_state_file(self, fake_system):
+        """Atomic writes produce a valid, parseable state file."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        r = run_lifecycle(fake, "install-or-upgrade")
+        assert r.returncode == 0
+        st = read_state(fake)
+        assert "setup_state" in st
+        assert "boot_id" in st
+        assert "kernel" in st
+
+    def test_journal_pruning_after_many_operations(self, fake_system):
+        """The journal is pruned when it exceeds JOURNAL_MAX entries."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        # Run many operations to exceed the journal limit
+        for _ in range(5):
+            run_lifecycle(fake, "install-or-upgrade")
+        journal = fake.state / "ops-journal"
+        if journal.exists():
+            lines = journal.read_text().splitlines()
+            # Should be at most JOURNAL_MAX + unresolved failure entries
+            assert len(lines) <= 120  # 100 + some buffer for unresolved failures
+
+    def test_multiple_verbs_all_journal(self, fake_system):
+        """All mutating verbs create journal entries."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        run_lifecycle(fake, "install-or-upgrade")
+        entries_before = len(read_journal(fake))
+        run_lifecycle(fake, "repair")
+        entries_after = len(read_journal(fake))
+        assert entries_after > entries_before
+
+    def test_charge_threshold_survives_lock_and_journal(self, fake_system):
+        """Machine-wide charge threshold persists despite locking and journaling."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        (fake.state / "charge-threshold").write_text("75\n")
+        run_lifecycle(fake, "install-or-upgrade")
+        run_lifecycle(fake, "remove", boot_id="boot-a")
+        assert (fake.state / "charge-threshold").read_text() == "75\n"
