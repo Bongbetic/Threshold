@@ -115,7 +115,7 @@ def test_status_summary_omits_boot_id():
     text = _script()
     # The write_sanitized_status function must not include boot_id
     idx = text.index("write_sanitized_status")
-    fn_body = text[idx:idx + 500]
+    fn_body = text[idx:idx + 800]
     assert "grep" in fn_body  # extracts only bounded fields
 
 

@@ -85,10 +85,27 @@ set_setup_state() {
     {
         echo "setup_state=$1"
         [ $# -ge 2 ] && echo "reason=$2"
-        echo "maintenance=${3:-ok}"
         echo "boot_id=$(boot_id)"
         echo "kernel=$(running_kernel)"
     } > "$EC_STATE_FILE"
+}
+
+write_maintenance_status() {
+    # write_maintenance_status <status>
+    # Write the EC maintenance status file (ok|pending|failed) separately
+    # from the state file so the state and maintenance outcomes can be
+    # composed independently in the sanitized status summary.
+    mkdir -p "$EC_STATE_DIR"
+    echo "$1" > "$EC_STATE_DIR/maintenance"
+}
+
+read_maintenance_status() {
+    # Read the current maintenance status, defaulting to "ok".
+    if [ -f "$EC_STATE_DIR/maintenance" ]; then
+        cat "$EC_STATE_DIR/maintenance"
+    else
+        echo "ok"
+    fi
 }
 
 record_pending_reboot() {
@@ -110,14 +127,17 @@ write_sanitized_status() {
     # unprivileged presentation layer. Contains only bounded, safe fields;
     # privileged evidence (boot_id, kernel, DMI paths, source locations)
     # remains in the root-owned state file and lifecycle log.
+    # The maintenance field is composed from the separate maintenance file
+    # so that state and maintenance outcomes are independent.
     mkdir -p "$EC_STATE_DIR"
     {
         if [ -f "$EC_STATE_FILE" ]; then
-            grep -E '^setup_state=|^reason=|^maintenance=' "$EC_STATE_FILE"
+            grep -E '^setup_state=|^reason=' "$EC_STATE_FILE"
         else
             echo "setup_state=unavailable"
             echo "reason=threshold_interface_missing"
         fi
+        echo "maintenance=$(read_maintenance_status)"
     } > "$EC_STATUS_FILE"
 }
 
@@ -148,12 +168,14 @@ do_setup() {
     # MSI preflight: non-MSI hardware never builds or loads msi-ec.
     if ! is_msi_hardware; then
         set_setup_state unavailable not_msi_hardware
+        write_maintenance_status ok
         log "Non-MSI hardware; skipping EC setup entirely."
         return 0
     fi
 
     if ! command -v dkms >/dev/null 2>&1; then
         set_setup_state unavailable dkms_missing
+        write_maintenance_status ok
         log "dkms not found; EC setup unavailable."
         return 0
     fi
@@ -162,7 +184,17 @@ do_setup() {
     # repairable reason — never an automatic header install.
     if ! kernel_headers_present; then
         set_setup_state unavailable kernel_headers_missing
+        write_maintenance_status ok
         log "Kernel build tree for $(running_kernel) missing; EC setup repairable."
+        return 0
+    fi
+
+    # Source provenance: the expected DKMS source directory must exist
+    # before attempting to register the module.
+    if [ ! -d "$DKMS_SRC" ]; then
+        set_setup_state unavailable dkms_missing
+        write_maintenance_status failed
+        log "DKMS source directory not found at $DKMS_SRC; source provenance check failed."
         return 0
     fi
 
@@ -170,12 +202,14 @@ do_setup() {
         log "dkms add failed (may already be registered)."
     fi
     if ! dkms build -m "$DKMS_NAME" -v "$MSI_EC_VERSION" 2>&1; then
-        set_setup_state unavailable build_failed failed
+        set_setup_state unavailable build_failed
+        write_maintenance_status failed
         log "dkms build failed; older module (if any) remains in control."
         return 0
     fi
     if ! dkms install -m "$DKMS_NAME" -v "$MSI_EC_VERSION" 2>&1; then
-        set_setup_state unavailable build_failed failed
+        set_setup_state unavailable build_failed
+        write_maintenance_status failed
         log "dkms install failed; older module (if any) remains in control."
         return 0
     fi
@@ -192,9 +226,11 @@ do_setup() {
     if ! modprobe "$DKMS_NAME" 2>/dev/null; then
         if mokutil --sb-state 2>/dev/null | grep -q "SecureBoot enabled"; then
             set_setup_state unavailable load_failed_secure_boot
+            write_maintenance_status ok
             record_pending_reboot setup
         else
             set_setup_state unavailable load_failed
+            write_maintenance_status ok
         fi
         record_kernel_event "$(running_kernel)" built unsigned noload none
         log "modprobe msi-ec failed (possibly Secure Boot); pending reboot not assumed."
@@ -204,11 +240,12 @@ do_setup() {
     # Live verification: the expected threshold interface must work.
     if verify_live_interface; then
         set_setup_state available
-        echo ok > "$EC_STATE_DIR/maintenance"
+        write_maintenance_status ok
         record_kernel_event "$(running_kernel)" built signed loaded yes verified
         log "EC setup available and verified."
     else
         set_setup_state unavailable threshold_interface_missing
+        write_maintenance_status ok
         record_kernel_event "$(running_kernel)" built signed loaded no failed
         log "Module loaded but threshold interface not verified."
     fi
@@ -253,6 +290,7 @@ do_reconcile() {
         # No live EC control: leave machine-wide threshold policy intact.
         if [ -f "$EC_STATE_FILE" ] && grep -q '^setup_state=available' "$EC_STATE_FILE"; then
             set_setup_state unavailable threshold_interface_missing
+            write_maintenance_status failed
         fi
         record_kernel_event "$(running_kernel)" - - - no nolive
         log "No threshold interface at boot; notification-only mode remains usable."
@@ -284,11 +322,13 @@ do_reconcile() {
                 log "Reconciled threshold to ${DESIRED}% (verified)."
             else
                 set_setup_state unavailable verification_failed
+                write_maintenance_status failed
                 record_kernel_event "$(running_kernel)" - - loaded no readback_failed
                 log "Reconciliation readback mismatch (${VERIFY:-none} != $DESIRED)."
             fi
         else
             set_setup_state unavailable verification_failed
+            write_maintenance_status failed
             record_kernel_event "$(running_kernel)" - - loaded no write_failed
             log "Reconciliation write failed; charge threshold preserved."
         fi
@@ -328,6 +368,7 @@ do_remove() {
 
     rm -rf "$EC_KERNEL_DIR" "$EC_PENDING"
     rm -f "$EC_STATE_FILE" "$EC_STATUS_FILE"
+    rm -f "$EC_STATE_DIR/maintenance"
     log "EC lifecycle removed; charge threshold policy and foreign assets preserved."
 }
 
@@ -357,6 +398,9 @@ case "${1:-}" in
     repair)
         # May prepare a named kernel while booted into another; that kernel
         # remains verification-pending until booted and reconciled.
+        # Explicit repair always starts with maintenance=pending; do_setup
+        # advances it to ok or failed on completion.
+        write_maintenance_status pending
         do_setup
         write_sanitized_status
         ;;

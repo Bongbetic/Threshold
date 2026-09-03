@@ -115,4 +115,5 @@ def test_adapter_reads_ec_status_from_file(tmp_path, monkeypatch):
     state = build_state(battery_path=None, config=config)
     assert state.ec_setup_state == ECSetupState.UNAVAILABLE
     assert state.ec_setup_reason == ECSetupReason.NOT_MSI_HARDWARE
-    assert state.charge_threshold == 75
+    # charge_threshold comes from GSettings config, not the EC status file
+    assert state.charge_threshold == 80
