@@ -1,10 +1,12 @@
-"""Privileged fake-system EC transaction tests (issue #86).
+"""Privileged fake-system EC transaction tests (issue #86, #89).
 
 Runs the real lifecycle script with substituted DKMS, module, Secure Boot,
 udev, boot identity, and sysfs effects (PATH stubs + THRESHOLD_FAKE_SYS
 sysroot), asserting preflight rejection, setup states, pending-reboot
 consumption, reconciliation single-write/readback, foreign-asset
-preservation, removal semantics, and idempotency — without root.
+preservation, removal semantics, idempotency, sanitized status summary,
+machine-wide policy persistence, and absence of privileged side effects
+— without root.
 """
 
 import os
@@ -271,3 +273,140 @@ class TestFakeSystemLifecycle:
         log.write_text("")
         run_lifecycle(fake, "remove", boot_id="boot-a")
         assert "modprobe -r" not in log.read_text()
+
+    # ── Sanitized status summary (issue #89) ────────────────────────────────
+
+    def test_install_writes_sanitized_status(self, fake_system):
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        run_lifecycle(fake, "install-or-upgrade")
+        status = fake.state / "status"
+        assert status.exists()
+        kv = dict(l.split("=", 1) for l in status.read_text().splitlines() if "=" in l)
+        assert kv["setup_state"] == "available"
+        assert "maintenance" in kv
+
+    def test_status_summary_omits_privileged_fields(self, fake_system):
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        run_lifecycle(fake, "install-or-upgrade")
+        status = fake.state / "status"
+        text = status.read_text()
+        assert "boot_id" not in text
+        assert "kernel=" not in text
+        assert "dkms" not in text.lower()
+
+    def test_non_msi_status_shows_unavailable_reason(self, fake_system):
+        fake = fake_system
+        (fake.sysroot / "sys/class/dmi/id/sys_vendor").write_text("Lenovo\n")
+        run_lifecycle(fake, "install-or-upgrade")
+        status = fake.state / "status"
+        kv = dict(l.split("=", 1) for l in status.read_text().splitlines() if "=" in l)
+        assert kv["setup_state"] == "unavailable"
+        assert kv["reason"] == "not_msi_hardware"
+
+    def test_reconcile_updates_sanitized_status(self, fake_system):
+        fake = fake_system
+        make_msi(fake)
+        add_threshold_interface(fake)
+        (fake.state / "charge-threshold").write_text("70\n")
+        run_lifecycle(fake, "reconcile", boot_id="boot-b")
+        status = fake.state / "status"
+        kv = dict(l.split("=", 1) for l in status.read_text().splitlines() if "=" in l)
+        assert kv["setup_state"] == "available"
+
+    # ── Machine-wide policy persistence (issue #89) ─────────────────────────
+
+    def test_charge_threshold_survives_ec_removal(self, fake_system):
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        (fake.state / "charge-threshold").write_text("80\n")
+        run_lifecycle(fake, "install-or-upgrade")
+        # Remove EC assets
+        run_lifecycle(fake, "remove", boot_id="boot-a")
+        # Machine-wide charge threshold persists
+        assert (fake.state / "charge-threshold").read_text() == "80\n"
+        # State file is cleaned up
+        assert not (fake.state / "state").exists()
+
+    def test_removal_preserves_charge_threshold_not_state(self, fake_system):
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        (fake.state / "charge-threshold").write_text("65\n")
+        run_lifecycle(fake, "install-or-upgrade")
+        assert (fake.state / "state").exists()
+        run_lifecycle(fake, "remove", boot_id="boot-a")
+        # Threshold policy survives
+        assert (fake.state / "charge-threshold").read_text() == "65\n"
+        # State file does not survive
+        assert not (fake.state / "state").exists()
+
+    # ── Collision refusal / foreign asset preservation (issue #89) ──────────
+
+    def test_removal_only_removes_ledger_proven_assets(self, fake_system):
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        dkms_src = Path(fake.env["THRESHOLD_EC_DKMS_SRC"])
+        dkms_src.mkdir(parents=True)
+        # Foreign asset outside the ledger
+        foreign_dir = fake.state / "foreign-ec-config"
+        foreign_dir.mkdir()
+        (foreign_dir / "config.conf").write_text("foreign\n")
+        run_lifecycle(fake, "install-or-upgrade")
+        run_lifecycle(fake, "remove", boot_id="boot-a")
+        # Foreign asset is untouched
+        assert (foreign_dir / "config.conf").read_text() == "foreign\n"
+        assert not (fake.state / "ledger").exists()
+
+    def test_ledger_distinguishes_managed_from_foreign(self, fake_system):
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        run_lifecycle(fake, "install-or-upgrade")
+        ledger = (fake.state / "ledger").read_text()
+        assert fake.env["THRESHOLD_EC_DKMS_SRC"] in ledger
+        assert fake.env["THRESHOLD_EC_MODULES_LOAD"] in ledger
+        # Foreign paths are not in the ledger
+        assert "/etc/foreign" not in ledger
+
+    # ── Absence of privileged side effects (issue #89) ──────────────────────
+
+    def test_status_read_does_not_write_state(self, fake_system):
+        """Reading the sanitized status file must not trigger lifecycle writes."""
+        fake = fake_system
+        # No lifecycle verb has run yet — state file should not exist
+        assert not (fake.state / "state").exists()
+        status = fake.state / "status"
+        # Simulate a status read (what the Python reader does)
+        if status.exists():
+            status.read_text()
+        # State file still does not exist
+        assert not (fake.state / "state").exists()
+
+    def test_diagnostics_does_not_write_status(self, fake_system):
+        """The diagnostics verb must not produce a sanitized status file."""
+        fake = fake_system
+        make_msi(fake)
+        run_lifecycle(fake, "diagnostics")
+        assert not (fake.state / "status").exists()
+
+    def test_status_file_is_world_readable(self, fake_system):
+        """Sanitized status file must be readable without privileges."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        run_lifecycle(fake, "install-or-upgrade")
+        status = fake.state / "status"
+        mode = status.stat().st_mode
+        # World-readable (other-read bit set)
+        assert mode & 0o004

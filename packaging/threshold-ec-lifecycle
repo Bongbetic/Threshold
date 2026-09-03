@@ -44,6 +44,7 @@ sysroot() {
 # THRESHOLD_FAKE_SYS.
 EC_STATE_DIR=${THRESHOLD_EC_STATE_DIR:-/var/lib/threshold/ec}
 EC_STATE_FILE=$EC_STATE_DIR/state
+EC_STATUS_FILE=$EC_STATE_DIR/status
 EC_LEDGER=$EC_STATE_DIR/ledger
 EC_KERNEL_DIR=$EC_STATE_DIR/kernels
 EC_PENDING=$EC_STATE_DIR/pending-reboot
@@ -102,6 +103,22 @@ record_pending_reboot() {
 
 clear_pending_reboot() {
     rm -f "$EC_PENDING"
+}
+
+write_sanitized_status() {
+    # Write a world-readable summary of EC lifecycle state for the
+    # unprivileged presentation layer. Contains only bounded, safe fields;
+    # privileged evidence (boot_id, kernel, DMI paths, source locations)
+    # remains in the root-owned state file and lifecycle log.
+    mkdir -p "$EC_STATE_DIR"
+    {
+        if [ -f "$EC_STATE_FILE" ]; then
+            grep -E '^setup_state=|^reason=|^maintenance=' "$EC_STATE_FILE"
+        else
+            echo "setup_state=unavailable"
+            echo "reason=threshold_interface_missing"
+        fi
+    } > "$EC_STATUS_FILE"
 }
 
 is_msi_hardware() {
@@ -310,7 +327,7 @@ do_remove() {
     fi
 
     rm -rf "$EC_KERNEL_DIR" "$EC_PENDING"
-    rm -f "$EC_STATE_FILE"
+    rm -f "$EC_STATE_FILE" "$EC_STATUS_FILE"
     log "EC lifecycle removed; charge threshold policy and foreign assets preserved."
 }
 
@@ -332,6 +349,7 @@ do_diagnostics() {
 case "${1:-}" in
     install-or-upgrade)
         do_setup
+        write_sanitized_status
         # Refresh udev after setup attempts (udev rule ownership is the package's).
         udevadm control --reload 2>/dev/null || :
         udevadm trigger --subsystem-match=power_supply 2>/dev/null || :
@@ -340,9 +358,11 @@ case "${1:-}" in
         # May prepare a named kernel while booted into another; that kernel
         # remains verification-pending until booted and reconciled.
         do_setup
+        write_sanitized_status
         ;;
     reconcile)
         do_reconcile
+        write_sanitized_status
         ;;
     remove)
         do_remove
