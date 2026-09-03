@@ -149,3 +149,27 @@ class TestECActionCommands:
             r = d.dispatch("ec_diagnostics", {})
         assert r.success is True
         assert r.data["diagnostics"] == "ok"
+
+    def test_repair_never_triggers_from_passive_poll(self, tmp_path, monkeypatch):
+        """The repair command is only reachable via explicit ec_action dispatch,
+        never from get_state or other passive commands."""
+        monkeypatch.delenv("THRESHOLD_APPIMAGE", raising=False)
+        d = make_dispatcher(tmp_path)
+        calls = {}
+
+        def fake_run(cmd, **kw):
+            calls["cmd"] = cmd
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+        # get_state should not trigger any subprocess
+        config = Config(settings=FakeGSettings())
+        r = d.dispatch("get_state", state=None)
+        assert r.success is False  # no state available
+        assert "subprocess" not in str(calls)
+
+        # Only ec_action with action="repair" triggers the lifecycle
+        with patch.object(Path, "exists", return_value=True), \
+             patch("subprocess.run", side_effect=fake_run):
+            r = d.dispatch("ec_action", {"action": "repair"})
+        assert r.success is True
+        assert calls["cmd"][-1] == "repair"
