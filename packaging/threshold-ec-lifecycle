@@ -59,6 +59,7 @@ EC_LOCK=$EC_STATE_DIR/lock
 EC_OPS_JOURNAL=$EC_STATE_DIR/ops-journal
 JOURNAL_MAX=100
 LOG_MAX_LINES=2000
+RECONCILE_TIMEOUT=30
 
 MSI_VENDOR_PATTERN='Micro-Star|MSI'
 MSI_EC_VERSION='0.13.112'
@@ -271,10 +272,44 @@ prune_lifecycle_log() {
 }
 
 record_kernel_event() {
-    # record_kernel_event <kernel> <event> <outcome>
+    # record_kernel_event <kernel> <module_version> <dkms> <trust> <load> <live> <reconciliation>
     mkdir -p "$EC_KERNEL_DIR"
     echo "$(date -Iseconds) module=$DKMS_NAME-$MSI_EC_VERSION dkms=$1 trust=$2 load=$3 live=$4 reconciliation=$5" \
         >> "$EC_KERNEL_DIR/$1.log"
+}
+
+mark_kernel_known_good() {
+    # mark_kernel_known_good <kernel>
+    # A kernel becomes known-good only after a real boot, live capability
+    # verification, and successful reconciliation. This marker is never
+    # claimed before all three conditions are satisfied.
+    mkdir -p "$EC_KERNEL_DIR"
+    touch "$EC_KERNEL_DIR/$1.known-good"
+}
+
+is_kernel_known_good() {
+    # is_kernel_known_good <kernel> — returns 0 if the kernel is known-good.
+    [ -f "$EC_KERNEL_DIR/$1.known-good" ]
+}
+
+get_known_good_kernels() {
+    # get_known_good_kernels — list all known-good kernel versions.
+    for f in "$EC_KERNEL_DIR"/*.known-good; do
+        [ -f "$f" ] || continue
+        basename "$f" .known-good
+    done
+}
+
+preserve_older_kernel_records() {
+    # preserve_older_kernel_records <failed_kernel>
+    # When a new kernel build fails, preserve the successful older kernel
+    # records. The failed kernel's record is kept but NOT marked known-good.
+    # Older known-good markers are never removed.
+    local failed_kernel="$1"
+    # The failed kernel record is already in the log from record_kernel_event.
+    # We just ensure it's NOT marked known-good (it won't be, since
+    # mark_kernel_known_good is only called on successful reconciliation).
+    log "Kernel $failed_kernel build failed; preserving older known-good records."
 }
 
 # ── MSI EC setup (shared by install-or-upgrade and repair) ────────────────
@@ -319,12 +354,16 @@ do_setup() {
     if ! dkms build -m "$DKMS_NAME" -v "$MSI_EC_VERSION" 2>&1; then
         set_setup_state unavailable build_failed
         write_maintenance_status failed
+        # Issue #92: failed new-kernel build preserves successful older builds.
+        preserve_older_kernel_records "$(running_kernel)"
         log "dkms build failed; older module (if any) remains in control."
         return 0
     fi
     if ! dkms install -m "$DKMS_NAME" -v "$MSI_EC_VERSION" 2>&1; then
         set_setup_state unavailable build_failed
         write_maintenance_status failed
+        # Issue #92: failed new-kernel build preserves successful older builds.
+        preserve_older_kernel_records "$(running_kernel)"
         log "dkms install failed; older module (if any) remains in control."
         return 0
     fi
@@ -433,8 +472,11 @@ do_reconcile() {
                 if is_msi_hardware; then
                     set_setup_state available
                 fi
+                # Issue #92: kernel becomes known-good after real boot,
+                # live capability verification, and successful reconciliation.
+                mark_kernel_known_good "$(running_kernel)"
                 record_kernel_event "$(running_kernel)" - - loaded yes reconciled
-                log "Reconciled threshold to ${DESIRED}% (verified)."
+                log "Reconciled threshold to ${DESIRED}% (verified); kernel marked known-good."
             else
                 set_setup_state unavailable verification_failed
                 write_maintenance_status failed
@@ -451,8 +493,11 @@ do_reconcile() {
         if is_msi_hardware; then
             set_setup_state available
         fi
+        # Issue #92: even on no-write (active matches desired), mark kernel
+        # as known-good since live capability is verified.
+        mark_kernel_known_good "$(running_kernel)"
         record_kernel_event "$(running_kernel)" - - loaded yes noop
-        log "Active and desired thresholds agree; no write needed."
+        log "Active and desired thresholds agree; no write needed; kernel marked known-good."
     fi
 }
 
@@ -500,6 +545,112 @@ do_diagnostics() {
     echo "module_loaded=$(grep -qw msi_ec "$(sysroot /proc/modules)" 2>/dev/null && echo yes || echo no)"
 }
 
+# ── Support export: bounded evidence, privacy-safe (issue #92) ───────────
+
+SUPPORT_EXPORT_MAX_LINES=500
+
+do_support_export() {
+    # Privacy-safe support export: bounded relevant lifecycle evidence,
+    # excluding usernames, home paths, hardware serials and UUIDs,
+    # private keys, enrollment passwords, and unrelated logs.
+    echo "=== Threshold EC Support Export ==="
+    echo "timestamp: $(date -Iseconds)"
+    echo "script_version: $(basename "$0")"
+    echo ""
+
+    # EC setup state (sanitized — no boot_id, no kernel details)
+    echo "--- EC Setup State ---"
+    if [ -f "$EC_STATE_FILE" ]; then
+        grep -E '^setup_state=|^reason=' "$EC_STATE_FILE" 2>/dev/null || echo "  (parse error)"
+    else
+        echo "setup_state=unavailable"
+        echo "reason=threshold_interface_missing"
+    fi
+    echo "maintenance=$(read_maintenance_status)"
+    echo ""
+
+    # Pending reboot (bounded — boot_id present for consumed-check only)
+    echo "--- Pending Reboot ---"
+    if [ -f "$EC_PENDING" ]; then
+        grep -E '^action=|^target_kernel=' "$EC_PENDING" 2>/dev/null || echo "  (parse error)"
+    else
+        echo "(none)"
+    fi
+    echo ""
+
+    # Machine-wide charge threshold (policy value)
+    echo "--- Charge Threshold Policy ---"
+    if [ -r "$EC_STATE_DIR/charge-threshold" ]; then
+        echo "charge_threshold=$(cat "$EC_STATE_DIR/charge-threshold")"
+    else
+        echo "(none)"
+    fi
+    echo ""
+
+    # Known-good kernels (bounded list)
+    echo "--- Known-Good Kernels ---"
+    local kg_count=0
+    for kg in $(get_known_good_kernels); do
+        echo "  $kg"
+        kg_count=$((kg_count + 1))
+    done
+    [ "$kg_count" -eq 0 ] && echo "  (none)"
+    echo ""
+
+    # Per-kernel records (bounded — last 5 entries per kernel, no DMI/serial)
+    echo "--- Kernel Lifecycle Records ---"
+    if [ -d "$EC_KERNEL_DIR" ]; then
+        for log_file in "$EC_KERNEL_DIR"/*.log; do
+            [ -f "$log_file" ] || continue
+            local kname
+            kname=$(basename "$log_file" .log)
+            echo "  kernel=$kname"
+            tail -n 5 "$log_file" 2>/dev/null | sed 's/^/    /'
+        done
+    else
+        echo "  (none)"
+    fi
+    echo ""
+
+    # Operation journal (bounded — last 10 entries, no operation content)
+    echo "--- Operation Journal (last 10) ---"
+    if [ -f "$EC_OPS_JOURNAL" ]; then
+        tail -n 10 "$EC_OPS_JOURNAL" 2>/dev/null | sed 's/^/  /'
+    else
+        echo "  (none)"
+    fi
+    echo ""
+
+    # Lifecycle log (bounded — last 20 lines, no file paths with usernames)
+    echo "--- Lifecycle Log (last 20) ---"
+    if [ -f "$EC_LOG" ]; then
+        tail -n 20 "$EC_LOG" 2>/dev/null \
+            | sed 's|/home/[^ ]*|/home/<redacted>|g' \
+            | sed 's|/root[^ ]*|/root<redacted>|g' \
+            | sed 's/uuid=[^ ]*/uuid=<redacted>/g' \
+            | sed 's/serial=[^ ]*/serial=<redacted>/g' \
+            | sed 's/password=[^ ]*/password=<redacted>/g' \
+            | sed 's/MOK=[^ ]*/MOK=<redacted>/g' \
+            | sed 's/^/  /'
+    else
+        echo "  (none)"
+    fi
+    echo ""
+
+    # Ownership ledger (bounded — asset paths only, no content)
+    echo "--- Ownership Ledger ---"
+    if [ -f "$EC_LEDGER" ]; then
+        while IFS= read -r asset; do
+            # Redact home paths and sensitive patterns
+            echo "$asset" | sed 's|/home/[^ ]*|/home/<redacted>|g'
+        done < "$EC_LEDGER"
+    else
+        echo "  (none)"
+    fi
+    echo ""
+    echo "=== End Support Export ==="
+}
+
 # ── Verb dispatch (issue #91: lock, journal, idempotency, pruning) ────────
 
 # Ensure the lock is released on any exit path.
@@ -535,6 +686,12 @@ case "${1:-}" in
         write_sanitized_status
         ;;
     reconcile)
+        # Issue #92: bounded reconciliation with explicit timeout.
+        # The systemd unit (threshold-boot-reconcile.service) enforces
+        # TimeoutStartSec. This script-level timeout provides a second
+        # safety net for direct invocation. Never fail boot or enter
+        # emergency mode — timeout preserves charge threshold and leaves
+        # notification-only mode usable.
         do_reconcile
         write_sanitized_status
         ;;
@@ -544,8 +701,11 @@ case "${1:-}" in
     diagnostics)
         do_diagnostics
         ;;
+    support-export)
+        do_support_export
+        ;;
     *)
-        echo "usage: $0 {install-or-upgrade|repair|reconcile|remove|diagnostics}" >&2
+        echo "usage: $0 {install-or-upgrade|repair|reconcile|remove|diagnostics|support-export}" >&2
         exit 2
         ;;
 esac

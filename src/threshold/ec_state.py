@@ -8,10 +8,17 @@ Separates three concepts the presentation must never conflate:
 
 The machine-wide charge threshold lives in GSettings (Config) and is
 independent of any of these; the active threshold is the live sysfs value.
+
+Kernel lifecycle (issue #92):
+- A kernel becomes known-good only after a real boot, live capability
+  verification, and successful reconciliation.
+- Known-good markers are per-kernel files in the EC state directory.
+- Failed new-kernel builds preserve successful older kernel records.
 """
 
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Optional
 
 
@@ -132,3 +139,80 @@ def consume_pending_reboot(
     if pending.boot_id == current_boot_id:
         return pending
     return None
+
+
+# ── Kernel lifecycle (issue #92) ──────────────────────────────────────────
+
+EC_KERNEL_DIR = Path("/var/lib/threshold/ec/kernels")
+
+
+@dataclass(frozen=True)
+class KernelRecord:
+    """A per-kernel lifecycle record with known-good status.
+
+    A kernel becomes known-good only after a real boot, live capability
+    verification, and successful reconciliation. The marker file is
+    never created before all three conditions are satisfied.
+    """
+
+    kernel: str
+    known_good: bool
+    log_lines: tuple[str, ...] = ()
+
+    @classmethod
+    def read_from_dir(cls, kernel_dir: Path, kernel: str) -> "KernelRecord":
+        """Read a kernel record from the lifecycle directory."""
+        log_file = kernel_dir / f"{kernel}.log"
+        known_good_file = kernel_dir / f"{kernel}.known-good"
+
+        log_lines: tuple[str, ...] = ()
+        if log_file.exists():
+            try:
+                log_lines = tuple(log_file.read_text(encoding="utf-8").splitlines())
+            except OSError:
+                pass
+
+        known_good = known_good_file.exists()
+
+        return cls(kernel=kernel, known_good=known_good, log_lines=log_lines)
+
+
+def read_known_good_kernels(kernel_dir: Optional[Path] = None) -> tuple[str, ...]:
+    """Return kernel versions that have been verified as known-good.
+
+    A kernel is known-good when its ``.known-good`` marker file exists
+    in the kernel lifecycle directory.
+    """
+    kdir = kernel_dir or EC_KERNEL_DIR
+    if not kdir.is_dir():
+        return ()
+
+    kernels: list[str] = []
+    for marker in sorted(kdir.glob("*.known-good")):
+        kernels.append(marker.stem)
+    return tuple(kernels)
+
+
+def read_kernel_records(kernel_dir: Optional[Path] = None) -> tuple[KernelRecord, ...]:
+    """Read all kernel records from the lifecycle directory."""
+    kdir = kernel_dir or EC_KERNEL_DIR
+    if not kdir.is_dir():
+        return ()
+
+    records: list[KernelRecord] = []
+    for log_file in sorted(kdir.glob("*.log")):
+        kernel = log_file.stem
+        records.append(KernelRecord.read_from_dir(kdir, kernel))
+    return tuple(records)
+
+
+def get_oldest_known_good(
+    kernel_dir: Optional[Path] = None,
+) -> Optional[str]:
+    """Return the oldest known-good kernel version, or None.
+
+    Used for fallback when a new kernel build fails — preserves the
+    working older kernel.
+    """
+    kg = read_known_good_kernels(kernel_dir)
+    return kg[0] if kg else None

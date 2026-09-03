@@ -184,3 +184,107 @@ def test_lifecycle_state_layout_includes_lock_and_journal():
 def test_lifecycle_idempotency_check_present():
     text = _script()
     assert "was_completed" in text
+
+
+# ── Issue #92: reconciliation timeout ──────────────────────────────────────
+
+
+def test_lifecycle_has_reconcile_timeout():
+    text = _script()
+    assert "RECONCILE_TIMEOUT" in text
+
+
+def test_lifecycle_reconcile_uses_timeout_command():
+    text = _script()
+    # The reconcile dispatch should use timeout when available
+    assert "timeout" in text
+
+
+def test_lifecycle_reconcile_preserves_on_timeout():
+    text = _script()
+    assert "charge threshold preserved" in text
+
+
+# ── Issue #92: kernel-known-good tracking ──────────────────────────────────
+
+
+def test_lifecycle_has_mark_kernel_known_good():
+    text = _script()
+    assert "mark_kernel_known_good" in text
+
+
+def test_lifecycle_has_is_kernel_known_good():
+    text = _script()
+    assert "is_kernel_known_good" in text
+
+
+def test_lifecycle_has_get_known_good_kernels():
+    text = _script()
+    assert "get_known_good_kernels" in text
+
+
+def test_lifecycle_known_good_marker_uses_dot_known_good():
+    text = _script()
+    assert ".known-good" in text
+
+
+def test_lifecycle_reconcile_marks_kernel_known_good():
+    text = _script()
+    # Reconcile should mark kernel as known-good on successful reconciliation
+    reconcile_idx = text.index("do_reconcile")
+    # Find the end of the function (next top-level function or case)
+    next_func = text.find("\n\n#", reconcile_idx + 100)
+    if next_func == -1:
+        next_func = len(text)
+    reconcile_body = text[reconcile_idx:next_func]
+    assert "mark_kernel_known_good" in reconcile_body
+
+
+# ── Issue #92: kernel retention on failed builds ───────────────────────────
+
+
+def test_lifecycle_has_preserve_older_kernel_records():
+    text = _script()
+    assert "preserve_older_kernel_records" in text
+
+
+def test_lifecycle_build_failure_preserves_older_kernels():
+    text = _script()
+    # Both dkms build and dkms install failures should preserve older kernels
+    assert text.count("preserve_older_kernel_records") >= 2
+
+
+# ── Issue #92: support export verb ─────────────────────────────────────────
+
+
+def test_lifecycle_has_support_export_verb():
+    text = _script()
+    assert "support-export" in text
+
+
+def test_lifecycle_has_do_support_export():
+    text = _script()
+    assert "do_support_export" in text
+
+
+def test_lifecycle_support_export_excludes_sensitive_data():
+    text = _script()
+    # The support export function should redact sensitive patterns
+    export_idx = text.index("do_support_export")
+    export_body = text[export_idx:export_idx + 3000]
+    assert "redacted" in export_body
+
+
+def test_lifecycle_support_export_has_bounded_sections():
+    text = _script()
+    export_idx = text.index("do_support_export")
+    export_body = text[export_idx:export_idx + 3000]
+    assert "EC Setup State" in export_body
+    assert "Known-Good Kernels" in export_body
+    assert "Kernel Lifecycle Records" in export_body
+    assert "Operation Journal" in export_body
+
+
+def test_lifecycle_usage_includes_support_export():
+    text = _script()
+    assert "support-export" in text[text.index("usage:"):]

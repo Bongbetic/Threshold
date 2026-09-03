@@ -108,3 +108,92 @@ def test_working_older_module_keeps_setup_available_despite_failed_replacement()
     assert status.state == ECSetupState.AVAILABLE
     assert status.maintenance == ECMaintenanceStatus.FAILED
     assert status.presentation == "maintenance_failed"
+
+
+# ── Issue #92: kernel lifecycle ────────────────────────────────────────────
+
+
+def test_kernel_record_known_good_from_marker(tmp_path):
+    """KernelRecord reads known-good status from .known-good marker file."""
+    from threshold.ec_state import KernelRecord
+    kernel_dir = tmp_path / "kernels"
+    kernel_dir.mkdir()
+    (kernel_dir / "6.11.0.log").write_text("2026-01-01 module=msi-ec\n")
+    (kernel_dir / "6.11.0.known-good").touch()
+    record = KernelRecord.read_from_dir(kernel_dir, "6.11.0")
+    assert record.known_good is True
+    assert record.kernel == "6.11.0"
+    assert len(record.log_lines) == 1
+
+
+def test_kernel_record_not_known_good_without_marker(tmp_path):
+    """KernelRecord without .known-good marker is not known-good."""
+    from threshold.ec_state import KernelRecord
+    kernel_dir = tmp_path / "kernels"
+    kernel_dir.mkdir()
+    (kernel_dir / "6.11.0.log").write_text("2026-01-01 module=msi-ec\n")
+    record = KernelRecord.read_from_dir(kernel_dir, "6.11.0")
+    assert record.known_good is False
+
+
+def test_read_known_good_kernels_empty(tmp_path):
+    """No kernels directory returns empty tuple."""
+    from threshold.ec_state import read_known_good_kernels
+    result = read_known_good_kernels(tmp_path / "nonexistent")
+    assert result == ()
+
+
+def test_read_known_good_kernels_multiple(tmp_path):
+    """Reads all known-good kernels from marker files."""
+    from threshold.ec_state import read_known_good_kernels
+    kernel_dir = tmp_path / "kernels"
+    kernel_dir.mkdir()
+    (kernel_dir / "6.11.0.known-good").touch()
+    (kernel_dir / "6.12.0.known-good").touch()
+    (kernel_dir / "6.10.0.log").write_text("no marker\n")
+    result = read_known_good_kernels(kernel_dir)
+    assert "6.10.0" not in result
+    assert "6.11.0" in result
+    assert "6.12.0" in result
+    assert result == ("6.11.0", "6.12.0")
+
+
+def test_read_kernel_records_empty(tmp_path):
+    """No kernels directory returns empty tuple."""
+    from threshold.ec_state import read_kernel_records
+    result = read_kernel_records(tmp_path / "nonexistent")
+    assert result == ()
+
+
+def test_read_kernel_records_with_logs(tmp_path):
+    """Reads kernel records from log files."""
+    from threshold.ec_state import read_kernel_records
+    kernel_dir = tmp_path / "kernels"
+    kernel_dir.mkdir()
+    (kernel_dir / "6.11.0.log").write_text("line1\nline2\n")
+    (kernel_dir / "6.12.0.log").write_text("line3\n")
+    (kernel_dir / "6.12.0.known-good").touch()
+    records = read_kernel_records(kernel_dir)
+    assert len(records) == 2
+    by_kernel = {r.kernel: r for r in records}
+    assert by_kernel["6.11.0"].known_good is False
+    assert by_kernel["6.12.0"].known_good is True
+    assert by_kernel["6.11.0"].log_lines == ("line1", "line2")
+
+
+def test_get_oldest_known_good_none(tmp_path):
+    """No known-good kernels returns None."""
+    from threshold.ec_state import get_oldest_known_good
+    result = get_oldest_known_good(tmp_path / "nonexistent")
+    assert result is None
+
+
+def test_get_oldest_known_good_returns_first(tmp_path):
+    """Returns the first (oldest) known-good kernel."""
+    from threshold.ec_state import get_oldest_known_good
+    kernel_dir = tmp_path / "kernels"
+    kernel_dir.mkdir()
+    (kernel_dir / "6.11.0.known-good").touch()
+    (kernel_dir / "6.12.0.known-good").touch()
+    result = get_oldest_known_good(kernel_dir)
+    assert result == "6.11.0"
