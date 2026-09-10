@@ -3,6 +3,7 @@
 # Removal invokes lifecycle removal before files disappear; upgrade paths
 # never reach this hook destructively (dpkg calls prerm with remove only
 # on actual removal, not upgrade, where the new postinst re-runs setup).
+# systemd stop/disable is handled by dh_installsystemd.
 set -e
 
 case "$1" in
@@ -10,10 +11,9 @@ case "$1" in
         if [ -x /usr/sbin/threshold-ec-lifecycle ]; then
             /usr/sbin/threshold-ec-lifecycle remove || true
         fi
-        if [ -x /usr/bin/systemctl ]; then
-            systemctl disable threshold-boot-reconcile.service >/dev/null 2>&1 || true
-        fi
         ;;
 esac
+
+#DEBHELPER#
 
 exit 0

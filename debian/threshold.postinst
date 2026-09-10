@@ -2,6 +2,7 @@
 # Threshold DEB configure hook (issue #86).
 # The shared EC lifecycle authority owns all EC behavior; this hook only
 # invokes it and never fails the transaction on EC outcomes.
+# systemd enable/disable is handled by dh_installsystemd.
 set -e
 
 case "$1" in
@@ -13,10 +14,9 @@ case "$1" in
         if [ -x /usr/sbin/threshold-ec-lifecycle ]; then
             /usr/sbin/threshold-ec-lifecycle install-or-upgrade || true
         fi
-        if [ -x /usr/bin/systemctl ]; then
-            systemctl enable threshold-boot-reconcile.service >/dev/null 2>&1 || true
-        fi
         ;;
 esac
+
+#DEBHELPER#
 
 exit 0

@@ -3,7 +3,7 @@
 export DH_VERBOSE = 1
 
 %:
-	dh $@ --buildsystem=meson --with python3
+	dh $@ --buildsystem=meson --with python3 --with systemd --with sysusers
 
 override_dh_auto_install:
 	cd obj-x86_64-linux-gnu && DESTDIR=$(CURDIR)/debian/tmp ninja install
