@@ -26,3 +26,6 @@ debian/threshold/
 /web/node_modules/
 /graphify-out/
 .gitignore
+releases/2.0.0/*.deb
+releases/2.0.0/*.rpm
+releases/2.0.0/*.src.rpm

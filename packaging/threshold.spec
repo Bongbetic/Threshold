@@ -92,7 +92,6 @@ install -Dpm 0644 data/threshold-boot-reconcile.service %{buildroot}%{_unitdir}/
 # command materializes the DKMS registration.
 mkdir -p %{buildroot}%{_usrsrc}/msi-ec-%{msi_ec_ver}
 cp -a msi-ec-src/. %{buildroot}%{_usrsrc}/msi-ec-%{msi_ec_ver}/
-install -Dpm 0644 %{buildroot}%{_usrsrc}/msi-ec-%{msi_ec_ver}/dkms.conf %{buildroot}%{_usrsrc}/msi-ec-%{msi_ec_ver}/dkms.conf
 
 # Autoload hint (registered in the ownership ledger by the lifecycle script)
 mkdir -p %{buildroot}%{_modulesloaddir}
@@ -152,6 +151,7 @@ fi
 %{_datadir}/glib-2.0/schemas/com.bongbetic.batteryguard.gschema.xml
 %{_datadir}/GConf/gsettings/com.bongbetic.batteryguard.convert
 %{_datadir}/icons/hicolor/scalable/apps/com.bongbetic.threshold.svg
+%{_datadir}/icons/hicolor/scalable/status/com.bongbetic.threshold-battery-*.svg
 %{_datadir}/icons/hicolor/symbolic/apps/com.bongbetic.threshold-symbolic.svg
 # po/LINGUAS is empty — no .mo installed yet; re-add
 # %%{_datadir}/locale/*/LC_MESSAGES/*.mo when translations land
