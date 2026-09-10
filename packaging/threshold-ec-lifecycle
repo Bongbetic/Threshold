@@ -379,7 +379,7 @@ do_setup() {
     # known reboot-completable path (enroll MOK, reboot completes it).
     if ! modprobe "$DKMS_NAME" 2>/dev/null; then
         if mokutil --sb-state 2>/dev/null | grep -q "SecureBoot enabled"; then
-            set_setup_state unavailable load_failed_secure_boot
+            set_setup_state pending_reboot
             write_maintenance_status ok
             record_pending_reboot setup
         else
@@ -387,7 +387,7 @@ do_setup() {
             write_maintenance_status ok
         fi
         record_kernel_event "$(running_kernel)" built unsigned noload none
-        log "modprobe msi-ec failed (possibly Secure Boot); pending reboot not assumed."
+        log "modprobe msi-ec failed; Secure Boot path records pending reboot."
         return 0
     fi
 
