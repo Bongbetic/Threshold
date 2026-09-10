@@ -272,9 +272,9 @@ prune_lifecycle_log() {
 }
 
 record_kernel_event() {
-    # record_kernel_event <kernel> <module_version> <dkms> <trust> <load> <live> <reconciliation>
+    # record_kernel_event <kernel> <dkms> <trust> <load> <live> <reconciliation>
     mkdir -p "$EC_KERNEL_DIR"
-    echo "$(date -Iseconds) module=$DKMS_NAME-$MSI_EC_VERSION dkms=$1 trust=$2 load=$3 live=$4 reconciliation=$5" \
+    echo "$(date -Iseconds) module=$DKMS_NAME-$MSI_EC_VERSION kernel=$1 dkms=$2 trust=$3 load=$4 live=$5 reconciliation=$6" \
         >> "$EC_KERNEL_DIR/$1.log"
 }
 
@@ -300,16 +300,12 @@ get_known_good_kernels() {
     done
 }
 
-preserve_older_kernel_records() {
-    # preserve_older_kernel_records <failed_kernel>
-    # When a new kernel build fails, preserve the successful older kernel
-    # records. The failed kernel's record is kept but NOT marked known-good.
-    # Older known-good markers are never removed.
-    local failed_kernel="$1"
-    # The failed kernel record is already in the log from record_kernel_event.
-    # We just ensure it's NOT marked known-good (it won't be, since
-    # mark_kernel_known_good is only called on successful reconciliation).
-    log "Kernel $failed_kernel build failed; preserving older known-good records."
+log_build_failure() {
+    # log_build_failure <failed_kernel>
+    # When a new kernel build fails, older known-good records are preserved
+    # (markers are only created on successful reconciliation). This logs
+    # the failure for diagnostic evidence.
+    log "Kernel $1 build failed; older known-good records preserved."
 }
 
 # ── MSI EC setup (shared by install-or-upgrade and repair) ────────────────
@@ -355,7 +351,7 @@ do_setup() {
         set_setup_state unavailable build_failed
         write_maintenance_status failed
         # Issue #92: failed new-kernel build preserves successful older builds.
-        preserve_older_kernel_records "$(running_kernel)"
+        log_build_failure "$(running_kernel)"
         log "dkms build failed; older module (if any) remains in control."
         return 0
     fi
@@ -363,7 +359,7 @@ do_setup() {
         set_setup_state unavailable build_failed
         write_maintenance_status failed
         # Issue #92: failed new-kernel build preserves successful older builds.
-        preserve_older_kernel_records "$(running_kernel)"
+        log_build_failure "$(running_kernel)"
         log "dkms install failed; older module (if any) remains in control."
         return 0
     fi
@@ -386,7 +382,7 @@ do_setup() {
             set_setup_state unavailable load_failed
             write_maintenance_status ok
         fi
-        record_kernel_event "$(running_kernel)" built unsigned noload none
+        record_kernel_event "$(running_kernel)" built unsigned noload none ""
         log "modprobe msi-ec failed; Secure Boot path records pending reboot."
         return 0
     fi
@@ -395,12 +391,12 @@ do_setup() {
     if verify_live_interface; then
         set_setup_state available
         write_maintenance_status ok
-        record_kernel_event "$(running_kernel)" built signed loaded yes verified
+        record_kernel_event "$(running_kernel)" built signed loaded yes verified ""
         log "EC setup available and verified."
     else
         set_setup_state unavailable threshold_interface_missing
         write_maintenance_status ok
-        record_kernel_event "$(running_kernel)" built signed loaded no failed
+        record_kernel_event "$(running_kernel)" built signed loaded no failed ""
         log "Module loaded but threshold interface not verified."
     fi
 }
@@ -446,7 +442,7 @@ do_reconcile() {
             set_setup_state unavailable threshold_interface_missing
             write_maintenance_status failed
         fi
-        record_kernel_event "$(running_kernel)" - - - no nolive
+        record_kernel_event "$(running_kernel)" - - - no nolive ""
         log "No threshold interface at boot; notification-only mode remains usable."
         return 0
     fi
@@ -475,18 +471,18 @@ do_reconcile() {
                 # Issue #92: kernel becomes known-good after real boot,
                 # live capability verification, and successful reconciliation.
                 mark_kernel_known_good "$(running_kernel)"
-                record_kernel_event "$(running_kernel)" - - loaded yes reconciled
+                record_kernel_event "$(running_kernel)" - - loaded yes reconciled ""
                 log "Reconciled threshold to ${DESIRED}% (verified); kernel marked known-good."
             else
                 set_setup_state unavailable verification_failed
                 write_maintenance_status failed
-                record_kernel_event "$(running_kernel)" - - loaded no readback_failed
+                record_kernel_event "$(running_kernel)" - - loaded no readback_failed ""
                 log "Reconciliation readback mismatch (${VERIFY:-none} != $DESIRED)."
             fi
         else
             set_setup_state unavailable verification_failed
             write_maintenance_status failed
-            record_kernel_event "$(running_kernel)" - - loaded no write_failed
+            record_kernel_event "$(running_kernel)" - - loaded no write_failed ""
             log "Reconciliation write failed; charge threshold preserved."
         fi
     else
@@ -496,7 +492,7 @@ do_reconcile() {
         # Issue #92: even on no-write (active matches desired), mark kernel
         # as known-good since live capability is verified.
         mark_kernel_known_good "$(running_kernel)"
-        record_kernel_event "$(running_kernel)" - - loaded yes noop
+        record_kernel_event "$(running_kernel)" - - loaded yes noop ""
         log "Active and desired thresholds agree; no write needed; kernel marked known-good."
     fi
 }
@@ -547,7 +543,16 @@ do_diagnostics() {
 
 # ── Support export: bounded evidence, privacy-safe (issue #92) ───────────
 
-SUPPORT_EXPORT_MAX_LINES=500
+redact_pii() {
+    # redact_pii — strip usernames, home paths, hardware identifiers, and
+    # other sensitive patterns from lifecycle evidence.
+    sed 's|/home/[^ ]*|/home/<redacted>|g' \
+        | sed 's|/root[^ ]*|/root<redacted>|g' \
+        | sed 's/uuid=[^ ]*/uuid=<redacted>/g' \
+        | sed 's/serial=[^ ]*/serial=<redacted>/g' \
+        | sed 's/password=[^ ]*/password=<redacted>/g' \
+        | sed 's/MOK=[^ ]*/MOK=<redacted>/g'
+}
 
 do_support_export() {
     # Privacy-safe support export: bounded relevant lifecycle evidence,
@@ -625,12 +630,7 @@ do_support_export() {
     echo "--- Lifecycle Log (last 20) ---"
     if [ -f "$EC_LOG" ]; then
         tail -n 20 "$EC_LOG" 2>/dev/null \
-            | sed 's|/home/[^ ]*|/home/<redacted>|g' \
-            | sed 's|/root[^ ]*|/root<redacted>|g' \
-            | sed 's/uuid=[^ ]*/uuid=<redacted>/g' \
-            | sed 's/serial=[^ ]*/serial=<redacted>/g' \
-            | sed 's/password=[^ ]*/password=<redacted>/g' \
-            | sed 's/MOK=[^ ]*/MOK=<redacted>/g' \
+            | redact_pii \
             | sed 's/^/  /'
     else
         echo "  (none)"
@@ -641,8 +641,7 @@ do_support_export() {
     echo "--- Ownership Ledger ---"
     if [ -f "$EC_LEDGER" ]; then
         while IFS= read -r asset; do
-            # Redact home paths and sensitive patterns
-            echo "$asset" | sed 's|/home/[^ ]*|/home/<redacted>|g'
+            echo "$asset" | redact_pii
         done < "$EC_LEDGER"
     else
         echo "  (none)"
@@ -665,6 +664,12 @@ case "${1:-}" in
             exit 0
         fi
         trap 'release_lock' EXIT
+        ;;
+    _reconcile_core)
+        # Internal verb: runs do_reconcile under timeout, invoked by the
+        # reconcile dispatch. Skips lock (parent holds it) and journaling.
+        do_reconcile
+        exit 0
         ;;
 esac
 
@@ -692,7 +697,15 @@ case "${1:-}" in
         # safety net for direct invocation. Never fail boot or enter
         # emergency mode — timeout preserves charge threshold and leaves
         # notification-only mode usable.
-        do_reconcile
+        if command -v timeout >/dev/null 2>&1; then
+            # timeout is an external command and cannot run shell functions;
+            # re-invoke this script as an external process under timeout.
+            timeout "$RECONCILE_TIMEOUT" "$0" _reconcile_core || {
+                log "Reconciliation timed out after ${RECONCILE_TIMEOUT}s; charge threshold preserved."
+            }
+        else
+            do_reconcile
+        fi
         write_sanitized_status
         ;;
     remove)

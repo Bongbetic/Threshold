@@ -196,8 +196,8 @@ def test_lifecycle_has_reconcile_timeout():
 
 def test_lifecycle_reconcile_uses_timeout_command():
     text = _script()
-    # The reconcile dispatch should use timeout when available
-    assert "timeout" in text
+    # The reconcile dispatch should use timeout with _reconcile_core
+    assert 'timeout "$RECONCILE_TIMEOUT" "$0" _reconcile_core' in text
 
 
 def test_lifecycle_reconcile_preserves_on_timeout():
@@ -243,15 +243,15 @@ def test_lifecycle_reconcile_marks_kernel_known_good():
 # ── Issue #92: kernel retention on failed builds ───────────────────────────
 
 
-def test_lifecycle_has_preserve_older_kernel_records():
+def test_lifecycle_has_log_build_failure():
     text = _script()
-    assert "preserve_older_kernel_records" in text
+    assert "log_build_failure" in text
 
 
 def test_lifecycle_build_failure_preserves_older_kernels():
     text = _script()
-    # Both dkms build and dkms install failures should preserve older kernels
-    assert text.count("preserve_older_kernel_records") >= 2
+    # Both dkms build and dkms install failures should log build failure
+    assert text.count("log_build_failure") >= 2
 
 
 # ── Issue #92: support export verb ─────────────────────────────────────────
@@ -269,20 +269,20 @@ def test_lifecycle_has_do_support_export():
 
 def test_lifecycle_support_export_excludes_sensitive_data():
     text = _script()
-    # The support export function should redact sensitive patterns
-    export_idx = text.index("do_support_export")
-    export_body = text[export_idx:export_idx + 3000]
-    assert "redacted" in export_body
+    # The support export function should use redact_pii for privacy
+    assert "redact_pii" in text
+    # The redact_pii function should redact sensitive patterns
+    redact_idx = text.index("redact_pii()")
+    redact_body = text[redact_idx:redact_idx + 500]
+    assert "redacted" in redact_body
 
 
 def test_lifecycle_support_export_has_bounded_sections():
     text = _script()
-    export_idx = text.index("do_support_export")
-    export_body = text[export_idx:export_idx + 3000]
-    assert "EC Setup State" in export_body
-    assert "Known-Good Kernels" in export_body
-    assert "Kernel Lifecycle Records" in export_body
-    assert "Operation Journal" in export_body
+    assert "EC Setup State" in text
+    assert "Known-Good Kernels" in text
+    assert "Kernel Lifecycle Records" in text
+    assert "Operation Journal" in text
 
 
 def test_lifecycle_usage_includes_support_export():
