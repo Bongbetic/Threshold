@@ -10,6 +10,7 @@ project(
 
 gnome = import('gnome')
 i18n = import('i18n')
+fs = import('fs')
 
 app_id = 'com.bongbetic.threshold'
 
@@ -36,7 +37,7 @@ subdir('tests')
 
 # Install committed web/dist if present
 web_dist = meson.current_source_dir() / 'web' / 'dist'
-if web_dist.is_dir()
+if fs.is_dir(web_dist)
   install_subdir(
     web_dist,
     install_dir: pkgdatadir / 'web',

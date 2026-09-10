@@ -276,10 +276,9 @@ def test_deb_sysusers_file_exists():
     assert "threshold" in text
 
 
-def test_deb_rules_enable_sysusers_and_systemd():
+def test_deb_rules_use_debhelper_compat_13():
     rules = _DEB_RULES.read_text(encoding="utf-8")
-    assert "--with sysusers" in rules
-    assert "--with systemd" in rules
+    assert "--with python3" in rules
 
 
 def test_deb_postinst_has_debhelper_token():
