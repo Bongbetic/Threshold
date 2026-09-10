@@ -3,6 +3,9 @@ set -e
 
 case "$1" in
     purge)
+        if [ -x /usr/sbin/threshold-ec-lifecycle ]; then
+            /usr/sbin/threshold-ec-lifecycle remove || true
+        fi
         rm -f /usr/lib/modules-load.d/msi-ec.conf
         rm -rf /var/lib/threshold
         ;;

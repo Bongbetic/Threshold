@@ -216,3 +216,146 @@ def test_source_icons_and_udev_live_under_data():
         / f"{APP_ID}-symbolic.svg"
     ).is_file()
     assert (ROOT / "data" / "99-msi-battery.rules").is_file()
+
+
+# ── DEB packaging completeness (issue #93) ────────────────────────────────
+
+_DEB_INSTALL = ROOT / "debian" / "threshold.install"
+_DEB_POSTINST = ROOT / "debian" / "threshold.postinst"
+_DEB_PRERM = ROOT / "debian" / "threshold.prerm"
+_DEB_POSTRM = ROOT / "debian" / "threshold.postrm"
+_DEB_CONTROL = ROOT / "debian" / "control"
+_DEB_RULES = ROOT / "debian" / "rules"
+_SYSUSERS = ROOT / "debian" / "threshold.sysusers"
+_LIFECYCLE = ROOT / "packaging" / "threshold-ec-lifecycle"
+
+
+def _install_manifest() -> str:
+    return _DEB_INSTALL.read_text(encoding="utf-8")
+
+
+def test_deb_installs_lifecycle_authority():
+    assert "usr/sbin/threshold-ec-lifecycle" in _install_manifest()
+
+
+def test_deb_installs_systemd_unit():
+    assert (
+        "usr/lib/systemd/system/threshold-boot-reconcile.service"
+        in _install_manifest()
+    )
+
+
+def test_deb_installs_ec_dkms_source():
+    manifest = _install_manifest()
+    assert "msi-ec-src" in manifest
+    assert "usr/src/msi-ec-0.13.112" in manifest
+
+
+def test_deb_installs_udev_rule():
+    assert "usr/lib/udev/rules.d/99-msi-battery.rules" in _install_manifest()
+
+
+def test_deb_installs_notification_area_icons():
+    manifest = _install_manifest()
+    assert "icons/hicolor/scalable/apps/" in manifest
+    assert "icons/hicolor/symbolic/apps/" in manifest
+
+
+def test_deb_installs_dbusmenu_typelib():
+    control = _DEB_CONTROL.read_text(encoding="utf-8")
+    assert "gir1.2-dbusmenu-glib-0.4" in control
+
+
+def test_deb_installs_web_ui():
+    assert "usr/share/com.bongbetic.threshold/web/" in _install_manifest()
+
+
+def test_deb_sysusers_file_exists():
+    assert _SYSUSERS.is_file(), "debian/threshold.sysusers must exist"
+    text = _SYSUSERS.read_text(encoding="utf-8")
+    assert "threshold" in text
+
+
+def test_deb_rules_enable_sysusers_and_systemd():
+    rules = _DEB_RULES.read_text(encoding="utf-8")
+    assert "--with sysusers" in rules
+    assert "--with systemd" in rules
+
+
+def test_deb_postinst_has_debhelper_token():
+    text = _DEB_POSTINST.read_text(encoding="utf-8")
+    assert "#DEBHELPER#" in text
+
+
+def test_deb_postinst_invokes_lifecycle():
+    text = _DEB_POSTINST.read_text(encoding="utf-8")
+    assert "threshold-ec-lifecycle" in text
+    assert "install-or-upgrade" in text
+
+
+def test_deb_postinst_no_manual_systemctl():
+    text = _DEB_POSTINST.read_text(encoding="utf-8")
+    assert "systemctl" not in text, (
+        "postinst must not call systemctl — dh_installsystemd handles this"
+    )
+
+
+def test_deb_prerm_has_debhelper_token():
+    text = _DEB_PRERM.read_text(encoding="utf-8")
+    assert "#DEBHELPER#" in text
+
+
+def test_deb_prerm_invokes_lifecycle_on_remove():
+    text = _DEB_PRERM.read_text(encoding="utf-8")
+    assert "threshold-ec-lifecycle remove" in text
+
+
+def test_deb_prerm_no_manual_systemctl():
+    text = _DEB_PRERM.read_text(encoding="utf-8")
+    assert "systemctl" not in text, (
+        "prerm must not call systemctl — dh_installsystemd handles this"
+    )
+
+
+def test_deb_postrm_has_debhelper_token():
+    text = _DEB_POSTRM.read_text(encoding="utf-8")
+    assert "#DEBHELPER#" in text
+
+
+def test_deb_postrm_purges_lifecycle_and_state():
+    text = _DEB_POSTRM.read_text(encoding="utf-8")
+    assert "threshold-ec-lifecycle remove" in text
+    assert "rm -rf /var/lib/threshold" in text
+
+
+def test_deb_control_has_runtime_deps():
+    control = _DEB_CONTROL.read_text(encoding="utf-8")
+    for dep in (
+        "gir1.2-gtk-4.0",
+        "gir1.2-adw-1",
+        "gir1.2-notify-0.7",
+        "gir1.2-webkit-6.0",
+        "gir1.2-dbusmenu-glib-0.4",
+        "dkms",
+        "kmod",
+        "systemd",
+    ):
+        assert dep in control, f"missing runtime dependency: {dep}"
+
+
+def test_deb_control_recommends_not_depends():
+    control = _DEB_CONTROL.read_text(encoding="utf-8")
+    depends_section = control.split("Recommends:")[0]
+    assert "policykit-1" not in depends_section, (
+        "policykit-1 must be Recommends, not Depends"
+    )
+    assert "mokutil" not in depends_section, (
+        "mokutil must be Recommends, not Depends"
+    )
+    recommends = control.split("Recommends:")[1]
+    assert "policykit-1" in recommends
+    assert "mokutil" in recommends
+
+
+def test_deb_lifecycle_authority_source_exists():
+    assert _LIFECYCLE.is_file(), "packaging/threshold-ec-lifecycle must exist"

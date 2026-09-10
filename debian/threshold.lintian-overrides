@@ -6,3 +6,9 @@ threshold: initial-upload-closes-no-bugs
 
 # CLI is a thin launcher for the GUI; no man page in this release.
 threshold: no-manual-page
+
+# Vendored msi-ec kernel-module source installed to /usr/src for DKMS
+# compilation at install time.  The tree is a self-contained DKMS source
+# package, not a bundled library.
+threshold: embedded-library *
+threshold: package-installs-source *
