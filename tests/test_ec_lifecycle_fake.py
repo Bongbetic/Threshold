@@ -222,10 +222,42 @@ class TestFakeSystemLifecycle:
         r = run_lifecycle(fake, "install-or-upgrade")
         assert r.returncode == 0
         st = read_state(fake)
-        assert st["reason"] == "load_failed_secure_boot"
+        assert st["setup_state"] == "pending_reboot"
+        assert "reason" not in st
         pending = (fake.state / "pending-reboot").read_text()
         assert "boot_id=boot-a" in pending
         assert "action=setup" in pending
+
+    def test_load_failed_without_secure_boot_is_unavailable(self, fake_system):
+        """Non-Secure-Boot modprobe failure produces unavailable with load_failed reason."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        # Default mokutil stub reports SecureBoot disabled
+        stub(Path(fake.env["PATH"].split(":")[0]) / "modprobe", """\
+            #!/bin/sh
+            exit 1
+            """)
+        r = run_lifecycle(fake, "install-or-upgrade")
+        assert r.returncode == 0
+        st = read_state(fake)
+        assert st["setup_state"] == "unavailable"
+        assert st["reason"] == "load_failed"
+        assert read_maintenance(fake) == "ok"
+        assert not (fake.state / "pending-reboot").exists()
+
+    def test_threshold_interface_missing_after_load(self, fake_system):
+        """Module loads but threshold sysfs interface is absent → unavailable."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        # Do NOT call add_threshold_interface — module loads but no sysfs
+        r = run_lifecycle(fake, "install-or-upgrade")
+        assert r.returncode == 0
+        st = read_state(fake)
+        assert st["setup_state"] == "unavailable"
+        assert st["reason"] == "threshold_interface_missing"
+        assert read_maintenance(fake) == "ok"
 
     def test_first_different_boot_consumes_pending(self, fake_system):
         fake = fake_system
