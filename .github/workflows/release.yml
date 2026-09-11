@@ -209,8 +209,7 @@ jobs:
       - name: Install the exact Unified RPM via ${{ matrix.tool }}
         run: |
           if [ "${{ matrix.tool }}" = "dnf" ]; then
-            dnf -y install candidates/threshold-*.noarch.rpm || \
-              dnf -y install --skip-broken candidates/threshold-*.noarch.rpm
+            dnf -y install candidates/threshold-*.noarch.rpm
           else
             zypper -n --no-gpg-checks install candidates/threshold-*.noarch.rpm
           fi
@@ -218,9 +217,31 @@ jobs:
       - name: Check installed layout
         run: |
           set -e
-          test -f /usr/bin/threshold || test -f /usr/bin/threshold.py || true
+          # Application binary
+          test -x /usr/bin/threshold
+          # EC lifecycle authority
           test -x /usr/sbin/threshold-ec-lifecycle
+          # Vendored msi-ec source
           test -d /usr/src/msi-ec-0.13.112
+          # Boot reconciliation systemd unit
+          test -f /usr/lib/systemd/system/threshold-boot-reconcile.service
+          # Notification-area status icons (at least one non-charging + one charging)
+          test -f /usr/share/icons/hicolor/scalable/status/com.bongbetic.threshold-battery-good.svg
+          test -f /usr/share/icons/hicolor/scalable/status/com.bongbetic.threshold-battery-good-charging.svg
+          # App icon + symbolic icon
+          test -f /usr/share/icons/hicolor/scalable/apps/com.bongbetic.threshold.svg
+          test -f /usr/share/icons/hicolor/symbolic/apps/com.bongbetic.threshold-symbolic.svg
+          # sysusers.d config
+          test -f /usr/lib/sysusers.d/threshold.conf
+          # udev rules (plugdev rewritten to threshold)
+          test -f /usr/lib/udev/rules.d/99-msi-battery.rules
+          grep -q 'threshold' /usr/lib/udev/rules.d/99-msi-battery.rules
+          # GSettings schemas (both current + legacy)
+          test -f /usr/share/glib-2.0/schemas/com.bongbetic.threshold.gschema.xml
+          test -f /usr/share/glib-2.0/schemas/com.bongbetic.batteryguard.gschema.xml
+          # Desktop + metainfo
+          test -f /usr/share/applications/com.bongbetic.threshold.desktop
+          test -f /usr/share/metainfo/com.bongbetic.threshold.metainfo.xml
 
   appimage-verify:
     needs: appimage

@@ -226,6 +226,57 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
+  rpm-verify:
+    needs: rpm-package
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - container: fedora:44
+            tool: dnf
+          - container: opensuse/tumbleweed:latest
+            tool: zypper
+    container: ${{ matrix.container }}
+    steps:
+      - name: Download RPM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: threshold-rpm-fedora-44
+          path: rpm
+
+      - name: Record checksum
+        run: (cd rpm && sha256sum *.rpm) > sha256s.txt
+
+      - name: Install the Unified RPM via ${{ matrix.tool }}
+        run: |
+          if [ "${{ matrix.tool }}" = "dnf" ]; then
+            dnf -y install rpm/threshold-*.noarch.rpm
+          else
+            zypper -n --no-gpg-checks install rpm/threshold-*.noarch.rpm
+          fi
+
+      - name: Check installed layout
+        run: |
+          set -e
+          test -x /usr/bin/threshold
+          test -x /usr/sbin/threshold-ec-lifecycle
+          test -f /usr/lib/systemd/system/threshold-boot-reconcile.service
+          test -d /usr/src/msi-ec-0.13.112
+          test -f /usr/share/icons/hicolor/scalable/status/com.bongbetic.threshold-battery-good.svg
+          test -f /usr/share/icons/hicolor/scalable/apps/com.bongbetic.threshold.svg
+          test -f /usr/lib/sysusers.d/threshold.conf
+          grep -q 'threshold' /usr/lib/udev/rules.d/99-msi-battery.rules
+          test -f /usr/share/glib-2.0/schemas/com.bongbetic.threshold.gschema.xml
+          test -f /usr/share/applications/com.bongbetic.threshold.desktop
+
+      - name: Verify the same SHA-256 artifact was used
+        run: |
+          cd rpm
+          SHA=$(awk '{print $1}' sha256s.txt)
+          test -n "$SHA"
+          sha256sum -c sha256s.txt
+
   web:
     runs-on: ubuntu-24.04
     steps:
