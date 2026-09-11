@@ -13,7 +13,7 @@
 
 Name:           threshold
 Version:        2.0.0
-Release:        1
+Release:        2
 Summary:        Battery charge threshold controller for Linux laptops
 License:        GPL-3.0-or-later
 URL:            https://github.com/Bongbetic/Threshold
@@ -42,12 +42,14 @@ Requires:       hicolor-icon-theme
 Requires:       dkms
 Requires:       kmod
 Requires:       systemd
-# Explicit x86-64 GI typelib capabilities for the Carbon shell + tray.
-Requires:       gtk4(x86-64)
-Requires:       libadwaita(x86-64)
-Requires:       libnotify(x86-64)
-Requires:       dbusmenu-gtk3(x86-64)
-Requires:       webkit2gtk-6.0(x86-64)
+# Portable GI typelib capabilities for the Carbon shell + tray.
+# typelib() virtual provides resolve identically on Fedora and openSUSE
+# without architecture suffixes, so the noarch payload carries no ISA hint.
+Requires:       typelib(Gtk)-4.0
+Requires:       typelib(Adw)-1
+Requires:       typelib(Notify)-0.7
+Requires:       typelib(Dbusmenu)-0.4
+Requires:       typelib(WebKit)-6.0
 Recommends:     polkit
 Recommends:     mokutil
 
@@ -161,6 +163,11 @@ fi
 %{_modulesloaddir}/msi-ec.conf
 
 %changelog
+* Thu Sep 11 2026 Soubarna <Soubarna@live.in> - 2.0.0-2
+- Portable GI typelib Requires via typelib() virtual provides — resolves
+  on both Fedora and openSUSE without x86-64 architecture suffixes;
+  CI and release verify jobs now check all shipped assets (issue #94)
+
 * Tue Sep 02 2026 Soubarna <Soubarna@live.in> - 2.0.0-1
 - Unified RPM: one distribution-neutral artifact replaces the paired
   main + msi-ec-dkms release; shared EC lifecycle authority, boot
