@@ -91,6 +91,10 @@ _child = textwrap.dedent("""\
     def run_checks():
         # The tray registers from its watcher-appeared callback, so the
         # checks only run once the loop has spun and registration landed.
+        # Registration is event-driven: reschedule until the tray has
+        # registered with the watcher (bounded by the 8s safety quit).
+        if not results["registered_items"]:
+            return True
         try:
             results["props"] = {
                 "Id": check("Id").unpack(),
@@ -116,7 +120,7 @@ _child = textwrap.dedent("""\
         GLib.timeout_add(200, assert_lost)
         return False
 
-    GLib.timeout_add(1000, run_checks)
+    GLib.timeout_add(300, run_checks)
 
     def assert_lost():
         results["readiness_after_loss"] = tray.readiness.value
