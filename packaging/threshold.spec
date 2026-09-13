@@ -43,14 +43,15 @@ Requires:       dkms
 Requires:       kmod
 Requires:       systemd
 # Portable GI typelib capabilities for the Carbon shell + tray.
-# typelib() virtual provides (typelib(<Namespace>) = <GIR version>) resolve
-# identically on Fedora and openSUSE
-# without architecture suffixes, so the noarch payload carries no ISA hint.
-Requires:       typelib(Gtk) = 4.0
-Requires:       typelib(Adw) = 1
-Requires:       typelib(Notify) = 0.7
-Requires:       typelib(Dbusmenu) = 0.4
-Requires:       typelib(WebKit) = 6.0
+# Runtime GIR files, required as FILE dependencies: neither Fedora nor
+# openSUSE generates typelib() virtual provides, and package names differ
+# per distro, but both install GIRs at the same absolute path. File deps
+# carry no architecture hint, so the noarch payload stays clean.
+Requires:       /usr/lib64/girepository-1.0/Gtk-4.0.typelib
+Requires:       /usr/lib64/girepository-1.0/Adw-1.typelib
+Requires:       /usr/lib64/girepository-1.0/Notify-0.7.typelib
+Requires:       /usr/lib64/girepository-1.0/Dbusmenu-0.4.typelib
+Requires:       /usr/lib64/girepository-1.0/WebKit-6.0.typelib
 Recommends:     polkit
 Recommends:     mokutil
 

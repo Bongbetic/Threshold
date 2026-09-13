@@ -345,14 +345,14 @@ def test_deb_control_has_runtime_deps():
 def test_deb_control_recommends_not_depends():
     control = _DEB_CONTROL.read_text(encoding="utf-8")
     depends_section = control.split("Recommends:")[0]
-    assert "policykit-1" not in depends_section, (
-        "policykit-1 must be Recommends, not Depends"
+    assert "polkitd" not in depends_section, (
+        "polkitd must be Recommends, not Depends"
     )
     assert "mokutil" not in depends_section, (
         "mokutil must be Recommends, not Depends"
     )
     recommends = control.split("Recommends:")[1]
-    assert "policykit-1" in recommends
+    assert "polkitd" in recommends
     assert "mokutil" in recommends
 
 
