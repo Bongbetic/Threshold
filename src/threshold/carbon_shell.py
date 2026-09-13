@@ -609,8 +609,8 @@ def create_carbon_window(application, config):
         _load_shim_source(),
         WebKit.UserContentInjectedFrames.TOP_FRAME,
         WebKit.UserScriptInjectionTime.START,
-        [],  # allow_list
-        [],  # block_list
+        None,  # allow_list: NULL means every frame; an empty list matches none
+        None,  # block_list
     )
     user_content.add_script(shim)
 

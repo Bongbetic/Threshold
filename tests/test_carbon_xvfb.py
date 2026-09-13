@@ -52,6 +52,7 @@ from gi.repository import GLib, Gtk, WebKit, Gio
 BUNDLE = sys.argv[1]
 SHIM = sys.argv[2]
 result_data = {}
+events = []
 
 def on_message(ucm, message):
     # WebKit 6.0: message is a JSC.Value
@@ -90,13 +91,28 @@ def on_message(ucm, message):
     app.quit()
 
 def on_load_changed(wv, event):
+    events.append(int(event))
     if event == WebKit.LoadEvent.FINISHED:
         def trigger():
-            wv.evaluate_javascript(
-                "window.threshold.request('ready').then("
-                "  function(d){ window._ok = true; },"                "  function(e){ window._err = e.message; }"                ");",
-                -1, None, None, None, None,
+            probe = (
+                "try {"
+                "  if (!window.threshold) {"
+                "    window.webkit.messageHandlers.threshold.postMessage("
+                "      JSON.stringify({id: '0', cmd: '__smoke_error', args: 'shim missing'}));"
+                "  } else {"
+                "    window.threshold.request('ready').then("
+                "      function(d){ window._ok = true; },"
+                "      function(e){"
+                "        window.webkit.messageHandlers.threshold.postMessage("
+                "          JSON.stringify({id: '0', cmd: '__smoke_error', args: String(e)}));"
+                "      });"
+                "  }"
+                "} catch (err) {"
+                "  window.webkit.messageHandlers.threshold.postMessage("
+                "    JSON.stringify({id: '0', cmd: '__smoke_error', args: String(err)}));"
+                "}"
             )
+            wv.evaluate_javascript(probe, -1, None, None, None, None)
             return False
         GLib.timeout_add(500, trigger)
 
@@ -139,7 +155,12 @@ def on_command_line(a, cl):
 app = Gtk.Application.new("com.bongbetic.threshold.smoke", Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
 app.connect("activate", on_activate)
 app.connect("command-line", on_command_line)
-GLib.timeout_add(10000, lambda: app.quit())
+def _record_and_quit():
+    result_data["events"] = events
+    result_data["uri"] = web_view.get_uri() if web_view else None
+    app.quit()
+    return False
+GLib.timeout_add(10000, _record_and_quit)
 app.run(sys.argv)
 print(json.dumps(result_data))
 """
