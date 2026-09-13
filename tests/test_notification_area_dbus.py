@@ -76,8 +76,11 @@ _child = textwrap.dedent("""\
     conn = Gio.bus_get_sync(Gio.BusType.SESSION, None)
 
     def check(name):
+        # SNI hosts query items at the (unique) name the item registered —
+        # the watcher recorded it during registration.
+        item_name = results["registered_items"][0]
         v = conn.call_sync(
-            'com.bongbetic.threshold', '/StatusNotifierItem',
+            item_name, '/StatusNotifierItem',
             'org.freedesktop.DBus.Properties', 'Get',
             GLib.Variant('(ss)', ('org.kde.StatusNotifierItem', name)),
             GLib.VariantType('(v)'), Gio.DBusCallFlags.NONE, -1, None,
