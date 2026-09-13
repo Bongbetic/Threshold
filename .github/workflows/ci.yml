@@ -251,14 +251,16 @@ jobs:
       - name: Install the Unified RPM via ${{ matrix.tool }}
         run: |
           if [ "${{ matrix.tool }}" = "dnf" ]; then
-            dnf -y install rpm/threshold-*.noarch.rpm
+            # GIR file requires need the filelists metadata, which dnf5 in
+            # Fedora containers treats as optional.
+            dnf -y install --setopt=optional_metadata_types=filelists rpm/threshold-*.noarch.rpm
           else
             zypper -n --no-gpg-checks install rpm/threshold-*.noarch.rpm
           fi
 
       - name: Check installed layout
         run: |
-          set -e
+          set -ex
           test -x /usr/bin/threshold
           test -x /usr/sbin/threshold-ec-lifecycle
           test -f /usr/lib/systemd/system/threshold-boot-reconcile.service
