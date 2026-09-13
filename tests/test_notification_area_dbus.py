@@ -32,6 +32,7 @@ _child = textwrap.dedent("""\
 
     def watcher_register(conn, sender, path, iface, method, params, inv):
         results["registered_items"].append(params[0])
+        results["item_owner"] = sender  # unique bus name of the item
         inv.return_value(None)
 
     watcher_xml = \"\"\"
@@ -77,11 +78,10 @@ _child = textwrap.dedent("""\
     conn = Gio.bus_get_sync(Gio.BusType.SESSION, None)
 
     def check(name):
-        # SNI hosts query items at the (unique) name the item registered —
-        # the watcher recorded it during registration.
-        item_name = results["registered_items"][0]
+        # SNI hosts query items at the registering connection's unique bus
+        # name (the watcher recorded it as the sender) plus the item path.
         v = conn.call_sync(
-            item_name, '/StatusNotifierItem',
+            results["item_owner"], '/StatusNotifierItem',
             'org.freedesktop.DBus.Properties', 'Get',
             GLib.Variant('(ss)', ('org.kde.StatusNotifierItem', name)),
             GLib.VariantType('(v)'), Gio.DBusCallFlags.NONE, -1, None,
@@ -90,9 +90,7 @@ _child = textwrap.dedent("""\
 
     def run_checks():
         # The tray registers from its watcher-appeared callback, so the
-        # item name only exists once the loop has spun — query by it.
-        item_name = results["registered_items"][0]
-
+        # checks only run once the loop has spun and registration landed.
         results["props"] = {
             "Id": check("Id").unpack(),
             "Category": check("Category").unpack(),
