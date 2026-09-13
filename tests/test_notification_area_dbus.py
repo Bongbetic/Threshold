@@ -91,18 +91,25 @@ _child = textwrap.dedent("""\
     def run_checks():
         # The tray registers from its watcher-appeared callback, so the
         # checks only run once the loop has spun and registration landed.
-        results["props"] = {
-            "Id": check("Id").unpack(),
-            "Category": check("Category").unpack(),
-            "IconName": check("IconName").unpack(),
-            "Menu": check("Menu").unpack(),
-            "ItemIsMenu": check("ItemIsMenu").unpack(),
-        }
-        pix = check("IconPixmap")
-        results["pixmap_ok"] = pix is not None
+        try:
+            results["props"] = {
+                "Id": check("Id").unpack(),
+                "Category": check("Category").unpack(),
+                "IconName": check("IconName").unpack(),
+                "Menu": check("Menu").unpack(),
+                "ItemIsMenu": check("ItemIsMenu").unpack(),
+            }
+            pix = check("IconPixmap")
+            results["pixmap_ok"] = pix is not None
 
-        # Menu path must point to the dbusmenu server.
-        results["menu_path_ok"] = results["props"]["Menu"] == "/com/bongbetic/threshold/menu"
+            # Menu path must point to the dbusmenu server.
+            results["menu_path_ok"] = results["props"]["Menu"] == "/com/bongbetic/threshold/menu"
+        except Exception as exc:
+            # GLib only logs callback exceptions; surface them in the probe
+            # output so the parent test can report the real cause.
+            results["check_error"] = repr(exc)
+            loop.quit()
+            return False
 
         # ── Phase 1: Watcher loss revokes readiness immediately ───────────
         Gio.bus_unown_name(watcher_id)
@@ -185,6 +192,7 @@ def test_notification_area_service_probe(tmp_path):
 
     # ── Registration evidence ─────────────────────────────────────────────
     assert "/StatusNotifierItem" in results["registered_items"]
+    assert "check_error" not in results, results.get("check_error")
 
     # ── Required SNI properties ───────────────────────────────────────────
     assert results["props"]["Id"] == "com.bongbetic.threshold"
