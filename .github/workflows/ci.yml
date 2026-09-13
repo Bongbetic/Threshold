@@ -343,7 +343,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb gir1.2-webkit-6.0
-          # Headless runners have no GPU; WebKit's DMABUF renderer hangs
-          # without this (standard WebKitGTK-on-CI workaround).
-          env WEBKIT_DISABLE_DMABUF_RENDERER=1 PYTHONPATH=src \
+          # Headless runners: no GPU (DMABUF renderer hangs) and GitHub's
+          # AppArmor profile blocks WebKit's bubblewrap sandbox, so the
+          # WebProcess never launches and the page never loads.
+          env WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 PYTHONPATH=src \
             xvfb-run -a python3 -m pytest tests/test_carbon_xvfb.py -v
