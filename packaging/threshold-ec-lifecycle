@@ -11,6 +11,7 @@
 #   repair              Prepare a named failing kernel while booted into another
 #   reconcile           Boot reconciliation: once, bounded, single write + readback
 #   remove              Remove Threshold-managed EC assets, keep charge threshold
+#   handoff-snapshot    Read-only evidence capture of legacy paired-RPM state
 #   diagnostics         Emit structured machine-readable status records
 #
 # State layout (root-owned):
@@ -64,6 +65,11 @@ RECONCILE_TIMEOUT=30
 MSI_VENDOR_PATTERN='Micro-Star|MSI'
 MSI_EC_VERSION='0.13.112'
 DKMS_NAME=msi-ec
+# Vendored source identity (issue #95): the installed DKMS tree is the
+# official asset only if its checksum matches the packaging manifest.
+# Drift is guarded by tests/test_packaging_versions.py.
+MSI_EC_SOURCE_DIR='msi-ec-src'
+MSI_EC_SOURCE_CHECKSUM='fc5fcc54847fcafd480bc44094ce2d202a6c482576df14df037327727842aa20'
 DKMS_SRC=${THRESHOLD_EC_DKMS_SRC:-/usr/src/$DKMS_NAME-$MSI_EC_VERSION}
 MODULES_LOAD=${THRESHOLD_EC_MODULES_LOAD:-/usr/lib/modules-load.d/msi-ec.conf}
 FAKE_SYS=${THRESHOLD_FAKE_SYS:-}
@@ -147,6 +153,16 @@ write_sanitized_status() {
         else
             echo "setup_state=unavailable"
             echo "reason=threshold_interface_missing"
+        fi
+        # Authoritative live capability (issue #95): whether a loaded,
+        # working module currently exposes the threshold interface —
+        # independent of setup state and maintenance outcomes.
+        if [ -d "$(sysroot /sys/devices/platform/msi-ec)" ] && \
+           grep -qw msi_ec "$(sysroot /proc/modules)" 2>/dev/null && \
+           find_threshold_battery >/dev/null 2>&1; then
+            echo "live=yes"
+        else
+            echo "live=no"
         fi
         echo "maintenance=$(read_maintenance_status)"
     } | atomic_write "$EC_STATUS_FILE"
@@ -344,6 +360,16 @@ do_setup() {
         return 0
     fi
 
+    # Issue #95: reconstruct (add/build/install) only from verified official
+    # assets. A foreign or tampered tree is never touched here and the
+    # failure stays repairable: restore the official tree, then run repair.
+    if ! source_tree_is_official; then
+        set_setup_state unavailable source_unverified
+        write_maintenance_status failed
+        log "DKMS source at $DKMS_SRC failed checksum verification; foreign tree left unchanged."
+        return 0
+    fi
+
     if ! dkms add -m "$DKMS_NAME" -v "$MSI_EC_VERSION" 2>&1; then
         log "dkms add failed (may already be registered)."
     fi
@@ -415,6 +441,106 @@ find_threshold_battery() {
 
 verify_live_interface() {
     find_threshold_battery >/dev/null
+}
+
+# ── Official source verification (issue #95) ──────────────────────────────
+
+installed_source_checksum() {
+    # sha256 over sorted file paths (relative to the vendored layout) and
+    # contents — byte-identical to the packaging manifest's derivation.
+    # Prints the digest, or nothing when the tree is missing.
+    [ -d "$DKMS_SRC" ] || return 1
+    (cd "$DKMS_SRC" || return 1
+     find . -type f | LC_ALL=C sort | while IFS= read -r f; do
+         printf '%s\n' "$MSI_EC_SOURCE_DIR/${f#./}"
+         cat "$f" 2>/dev/null || :
+     done) | sha256sum 2>/dev/null | awk '{print $1}'
+}
+
+source_tree_is_official() {
+    # Empty digest (missing/unreadable tree) never matches the manifest.
+    [ "$(installed_source_checksum)" = "$MSI_EC_SOURCE_CHECKSUM" ]
+}
+
+# ── Handoff snapshot (issue #95) ──────────────────────────────────────────
+
+do_handoff_snapshot() {
+    # Read-only evidence capture for the paired-RPM → Unified RPM handoff.
+    # In a single transaction this runs while the legacy packages, their
+    # files, and their DKMS state are still on disk, so ownership, source
+    # provenance, DKMS registrations, per-kernel builds, and live-module
+    # status are provable before any erasure or reconstruction.
+    # Writes only the snapshot file: it never mutates module, DKMS,
+    # ledger, or setup state, and it never acquires the operation lock.
+    mkdir -p "$EC_STATE_DIR"
+    {
+        echo "# threshold EC handoff snapshot"
+        echo "captured=$(date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || :)"
+        echo ""
+        echo "--- Legacy Package Ownership ---"
+        if command -v rpm >/dev/null 2>&1; then
+            for pkg in threshold threshold-msi-ec-dkms; do
+                if v=$(rpm -q "$pkg" 2>/dev/null); then
+                    echo "legacy_package=$v"
+                else
+                    echo "legacy_package=$pkg: not-installed"
+                fi
+            done
+            for asset in "$DKMS_SRC" "$MODULES_LOAD"; do
+                if o=$(rpm -qf "$asset" 2>/dev/null); then
+                    echo "owned=$asset by $o"
+                else
+                    echo "owned=$asset: unknown"
+                fi
+            done
+        else
+            echo "rpm=unavailable"
+        fi
+        echo ""
+        echo "--- DKMS Source Provenance ---"
+        echo "source_path=$DKMS_SRC"
+        echo "source_expected=$MSI_EC_SOURCE_CHECKSUM"
+        echo "source_computed=$(installed_source_checksum)"
+        if source_tree_is_official; then
+            echo "source_match=yes"
+        else
+            echo "source_match=no"
+        fi
+        echo ""
+        echo "--- DKMS Registrations ---"
+        if command -v dkms >/dev/null 2>&1; then
+            dkms status 2>/dev/null || :
+        else
+            echo "(dkms unavailable)"
+        fi
+        echo ""
+        echo "--- Per-Kernel Builds (lifecycle records) ---"
+        if [ -d "$EC_KERNEL_DIR" ] && ls "$EC_KERNEL_DIR" 2>/dev/null | grep -q .; then
+            ls "$EC_KERNEL_DIR" 2>/dev/null
+        else
+            echo "(none recorded)"
+        fi
+        echo ""
+        echo "--- Live Module Status ---"
+        if grep -qw msi_ec "$(sysroot /proc/modules)" 2>/dev/null; then
+            echo "loaded=yes"
+        else
+            echo "loaded=no"
+        fi
+        if [ -d "$(sysroot /sys/devices/platform/msi-ec)" ]; then
+            echo "device=present"
+        else
+            echo "device=absent"
+        fi
+        if BAT=$(find_threshold_battery 2>/dev/null); then
+            echo "interface=$BAT"
+            echo "threshold=$(cat "$BAT/charge_control_end_threshold" 2>/dev/null || :)"
+            echo "live=yes"
+        else
+            echo "live=no"
+        fi
+    } | atomic_write "$EC_STATE_DIR/handoff-snapshot"
+    log "Handoff snapshot written (read-only evidence)."
 }
 
 # ── Boot reconciliation (once, bounded, single write + readback) ──────────
@@ -523,7 +649,7 @@ do_remove() {
     fi
 
     rm -rf "$EC_KERNEL_DIR" "$EC_PENDING"
-    rm -f "$EC_STATE_FILE" "$EC_STATUS_FILE"
+    rm -f "$EC_STATE_FILE" "$EC_STATUS_FILE" "$EC_STATE_DIR/handoff-snapshot"
     rm -f "$EC_STATE_DIR/maintenance"
     log "EC lifecycle removed; charge threshold policy and foreign assets preserved."
 }
@@ -711,6 +837,10 @@ case "${1:-}" in
     remove)
         do_remove
         ;;
+    handoff-snapshot)
+        # Read-only evidence capture (issue #95): no lock, no journal.
+        do_handoff_snapshot
+        ;;
     diagnostics)
         do_diagnostics
         ;;
@@ -718,7 +848,7 @@ case "${1:-}" in
         do_support_export
         ;;
     *)
-        echo "usage: $0 {install-or-upgrade|repair|reconcile|remove|diagnostics|support-export}" >&2
+        echo "usage: $0 {install-or-upgrade|repair|reconcile|remove|handoff-snapshot|diagnostics|support-export}" >&2
         exit 2
         ;;
 esac
