@@ -11,6 +11,7 @@ machine-wide policy persistence, and absence of privileged side effects
 
 import os
 import subprocess
+import shutil
 import textwrap
 from pathlib import Path
 
@@ -66,6 +67,9 @@ def fake_system(tmp_path: Path):
 
     dkms_src = tmp_path / "usr/src/msi-ec-0.13.112"
     dkms_src.mkdir(parents=True, exist_ok=True)
+    # Issue #95: default scenarios install the official vendored source so
+    # checksum provenance passes; tamper tests deliberately corrupt it.
+    shutil.copytree(ROOT / "msi-ec-src", dkms_src, dirs_exist_ok=True)
 
     env = dict(
         os.environ,
@@ -904,3 +908,120 @@ class TestFakeSystemLifecycle:
         r = run_lifecycle(fake, "support-export")
         # No journal entry should be created (read-only)
         assert not (fake.state / "ops-journal").exists()
+
+    # ── Issue #95: paired-RPM → Unified RPM handoff ──────────────────────
+
+    def _status_kv(self, fake):
+        status = fake.state / "status"
+        return dict(
+            line.split("=", 1)
+            for line in status.read_text().splitlines()
+            if "=" in line
+        )
+
+    def test_handoff_snapshot_proves_legacy_state_read_only(self, fake_system):
+        """Snapshot records ownership, provenance, DKMS, builds, and live status without mutating anything."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        (fake.sysroot / "proc/modules").write_text("msi_ec 20480 0 - Live 0x00000000\n")
+        (fake.sysroot / "sys/devices/platform/msi-ec").mkdir(parents=True)
+        bindir = Path(fake.env["PATH"].split(":")[0])
+        stub(bindir / "rpm", """\
+            #!/bin/sh
+            echo "rpm $*" >> "$DKMS_LOG"
+            case "$2" in
+                threshold-msi-ec-dkms) echo "threshold-msi-ec-dkms-1.4.2-1.fc43.noarch" ;;
+                *) echo "threshold-1.4.2-1.fc43.noarch" ;;
+            esac
+            exit 0
+            """)
+        stub(bindir / "dkms", """\
+            #!/bin/sh
+            echo "dkms $1" >> "$DKMS_LOG"
+            if [ "$1" = status ]; then
+                echo "msi-ec/0.13.112, 6.11.0, x86_64: installed"
+                echo "msi-ec/0.13.112, 6.12.0, x86_64: installed"
+            fi
+            exit 0
+            """)
+        r = run_lifecycle(fake, "handoff-snapshot")
+        assert r.returncode == 0
+        snap = (fake.state / "handoff-snapshot").read_text()
+        assert "legacy_package=threshold-msi-ec-dkms-1.4.2-1.fc43.noarch" in snap
+        assert "source_match=yes" in snap
+        assert "6.11.0" in snap and "6.12.0" in snap
+        assert "loaded=yes" in snap and "live=yes" in snap
+        assert "80" in snap
+        # Read-only: only the snapshot file is written.
+        assert not (fake.state / "state").exists()
+        assert not (fake.state / "ledger").exists()
+        assert not (fake.state / "maintenance").exists()
+        assert not (fake.state / "ops-journal").exists()
+        log = Path(fake.env["DKMS_LOG"]).read_text()
+        for mutation in ("add", "build", "install", "remove"):
+            assert f"dkms {mutation}" not in log
+
+    def test_handoff_snapshot_on_fresh_host_is_bounded(self, fake_system):
+        """Without rpm or live state the snapshot still records honest bounded evidence."""
+        fake = fake_system
+        bindir = Path(fake.env["PATH"].split(":")[0])
+        stub(bindir / "rpm", "#!/bin/sh\nexit 127\n")
+        r = run_lifecycle(fake, "handoff-snapshot")
+        assert r.returncode == 0
+        snap = (fake.state / "handoff-snapshot").read_text()
+        assert "legacy_package=threshold-msi-ec-dkms: not-installed" in snap
+        assert "source_match=yes" in snap
+        assert "loaded=no" in snap and "live=no" in snap
+
+    def test_foreign_source_tree_is_never_built_and_stays_repairable(self, fake_system):
+        """A tampered DKMS source fails provenance, stays byte-identical, and repair recovers."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        src = Path(fake.env["THRESHOLD_EC_DKMS_SRC"])
+        official = (src / "dkms.conf").read_bytes()
+        (src / "dkms.conf").write_bytes(official + b"# foreign local modification\n")
+        r = run_lifecycle(fake, "install-or-upgrade")
+        assert r.returncode == 0
+        st = read_state(fake)
+        assert st["setup_state"] == "unavailable"
+        assert st["reason"] == "source_unverified"
+        assert read_maintenance(fake) == "failed"
+        log_path = Path(fake.env["DKMS_LOG"])
+        log = log_path.read_text() if log_path.exists() else ""
+        for mutation in ("add", "build", "install", "remove"):
+            assert f"dkms {mutation}" not in log
+        # The foreign tree is left exactly as found.
+        assert (src / "dkms.conf").read_bytes() == official + b"# foreign local modification\n"
+        # Repairable: restoring the official asset lets repair succeed.
+        (src / "dkms.conf").write_bytes(official)
+        r = run_lifecycle(fake, "repair")
+        assert r.returncode == 0
+        assert read_state(fake)["setup_state"] == "available"
+        assert read_maintenance(fake) == "ok"
+
+    def test_reconstruction_failure_reports_live_capability(self, fake_system):
+        """Forced build failure never fails the package transaction and status reports live EC capability."""
+        fake = fake_system
+        make_msi(fake)
+        (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+        add_threshold_interface(fake)
+        (fake.sysroot / "proc/modules").write_text("msi_ec 20480 0 - Live 0x00000000\n")
+        (fake.sysroot / "sys/devices/platform/msi-ec").mkdir(parents=True)
+        bindir = Path(fake.env["PATH"].split(":")[0])
+        stub(bindir / "dkms", """\
+            #!/bin/sh
+            echo "dkms $1" >> "$DKMS_LOG"
+            [ "$1" = build ] && exit 1
+            exit 0
+            """)
+        r = run_lifecycle(fake, "install-or-upgrade")
+        assert r.returncode == 0
+        st = read_state(fake)
+        assert st["setup_state"] == "unavailable"
+        assert st["reason"] == "build_failed"
+        assert read_maintenance(fake) == "failed"
+        assert self._status_kv(fake)["live"] == "yes"

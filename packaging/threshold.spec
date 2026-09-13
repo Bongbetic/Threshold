@@ -13,7 +13,7 @@
 
 Name:           threshold
 Version:        2.0.0
-Release:        2
+Release:        3
 Summary:        Battery charge threshold controller for Linux laptops
 License:        GPL-3.0-or-later
 URL:            https://github.com/Bongbetic/Threshold
@@ -112,10 +112,15 @@ appstream-util validate-relax %{buildroot}%{_metainfodir}/com.bongbetic.threshol
 %sysusers_create threshold.conf
 udevadm control --reload 2>/dev/null || :
 udevadm trigger --subsystem-match=power_supply 2>/dev/null || :
-mkdir -p /var/lib/threshold/ec
-if rpm -q threshold-msi-ec-dkms >/dev/null 2>&1; then
-    rpm -q --qf 'legacy %{NAME} %{VERSION}-%{RELEASE}\n' threshold-msi-ec-dkms \
-        > /var/lib/threshold/ec/legacy-handoff 2>/dev/null || :
+# Issue #95: capture the read-only handoff snapshot while the legacy
+# paired packages, their files, and their DKMS state are still on disk —
+# in one transaction the install phase (%post) runs before the erasure
+# phase (%preun/%postun of the obsoleted threshold-msi-ec-dkms), so
+# ownership, source checksum, DKMS registrations, per-kernel builds, and
+# live-module status are provable before any erasure or reconstruction.
+# (The state directory belongs to the lifecycle script; it creates it.)
+if [ -x %{_sbindir}/threshold-ec-lifecycle ]; then
+    %{_sbindir}/threshold-ec-lifecycle handoff-snapshot || :
 fi
 systemctl preset threshold-boot-reconcile.service >/dev/null 2>&1 || :
 
@@ -163,6 +168,14 @@ fi
 %{_modulesloaddir}/msi-ec.conf
 
 %changelog
+* Fri Sep 11 2026 Soubarna <Soubarna@live.in> - 2.0.0-3
+- Safe in-place handoff from every official paired RPM release: the
+  lifecycle verifies DKMS source provenance before reconstruction,
+  leaves foreign trees untouched (repairable source_unverified),
+  reports live EC capability in the sanitized status, and records a
+  read-only handoff snapshot (ownership, checksum, DKMS registrations,
+  per-kernel builds, live-module status) before any erasure (issue #95)
+
 * Thu Sep 11 2026 Soubarna <Soubarna@live.in> - 2.0.0-2
 - Portable GI typelib Requires via typelib() virtual provides — resolves
   on both Fedora and openSUSE without x86-64 architecture suffixes;

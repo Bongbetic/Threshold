@@ -104,3 +104,64 @@ def test_makefile_vars_matches_manifest():
 
 def test_dkms_version_is_0_13_112():
     assert _dkms_version() == "0.13.112"
+
+def _lifecycle_text() -> str:
+    return (ROOT / "packaging" / "threshold-ec-lifecycle").read_text(encoding="utf-8")
+
+
+def _spec_version(spec: str) -> tuple[int, ...]:
+    m = re.search(r"^Version:\s+(\d+(?:\.\d+)+)", spec, re.M)
+    assert m, "spec Version tag missing"
+    return tuple(int(part) for part in m.group(1).split("."))
+
+
+def test_lifecycle_checksum_constant_tracks_manifest():
+    """The lifecycle verifies installed source against the manifest checksum."""
+    text = _lifecycle_text()
+    m = re.search(r"^MSI_EC_SOURCE_CHECKSUM='([0-9a-f]{64})'$", text, re.M)
+    assert m, "lifecycle is missing the MSI_EC_SOURCE_CHECKSUM constant"
+    assert m.group(1) == _manifest()["msi_ec"]["checksum"]
+    assert m.group(1) == _vendored_checksum()
+
+
+def test_spec_obsoletes_paired_dkms_with_version_bound():
+    """Unified RPM replaces the paired DKMS package via versioned Provides + bounded Obsoletes."""
+    spec = SPEC.read_text(encoding="utf-8")
+    provides = re.search(
+        r"^Provides:\s+threshold-msi-ec-dkms\s*=\s*%\{version\}-%\{release\}$", spec, re.M
+    )
+    assert provides, "missing versioned Provides for threshold-msi-ec-dkms"
+    obsoletes = re.search(
+        r"^Obsoletes:\s+threshold-msi-ec-dkms\s*<\s*(\d+(?:\.\d+)+)$", spec, re.M
+    )
+    assert obsoletes, "missing bounded Obsoletes for threshold-msi-ec-dkms"
+    bound = tuple(int(part) for part in obsoletes.group(1).split("."))
+    assert bound <= _spec_version(spec), "obsoletion bound must not reach the unified line"
+
+
+def test_first_unified_nevr_exceeds_last_official_paired_release():
+    """First unified NEVR (2.0.0-1) exceeds every official paired release (last: 1.4.2-1)."""
+    spec = SPEC.read_text(encoding="utf-8")
+    assert _spec_version(spec) > (1, 4, 2)
+
+
+def test_first_unified_nevr_exceeds_last_official_paired_release():
+    """The unified NEVR exceeds every official paired release recorded in the changelog."""
+    spec = SPEC.read_text(encoding="utf-8")
+    unified = _spec_version(spec)
+
+    paired = []
+    for m in re.finditer(r"^\* .* - (\d+(?:\.\d+)+)-(\d+)$", spec, re.M):
+        version = tuple(int(part) for part in m.group(1).split("."))
+        if version < (2, 0, 0):  # every entry on the pre-unified (paired) line
+            paired.append((version, int(m.group(2))))
+    assert paired, "no paired releases recorded in the changelog"
+    release = int(re.search(r"^Release:\s+\d+", spec, re.M).group(0).split()[-1])
+    assert (unified, release) > max(paired), (unified, release, paired)
+
+def test_spec_post_captures_handoff_snapshot():
+    """%post records the read-only handoff snapshot while legacy state is still on disk."""
+    spec = SPEC.read_text(encoding="utf-8")
+    m = re.search(r"^%post\n(.*?)^%posttrans", spec, re.M | re.S)
+    assert m, "%post section missing"
+    assert "threshold-ec-lifecycle handoff-snapshot" in m.group(1)
