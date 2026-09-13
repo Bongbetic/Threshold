@@ -179,6 +179,12 @@ class TestDetectSystemThemeScheme:
             result = detect_system_theme_scheme()
             assert result == "light"
 
+    def test_returns_light_when_schema_source_missing(self):
+        """Returns 'light' without a native abort when no schema source exists."""
+        with patch('gi.repository.Gio.SettingsSchemaSource.get_default', return_value=None):
+            from threshold.adapter import detect_system_theme_scheme
+            assert detect_system_theme_scheme() == "light"
+
     def test_returns_dark_for_prefer_dark(self):
         """Returns 'dark' when color-scheme is 'prefer-dark'."""
         mock_settings = MagicMock()
@@ -186,7 +192,8 @@ class TestDetectSystemThemeScheme:
             'color-scheme': 'prefer-dark',
             'gtk-theme': 'Adwaita',
         }.get(key, '')
-        with patch('gi.repository.Gio.Settings.new', return_value=mock_settings):
+        with patch('gi.repository.Gio.Settings.new', return_value=mock_settings), \
+             patch('gi.repository.Gio.SettingsSchemaSource.get_default', return_value=MagicMock()):
             from threshold.adapter import detect_system_theme_scheme
             result = detect_system_theme_scheme()
             assert result == "dark"
@@ -198,7 +205,8 @@ class TestDetectSystemThemeScheme:
             'color-scheme': 'prefer-light',
             'gtk-theme': 'Adwaita',
         }.get(key, '')
-        with patch('gi.repository.Gio.Settings.new', return_value=mock_settings):
+        with patch('gi.repository.Gio.Settings.new', return_value=mock_settings), \
+             patch('gi.repository.Gio.SettingsSchemaSource.get_default', return_value=MagicMock()):
             from threshold.adapter import detect_system_theme_scheme
             result = detect_system_theme_scheme()
             assert result == "light"
@@ -210,7 +218,8 @@ class TestDetectSystemThemeScheme:
             'color-scheme': 'default',
             'gtk-theme': 'Adwaita-dark',
         }.get(key, '')
-        with patch('gi.repository.Gio.Settings.new', return_value=mock_settings):
+        with patch('gi.repository.Gio.Settings.new', return_value=mock_settings), \
+             patch('gi.repository.Gio.SettingsSchemaSource.get_default', return_value=MagicMock()):
             from threshold.adapter import detect_system_theme_scheme
             result = detect_system_theme_scheme()
             assert result == "dark"
@@ -222,7 +231,8 @@ class TestDetectSystemThemeScheme:
             'color-scheme': 'default',
             'gtk-theme': 'Adwaita',
         }.get(key, '')
-        with patch('gi.repository.Gio.Settings.new', return_value=mock_settings):
+        with patch('gi.repository.Gio.Settings.new', return_value=mock_settings), \
+             patch('gi.repository.Gio.SettingsSchemaSource.get_default', return_value=MagicMock()):
             from threshold.adapter import detect_system_theme_scheme
             result = detect_system_theme_scheme()
             assert result == "light"
