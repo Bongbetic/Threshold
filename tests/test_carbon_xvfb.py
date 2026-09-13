@@ -207,7 +207,8 @@ class TestCarbonXvfbSmoke:
 
             resp = result.get("result", {})
             if resp.get("ok") is not True:
-                msg = "Ready handshake failed: " + json.dumps(resp) + " stderr=" + proc.stderr
+                msg = ("Ready handshake failed: " + json.dumps(result)
+                       + " stdout=" + proc.stdout[-2000:] + " stderr=" + proc.stderr)
                 pytest.fail(msg)
 
             ack = resp.get("data", {}).get("acknowledged")

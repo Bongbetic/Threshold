@@ -37,7 +37,7 @@ Depends: ${python3:Depends},
          gir1.2-adw-1,
          gir1.2-notify-0.7,
          gir1.2-webkit-6.0
-Recommends: policykit-1,
+Recommends: polkitd,
             mokutil
 Description: Battery charge threshold controller for Linux laptops
  Threshold provides a GTK4 graphical interface for setting the
