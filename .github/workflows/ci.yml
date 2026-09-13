@@ -262,7 +262,11 @@ jobs:
         run: |
           set -ex
           test -x /usr/bin/threshold
-          test -x /usr/sbin/threshold-ec-lifecycle
+          test -x /usr/sbin/threshold-ec-lifecycle || {
+            ls -la /usr/sbin/threshold-ec-lifecycle /usr/bin/threshold-ec-lifecycle /usr/bin/threshold 2>&1 || :
+            rpm -ql threshold 2>/dev/null | grep -i lifecycle || :
+            exit 1
+          }
           test -f /usr/lib/systemd/system/threshold-boot-reconcile.service
           test -d /usr/src/msi-ec-0.13.112
           test -f /usr/share/icons/hicolor/scalable/status/com.bongbetic.threshold-battery-good.svg
