@@ -87,21 +87,30 @@ _child = textwrap.dedent("""\
         )
         return v[0]
 
-    results["props"] = {
-        "Id": check("Id").unpack(),
-        "Category": check("Category").unpack(),
-        "IconName": check("IconName").unpack(),
-        "Menu": check("Menu").unpack(),
-        "ItemIsMenu": check("ItemIsMenu").unpack(),
-    }
-    pix = check("IconPixmap")
-    results["pixmap_ok"] = pix is not None
+    def run_checks():
+        # The tray registers from its watcher-appeared callback, so the
+        # item name only exists once the loop has spun — query by it.
+        item_name = results["registered_items"][0]
 
-    # Menu path must point to the dbusmenu server.
-    results["menu_path_ok"] = results["props"]["Menu"] == "/com/bongbetic/threshold/menu"
+        results["props"] = {
+            "Id": check("Id").unpack(),
+            "Category": check("Category").unpack(),
+            "IconName": check("IconName").unpack(),
+            "Menu": check("Menu").unpack(),
+            "ItemIsMenu": check("ItemIsMenu").unpack(),
+        }
+        pix = check("IconPixmap")
+        results["pixmap_ok"] = pix is not None
 
-    # ── Phase 1: Watcher loss revokes readiness immediately ───────────────
-    Gio.bus_unown_name(watcher_id)
+        # Menu path must point to the dbusmenu server.
+        results["menu_path_ok"] = results["props"]["Menu"] == "/com/bongbetic/threshold/menu"
+
+        # ── Phase 1: Watcher loss revokes readiness immediately ───────────
+        Gio.bus_unown_name(watcher_id)
+        GLib.timeout_add(200, assert_lost)
+        return False
+
+    GLib.timeout_add(1000, run_checks)
 
     def assert_lost():
         results["readiness_after_loss"] = tray.readiness.value
@@ -140,7 +149,6 @@ _child = textwrap.dedent("""\
         GLib.timeout_add(500, check_recovery)
         return False
 
-    GLib.timeout_add(200, assert_lost)
     GLib.timeout_add(8000, loop.quit)  # safety bound
     loop.run()
     print("PROBE:" + json.dumps(results))
