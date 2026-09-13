@@ -21,7 +21,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 _child = textwrap.dedent("""\
-    import json, sys
+    import json, os, sys
     import gi
     gi.require_version('Dbusmenu', '0.4')
     from gi.repository import GLib, Gio
