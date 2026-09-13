@@ -33,6 +33,15 @@ def detect_system_theme_scheme() -> str:
         gi.require_version('Gio', '2.0')
         from gi.repository import Gio
 
+        # g_settings_new() aborts the whole process when the schema is
+        # not installed (bare CI containers, non-GNOME desktops). Probe
+        # NULL-safely first so we fall back to 'light' instead of dying.
+        source = Gio.SettingsSchemaSource.get_default()
+        if source is None:
+            return 'light'
+        if source.lookup('org.gnome.desktop.interface', True) is None:
+            return 'light'
+
         settings = Gio.Settings.new('org.gnome.desktop.interface')
         scheme = settings.get_string('color-scheme')
         if scheme in ('prefer-dark', 'default'):
