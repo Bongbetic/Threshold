@@ -47,11 +47,11 @@ Requires:       systemd
 # openSUSE generates typelib() virtual provides, and package names differ
 # per distro, but both install GIRs at the same absolute path. File deps
 # carry no architecture hint, so the noarch payload stays clean.
-Requires:       /usr/lib64/girepository-1.0/Gtk-4.0.typelib
-Requires:       /usr/lib64/girepository-1.0/Adw-1.typelib
-Requires:       /usr/lib64/girepository-1.0/Notify-0.7.typelib
-Requires:       /usr/lib64/girepository-1.0/Dbusmenu-0.4.typelib
-Requires:       /usr/lib64/girepository-1.0/WebKit-6.0.typelib
+Requires:       (typelib(Gtk) or /usr/lib64/girepository-1.0/Gtk-4.0.typelib)
+Requires:       (typelib(Adw) or /usr/lib64/girepository-1.0/Adw-1.typelib)
+Requires:       (typelib(Notify) or /usr/lib64/girepository-1.0/Notify-0.7.typelib)
+Requires:       (typelib(Dbusmenu) or /usr/lib64/girepository-1.0/Dbusmenu-0.4.typelib)
+Requires:       (typelib(WebKit) or /usr/lib64/girepository-1.0/WebKit-6.0.typelib)
 Recommends:     polkit
 Recommends:     mokutil
 
