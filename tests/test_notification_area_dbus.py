@@ -9,6 +9,7 @@ Skipped where the Dbusmenu 0.4 typelib is unavailable; CI installs
 gir1.2-dbusmenu-glib-0.4 and runs this probe for real.
 """
 
+import json
 import os
 import shutil
 import subprocess

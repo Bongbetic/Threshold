@@ -246,7 +246,7 @@ jobs:
           path: rpm
 
       - name: Record checksum
-        run: (cd rpm && sha256sum *.rpm) > sha256s.txt
+        run: (cd rpm && sha256sum *.rpm > sha256s.txt)
 
       - name: Install the Unified RPM via ${{ matrix.tool }}
         run: |
