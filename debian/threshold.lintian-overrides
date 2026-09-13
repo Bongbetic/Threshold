@@ -11,4 +11,5 @@ threshold: no-manual-page
 # compilation at install time.  The tree is a self-contained DKMS source
 # package, not a bundled library.
 threshold: embedded-library *
-threshold: package-installs-source *
+# package-installs-source was removed from Lintian; overriding it now
+# fails the lintian step with an alien-tag error instead.

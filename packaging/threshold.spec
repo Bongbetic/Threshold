@@ -45,11 +45,11 @@ Requires:       systemd
 # Portable GI typelib capabilities for the Carbon shell + tray.
 # typelib() virtual provides resolve identically on Fedora and openSUSE
 # without architecture suffixes, so the noarch payload carries no ISA hint.
-Requires:       typelib(Gtk)-4.0
-Requires:       typelib(Adw)-1
-Requires:       typelib(Notify)-0.7
-Requires:       typelib(Dbusmenu)-0.4
-Requires:       typelib(WebKit)-6.0
+Requires:       typelib(Gtk-4.0)
+Requires:       typelib(Adw-1)
+Requires:       typelib(Notify-0.7)
+Requires:       typelib(Dbusmenu-0.4)
+Requires:       typelib(WebKit-6.0)
 Recommends:     polkit
 Recommends:     mokutil
 

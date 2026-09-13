@@ -119,7 +119,9 @@ def on_activate(a):
         SHIM,
         WebKit.UserContentInjectedFrames.TOP_FRAME,
         WebKit.UserScriptInjectionTime.START,
-        [], [],
+        # NULL allow/block lists (not empty lists!) — an empty allow list
+        # matches no frame at all, so the shim would never be injected.
+        None, None,
     )
     ucm.add_script(shim_us)
     web_view.connect("load-changed", on_load_changed)
