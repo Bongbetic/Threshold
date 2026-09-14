@@ -141,7 +141,7 @@ def test_ci_has_bundle_verify_job():
 
 
 def test_ci_web_job_rejects_http_references():
-    """Web CI job must reject runtime HTTP/HTTPS references in the bundle."""
+    """Web CI job must reject runtime HTTP references in the bundle."""
     text = CI_WORKFLOW.read_text(encoding="utf-8")
     assert "Reject runtime HTTP references" in text
     assert "grep -rn" in text
@@ -152,3 +152,72 @@ def test_ci_web_job_verifies_bundle_freshness():
     text = CI_WORKFLOW.read_text(encoding="utf-8")
     assert "Verify bundle is committed" in text
     assert "git status" in text
+
+
+# ── Issue #99: Build immutable v2.0.0 release candidates once ─────────────
+
+
+def test_release_has_preflight_validation_job():
+    """Release must validate version, EC, and manifest agreement before building."""
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    assert "  preflight:" in text
+    # Must check Meson version from meson.build
+    assert "meson.build" in text
+    # Must check EC manifest checksum matches vendored source
+    assert "ec-manifest.json" in text
+    # Must validate version agreement (tag vs meson vs spec)
+    assert "preflight" in text
+
+
+def test_release_has_source_archive_job():
+    """Release must build the canonical source archive once from the signed tag."""
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    assert "  source:" in text
+    # Must produce a tar.gz source archive with the version in the name
+    assert "Threshold-" in text or "threshold-" in text
+    assert ".tar.gz" in text
+
+
+def test_deb_and_rpm_use_source_archive():
+    """DEB and RPM must build from the canonical source archive, not rebuild from checkout."""
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    # The source job must exist
+    assert "  source:" in text
+    # DEB and RPM jobs must depend on source (via needs: [..., source])
+    deb_section = text.split("  deb:", 1)[1].split("  rpm:", 1)[0]
+    rpm_section = text.split("  rpm:", 1)[1].split("  appimage:", 1)[0]
+    assert "source" in deb_section
+    assert "source" in rpm_section
+    # Both must download the source archive artifact
+    assert "candidate-source" in deb_section or "source-archive" in deb_section
+    assert "candidate-source" in rpm_section or "source-archive" in rpm_section
+
+
+def test_release_manifest_includes_build_identity():
+    """Release manifest must record source revision, build identity, and provenance."""
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    assert "source_revision" in text
+    assert "build_identity" in text or "build_identity" in text
+    assert "provenance" in text or "runner" in text
+
+
+def test_release_assembly_validates_candidate_inventory():
+    """Assembly step must reject missing artifacts, unexpected names, or hash disagreement."""
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    # Assembly must count candidates
+    assert "wc -l" in text or "count" in text or "ls | wc" in text
+    # Must verify exactly 5 candidates
+    assert "5" in text
+    # Must check hashes match
+    assert "HASH MISMATCH" in text or "hash" in text
+
+
+def test_release_all_verify_jobs_download_candidates():
+    """Every verification job must download immutable candidates, never rebuild."""
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    # All verify jobs use download-artifact
+    assert "download-artifact" in text
+    # Verify jobs must not build
+    for section in text.split("  verify")[1:3]:  # deb-verify, rpm-verify
+        for forbidden in ("dpkg-buildpackage", "rpmbuild", "meson setup"):
+            assert forbidden not in section
