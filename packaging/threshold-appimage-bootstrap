@@ -19,7 +19,8 @@ AUTHORITY_DIR=${THRESHOLD_AUTHORITY_DIR:-/var/lib/threshold/authority}
 AUTHORITY_BIN=${THRESHOLD_AUTHORITY_BIN:-/usr/sbin/threshold-ec-lifecycle}
 AUTHORITY_UNIT=${THRESHOLD_AUTHORITY_UNIT:-/usr/lib/systemd/system/threshold-boot-reconcile.service}
 TRUST_PUB=${THRESHOLD_TRUST_PUB:-/usr/share/threshold/trust/threshold-ec-trust.pub}
-PACKAGE_OWNED_MARKER=${THRESHOLD_EC_STATE_DIR:-/var/lib/threshold/ec}/package-owned
+EC_STATE_DIR=${THRESHOLD_EC_STATE_DIR:-/var/lib/threshold/ec}
+PACKAGE_OWNED_MARKER=$EC_STATE_DIR/package-owned
 STAGING=$AUTHORITY_DIR/staging
 
 # Protocol compatibility: the bundle stream begins with a canonical JSON
@@ -132,8 +133,22 @@ PYEOF
 
 # Package-owned authority is never overwritten by the AppImage: an
 # installed DEB or Unified RPM owns /usr/sbin/threshold-ec-lifecycle.
+# A compatible package-owned authority is reused; an incompatible one
+# produces update guidance rather than overwrite.
 if [ -e "$PACKAGE_OWNED_MARKER" ]; then
-    fail "package-owned EC authority present; use the package's lifecycle instead"
+    # Check if the existing authority is compatible (same protocol).
+    EXISTING_PROTOCOL=""
+    if [ -r "$AUTHORITY_DIR/active-manifest.json" ]; then
+        EXISTING_PROTOCOL=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get('protocol',''))" "$AUTHORITY_DIR/active-manifest.json" 2>/dev/null || :)
+    fi
+    BUNDLE_PROTOCOL=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get('protocol',''))" "$MANIFEST_FILE" 2>/dev/null || :)
+    if [ "$EXISTING_PROTOCOL" = "$BUNDLE_PROTOCOL" ]; then
+        # Compatible: reuse the existing package-owned authority.
+        echo "threshold-appimage-bootstrap: compatible package-owned authority found; reusing." >&2
+    else
+        # Incompatible: produce guidance, do not overwrite.
+        fail "incompatible package-owned EC authority present (protocol $EXISTING_PROTOCOL vs $BUNDLE_PROTOCOL); update the package instead"
+    fi
 fi
 
 # ── Trust: Ed25519 signature + monotonic sequence (issue #86) ──────────────
@@ -181,7 +196,81 @@ if [ -f "$AUTHORITY_BIN" ]; then
     cp -f "$AUTHORITY_BIN" "$AUTHORITY_DIR/threshold-ec-lifecycle.last-known-good"
 fi
 
-tar -xzf "$STAGING/bundle.tar.gz" -C "$STAGING" lifecycle || fail "bundle payload invalid"
+# Extract bundle payload to a clean subdirectory for inventory verification.
+PAYLOAD_DIR=$STAGING/payload
+mkdir -p "$PAYLOAD_DIR"
+tar -xzf "$STAGING/bundle.tar.gz" -C "$PAYLOAD_DIR" || fail "bundle payload invalid"
+
+# ── Complete inventory verification (issue #97) ───────────────────────────
+# The manifest declares a complete inventory of normalized regular files.
+# Verify: all declared files are present, no extras, all regular, safe
+# modes, and per-file hash integrity — before any mutation.
+python3 - "$MANIFEST_FILE" "$PAYLOAD_DIR" <<'PYEOF' || fail "bundle inventory rejected"
+import hashlib, json, os, stat, sys
+
+manifest = json.load(open(sys.argv[1]))
+payload_dir = sys.argv[2]
+inventory = manifest.get("inventory", [])
+
+# Build the set of declared paths.
+declared = {item["path"] for item in inventory}
+# Build the set of actual paths in the extracted payload.
+actual = set()
+for root, dirs, files in os.walk(payload_dir):
+    for name in files:
+        full = os.path.join(root, name)
+        rel = os.path.relpath(full, payload_dir)
+        actual.add(rel)
+
+# No extra files beyond what the manifest declares.
+extras = actual - declared
+if extras:
+    sys.exit(f"bundle contains undeclared extra files: {extras}")
+
+# No missing files: every declared path must exist.
+missing = declared - actual
+if missing:
+    sys.exit(f"bundle is missing declared inventory files: {missing}")
+
+# Verify each declared file: regular, safe mode, correct hash.
+for item in inventory:
+    path = item["path"]
+    full = os.path.join(payload_dir, path)
+    # Check declared type matches actual file type.
+    declared_type = item.get("type", "regular")
+    if declared_type != "regular":
+        sys.exit(f"inventory entry {path} has non-regular type: {declared_type}")
+    if not os.path.isfile(full):
+        sys.exit(f"inventory entry {path} is not a regular file")
+    st = os.stat(full)
+    # Reject setuid, setgid, or sticky bits.
+    # Check the declared mode in the inventory, not just the actual file mode.
+    declared_mode = item.get("mode", "")
+    if declared_mode:
+        try:
+            mode_int = int(declared_mode, 8)
+            unsafe_declared = mode_int & (stat.S_ISUID | stat.S_ISGID | stat.S_ISVTX)
+            if unsafe_declared:
+                sys.exit(f"inventory entry {path} declares unsafe mode {declared_mode}")
+        except ValueError:
+            pass  # Invalid mode string; let the actual file check catch issues
+    # Also check actual file mode for safety.
+    unsafe = st.st_mode & (stat.S_ISUID | stat.S_ISGID | stat.S_ISVTX)
+    if unsafe:
+        sys.exit(f"inventory entry {path} has unsafe actual mode {oct(st.st_mode)}")
+    # Verify size.
+    if st.st_size != item.get("size", st.st_size):
+        sys.exit(f"inventory entry {path} size mismatch: {st.st_size} != {item.get('size')}")
+    # Verify sha256.
+    with open(full, "rb") as f:
+        computed = hashlib.sha256(f.read()).hexdigest()
+    if computed != item.get("sha256", computed):
+        sys.exit(f"inventory entry {path} hash mismatch: {computed} != {item.get('sha256')}")
+PYEOF
+
+# Copy the lifecycle script from the verified payload to the staging area
+# for offline validation.
+cp "$PAYLOAD_DIR/lifecycle" "$STAGING/lifecycle" || fail "bundle payload missing lifecycle"
 
 # Offline validation before switching the active record: the staged
 # lifecycle script must parse and declare the manifest's DKMS identity.
@@ -206,6 +295,25 @@ cp -f "$MANIFEST_FILE" "$AUTHORITY_DIR/active-manifest.json"
 fsync_path "$AUTHORITY_DIR/active-manifest.json"
 rm -rf "$STAGING"
 
+# ── Structured protocol output (issue #97) ────────────────────────────────
+# Emit a structured JSON result on stdout for the calling application.
+# Exit classes: success, pending_reboot, refusal, cancellation, busy,
+# validation_failure, operation_failure, rollback_failure.
+emit_result() {
+    python3 -c "
+import json, sys
+print(json.dumps({
+    'protocol': 1,
+    'operation': sys.argv[1],
+    'result': sys.argv[2],
+    'message': sys.argv[3] or None,
+    'ec_setup_state': sys.argv[4] or None,
+    'reason': sys.argv[5] or None,
+    'maintenance': sys.argv[6],
+}, sort_keys=True, indent=2))
+" "$@"
+}
+
 # Hand over to the installed authority for the actual EC work; the
 # bootstrap's install/update gestures map onto the lifecycle's
 # idempotent install-or-upgrade operation.
@@ -215,7 +323,39 @@ case "$1" in
 esac
 "$AUTHORITY_BIN" "$VERB" 2>&1
 AUTH_EXIT=$?
+
+# Determine EC state from the lifecycle's output.
+EC_STATE=""
+EC_REASON=""
+if [ -f "$EC_STATE_DIR/state" ]; then
+    EC_STATE=$(grep -o '^setup_state=.*' "$EC_STATE_DIR/state" 2>/dev/null | cut -d= -f2)
+    EC_REASON=$(grep -o '^reason=.*' "$EC_STATE_DIR/state" 2>/dev/null | cut -d= -f2)
+fi
+
 if [ "$AUTH_EXIT" -ne 0 ]; then
     recover_last_known_good || :
+    # Distinguish exit classes from the authority's exit code.
+    case "$AUTH_EXIT" in
+        1)  emit_result "$1" "busy" "another mutation is in progress" "$EC_STATE" "$EC_REASON" "ok" ;;
+        2)  emit_result "$1" "validation_failure" "bundle validation failed" "$EC_STATE" "$EC_REASON" "ok" ;;
+        *)  emit_result "$1" "operation_failure" "authority failed (exit $AUTH_EXIT)" "$EC_STATE" "$EC_REASON" "ok" ;;
+    esac
+    exit "$AUTH_EXIT"
 fi
-exit "$AUTH_EXIT"
+
+# Success: determine the specific result class from EC state.
+case "$EC_STATE" in
+    available)
+        emit_result "$1" "success" "EC setup available" "available" "" "ok"
+        ;;
+    pending_reboot)
+        emit_result "$1" "pending_reboot" "EC setup pending reboot" "pending_reboot" "" "ok"
+        ;;
+    unavailable)
+        emit_result "$1" "success" "EC setup unavailable ($EC_REASON)" "unavailable" "$EC_REASON" "ok"
+        ;;
+    *)
+        emit_result "$1" "success" "bootstrap completed" "$EC_STATE" "$EC_REASON" "ok"
+        ;;
+esac
+exit 0
