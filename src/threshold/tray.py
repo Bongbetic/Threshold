@@ -229,22 +229,31 @@ class TrayIcon:
         if not self._readiness.watcher_appeared():
             return  # duplicate event; an attempt is already in flight
         generation = self._readiness.generation
-        try:
-            self._conn.call_sync(
-                WATCHER_NAME,
-                WATCHER_PATH,
-                WATCHER_NAME,
-                'RegisterStatusNotifierItem',
-                GLib.Variant('(s)', (SNI_OBJECT_PATH,)),
-                None,
-                Gio.DBusCallFlags.NONE,
-                -1,
-                None,
-            )
-            self._readiness.registration_confirmed(generation)
-        except GLib.Error as e:
-            log.warning('Failed to register with StatusNotifierWatcher: %s', e)
-            self._readiness.registration_failed(generation)
+
+        # Issue #95: registration is asynchronous — a synchronous call here
+        # blocks the main loop and, when the watcher lives in-process (the
+        # CI probe), deadlocks against its own method dispatch.
+        def _on_register_reply(_source_object, res, _user_data):
+            try:
+                _conn.call_finish(res)
+                self._readiness.registration_confirmed(generation)
+            except GLib.Error as e:
+                log.warning('Failed to register with StatusNotifierWatcher: %s', e)
+                self._readiness.registration_failed(generation)
+
+        self._conn.call(
+            WATCHER_NAME,
+            WATCHER_PATH,
+            WATCHER_NAME,
+            'RegisterStatusNotifierItem',
+            GLib.Variant('(s)', (SNI_OBJECT_PATH,)),
+            None,
+            Gio.DBusCallFlags.NONE,
+            -1,
+            None,
+            _on_register_reply,
+            None,
+        )
 
     def _on_watcher_vanished(self, _conn, _name):
         if self._readiness.watcher_lost():
