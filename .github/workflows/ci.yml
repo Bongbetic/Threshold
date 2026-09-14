@@ -78,8 +78,7 @@ jobs:
           sudo apt-get install -y dpkg-dev lintian
 
       - name: Install build dependencies
-        run: |
-          sudo apt-get build-dep -y .
+        run: sudo apt-get build-dep -y .
 
       - name: Build .debs
         run: |
@@ -89,6 +88,38 @@ jobs:
 
       - name: Lintian
         run: lintian artifacts/*.deb
+
+      - name: Verify package ownership of key files
+        run: |
+          set -e
+          DEB=$(ls artifacts/threshold_*_amd64.deb)
+          dpkg-deb --contents "$DEB" | grep -q "usr/bin/threshold"
+          dpkg-deb --contents "$DEB" | grep -q "usr/sbin/threshold-ec-lifecycle"
+          dpkg-deb --contents "$DEB" | grep -q "usr/lib/systemd/system/threshold-boot-reconcile.service"
+          dpkg-deb --contents "$DEB" | grep -q "usr/src/msi-ec-0.13.112"
+          dpkg-deb --contents "$DEB" | grep -q "icons/hicolor/scalable/apps/com.bongbetic.threshold.svg"
+          dpkg-deb --contents "$DEB" | grep -q "glib-2.0/schemas/com.bongbetic.threshold.gschema.xml"
+          dpkg-deb --contents "$DEB" | grep -q "lib/udev/rules.d/99-msi-battery.rules"
+
+      - name: Install and verify lifecycle
+        run: |
+          set -e
+          sudo dpkg -i artifacts/threshold_*_amd64.deb || sudo apt-get install -f -y
+          # Package-owned marker must exist after install
+          test -f /var/lib/threshold/ec/package-owned
+          # Verify upgrade path (re-install = configure)
+          sudo dpkg --configure threshold
+          # Verify removal preserves charge threshold
+          sudo mkdir -p /var/lib/threshold/ec
+          echo "80" | sudo tee /var/lib/threshold/ec/charge-threshold > /dev/null
+          sudo dpkg --remove threshold || true
+          test -f /var/lib/threshold/ec/charge-threshold
+          test "80" = "$(cat /var/lib/threshold/ec/charge-threshold)"
+          # Re-install for purge test
+          sudo dpkg -i artifacts/threshold_*_amd64.deb || sudo apt-get install -f -y
+          # Verify purge removes state
+          sudo dpkg --purge threshold
+          test ! -d /var/lib/threshold/ec
 
       - name: Upload .deb artifacts
         uses: actions/upload-artifact@v4
@@ -166,6 +197,32 @@ jobs:
           runuser -u ci -- dpkg-buildpackage -us -uc -b
           mkdir -p artifacts
           cp ../threshold_*.deb artifacts/
+
+      - name: Verify DEB lifecycle on Debian 13
+        run: |
+          set -e
+          DEB=$(ls ../threshold_*_amd64.deb)
+          # Package ownership assertions
+          dpkg-deb --contents "$DEB" | grep -q "usr/bin/threshold"
+          dpkg-deb --contents "$DEB" | grep -q "usr/sbin/threshold-ec-lifecycle"
+          dpkg-deb --contents "$DEB" | grep -q "usr/src/msi-ec-0.13.112"
+          # Install
+          runuser -u ci -- sudo dpkg -i "$DEB" || runuser -u ci -- sudo apt-get install -f -y
+          # Package-owned marker
+          test -f /var/lib/threshold/ec/package-owned
+          # Upgrade path
+          runuser -u ci -- sudo dpkg --configure threshold
+          # Removal preserves charge threshold
+          runuser -u ci -- sudo mkdir -p /var/lib/threshold/ec
+          echo "80" | runuser -u ci -- sudo tee /var/lib/threshold/ec/charge-threshold > /dev/null
+          runuser -u ci -- sudo dpkg --remove threshold || true
+          test -f /var/lib/threshold/ec/charge-threshold
+          test "80" = "$(cat /var/lib/threshold/ec/charge-threshold)"
+          # Re-install for purge
+          runuser -u ci -- sudo dpkg -i "$DEB" || runuser -u ci -- sudo apt-get install -f -y
+          # Purge removes state
+          runuser -u ci -- sudo dpkg --purge threshold
+          test ! -d /var/lib/threshold/ec
 
       - name: Lintian
         run: lintian artifacts/*.deb

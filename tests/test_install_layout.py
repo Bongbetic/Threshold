@@ -359,3 +359,125 @@ def test_deb_control_recommends_not_depends():
 
 def test_deb_lifecycle_authority_source_exists():
     assert _LIFECYCLE.is_file(), "packaging/threshold-ec-lifecycle must exist"
+
+
+# ── DEB lifecycle verification (issue #93) ────────────────────────────────
+
+
+def test_deb_installs_complete_application():
+    """DEB must contain the complete application without a separate EC package."""
+    manifest = _DEB_INSTALL.read_text(encoding="utf-8")
+    # Application binary and Python sources
+    assert "usr/bin/threshold" in manifest
+    assert "usr/share/com.bongbetic.threshold/threshold/" in manifest
+    # EC lifecycle authority (single package, no separate msi-ec-dkms)
+    assert "usr/sbin/threshold-ec-lifecycle" in manifest
+    assert "msi-ec-src/" in manifest
+    assert "usr/src/msi-ec-0.13.112/" in manifest
+    # No separate DKMS package reference
+    assert "msi-ec-dkms" not in _DEB_CONTROL.read_text(encoding="utf-8")
+
+
+def test_deb_has_required_runtime_deps():
+    """Runtime deps must include all required capabilities."""
+    control = _DEB_CONTROL.read_text(encoding="utf-8")
+    for dep in (
+        "gir1.2-gtk-4.0",
+        "gir1.2-adw-1",
+        "gir1.2-notify-0.7",
+        "gir1.2-webkit-6.0",
+        "gir1.2-dbusmenu-glib-0.4",
+        "dkms",
+        "kmod",
+        "systemd",
+    ):
+        assert dep in control, f"missing runtime dependency: {dep}"
+
+
+def test_deb_polkit_and_mokutil_are_recommendations():
+    """Polkit and mokutil must be Recommends, not Depends."""
+    control = _DEB_CONTROL.read_text(encoding="utf-8")
+    depends_section = control.split("Recommends:")[0]
+    assert "polkitd" not in depends_section
+    assert "mokutil" not in depends_section
+    recommends = control.split("Recommends:")[1]
+    assert "polkitd" in recommends
+    assert "mokutil" in recommends
+
+
+def test_deb_postinst_invokes_lifecycle_and_never_fails():
+    """postinst must invoke lifecycle but never fail the transaction on EC outcomes."""
+    text = _DEB_POSTINST.read_text(encoding="utf-8")
+    assert "threshold-ec-lifecycle install-or-upgrade" in text
+    assert "|| true" in text
+
+
+def test_deb_upgrade_preserves_charge_threshold():
+    """postinst must not destroy threshold state on reconfigure."""
+    text = _DEB_POSTINST.read_text(encoding="utf-8")
+    assert "charge-threshold" not in text
+    assert "rm -rf /var/lib/threshold" not in text
+
+
+def test_deb_removal_preserves_charge_threshold():
+    """prerm must not destroy charge threshold on ordinary removal."""
+    text = _DEB_PRERM.read_text(encoding="utf-8")
+    assert "charge-threshold" not in text
+    assert "rm -rf /var/lib/threshold" not in text
+    assert "threshold-ec-lifecycle remove" in text
+
+
+def test_deb_purge_removes_retained_state():
+    """postrm purge must remove the retained preference."""
+    text = _DEB_POSTRM.read_text(encoding="utf-8")
+    assert "rm -rf /var/lib/threshold" in text
+    assert "threshold-ec-lifecycle remove" in text
+
+
+def test_deb_lifecycle_triggers_limited():
+    """Distribution-owned triggers must remain distribution-owned."""
+    triggers = ROOT / "debian" / "threshold.triggers"
+    text = triggers.read_text(encoding="utf-8")
+    assert "interest-noawait /etc/kernel/postinst.d" in text
+    assert "hicolor" not in text
+    assert "gtk-update-icon-cache" not in text
+
+
+def test_deb_sysusers_provides_threshold_group():
+    """sysusers file must define threshold group for lifecycle."""
+    text = (ROOT / "debian" / "threshold.sysusers").read_text(encoding="utf-8")
+    assert "threshold" in text
+    assert text.strip().endswith("-")
+
+
+def test_deb_udev_installed_under_lib():
+    """udev rule is installed to /usr/lib, not /etc."""
+    assert "usr/lib/udev/rules.d/99-msi-battery.rules" in _DEB_INSTALL.read_text(encoding="utf-8")
+
+
+def test_deb_notification_area_assets_included():
+    """DEB must include all notification-area battery icons."""
+    manifest = _DEB_INSTALL.read_text(encoding="utf-8")
+    assert "icons/hicolor/scalable/status/" in manifest
+    assert "icons/hicolor/scalable/apps/" in manifest
+    assert "icons/hicolor/symbolic/apps/" in manifest
+    # Source must have battery icons (charging + non-charging)
+    icon_dir = ROOT / "data" / "icons" / "hicolor" / "scalable" / "status"
+    assert icon_dir.is_dir()
+    battery_icons = list(icon_dir.glob("com.bongbetic.threshold-battery-*.svg"))
+    assert len(battery_icons) >= 10
+
+
+def test_deb_dbusmenu_support_included():
+    """DEB must include dbusmenu typelib for StatusNotifierItem."""
+    control = _DEB_CONTROL.read_text(encoding="utf-8")
+    assert "gir1.2-dbusmenu-glib-0.4" in control
+
+
+def test_deb_systemd_integration():
+    """DEB must include systemd unit and not manually call systemctl."""
+    manifest = _DEB_INSTALL.read_text(encoding="utf-8")
+    assert "usr/lib/systemd/system/threshold-boot-reconcile.service" in manifest
+    assert "systemctl" not in _DEB_POSTINST.read_text(encoding="utf-8")
+    assert "systemctl" not in _DEB_PRERM.read_text(encoding="utf-8")
+
