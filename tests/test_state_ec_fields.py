@@ -5,7 +5,6 @@ EC maintenance status, the machine-wide charge threshold, and the active
 threshold verified through the live interface.
 """
 
-import pytest
 
 from threshold.battery import ControlMode
 from threshold.config import Config
@@ -99,7 +98,6 @@ def test_adapter_passes_ec_status_through(tmp_path):
 
 def test_adapter_reads_ec_status_from_file(tmp_path, monkeypatch):
     from threshold.adapter import build_state
-    from threshold.ec_status import EC_STATUS_FILE
 
     status_file = tmp_path / "status"
     status_file.write_text(

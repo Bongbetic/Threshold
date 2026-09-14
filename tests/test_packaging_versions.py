@@ -105,6 +105,7 @@ def test_makefile_vars_matches_manifest():
 def test_dkms_version_is_0_13_112():
     assert _dkms_version() == "0.13.112"
 
+
 def _lifecycle_text() -> str:
     return (ROOT / "packaging" / "threshold-ec-lifecycle").read_text(encoding="utf-8")
 
@@ -140,12 +141,6 @@ def test_spec_obsoletes_paired_dkms_with_version_bound():
 
 
 def test_first_unified_nevr_exceeds_last_official_paired_release():
-    """First unified NEVR (2.0.0-1) exceeds every official paired release (last: 1.4.2-1)."""
-    spec = SPEC.read_text(encoding="utf-8")
-    assert _spec_version(spec) > (1, 4, 2)
-
-
-def test_first_unified_nevr_exceeds_last_official_paired_release():
     """The unified NEVR exceeds every official paired release recorded in the changelog."""
     spec = SPEC.read_text(encoding="utf-8")
     unified = _spec_version(spec)
@@ -158,6 +153,7 @@ def test_first_unified_nevr_exceeds_last_official_paired_release():
     assert paired, "no paired releases recorded in the changelog"
     release = int(re.search(r"^Release:\s+\d+", spec, re.M).group(0).split()[-1])
     assert (unified, release) > max(paired), (unified, release, paired)
+
 
 def test_spec_post_captures_handoff_snapshot():
     """%post records the read-only handoff snapshot while legacy state is still on disk."""

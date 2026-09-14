@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from threshold.commands import CommandDispatcher, CommandResult, ErrorCode, VALID_ACCENT_COLORS
 from threshold.battery import ControlMode, THRESHOLD_MIN, THRESHOLD_MAX
-from threshold.state import ThresholdState, Capabilities
+from threshold.state import ThresholdState
 
 
 # ── Golden fixtures ──────────────────────────────────────────────────────────
@@ -210,7 +210,8 @@ class TestNoBattery:
 
 class TestApplyThresholdSuccess:
     def test_ec_msi_direct_write(self, dispatcher, ec_msi_state, mock_config):
-        with patch("threshold.commands.write_threshold", return_value=(True, "direct")),              patch("threshold.commands.read_sysfs", return_value="80"):
+        with patch("threshold.commands.write_threshold", return_value=(True, "direct")), \
+                patch("threshold.commands.read_sysfs", return_value="80"):
             result = dispatcher.dispatch(
                 "apply_threshold", args={"threshold": 80}, state=ec_msi_state
             )
@@ -221,7 +222,8 @@ class TestApplyThresholdSuccess:
             mock_config.set_charge_threshold.assert_called_once_with(80)
 
     def test_sysfs_vendor_write(self, dispatcher, sysfs_vendor_state, mock_config):
-        with patch("threshold.commands.write_threshold", return_value=(True, "direct")),              patch("threshold.commands.read_sysfs", return_value="70"):
+        with patch("threshold.commands.write_threshold", return_value=(True, "direct")), \
+                patch("threshold.commands.read_sysfs", return_value="70"):
             result = dispatcher.dispatch(
                 "apply_threshold", args={"threshold": 70}, state=sysfs_vendor_state
             )
@@ -235,7 +237,8 @@ class TestApplyThresholdSuccess:
 
 class TestECMismatch:
     def test_ec_stores_different_value(self, dispatcher, ec_msi_state, mock_config):
-        with patch("threshold.commands.write_threshold", return_value=(True, "direct")),              patch("threshold.commands.read_sysfs", return_value="78"):
+        with patch("threshold.commands.write_threshold", return_value=(True, "direct")), \
+                patch("threshold.commands.read_sysfs", return_value="78"):
             result = dispatcher.dispatch(
                 "apply_threshold", args={"threshold": 80}, state=ec_msi_state
             )
@@ -244,7 +247,8 @@ class TestECMismatch:
             assert "EC stored 78%" in result.data["method"]
 
     def test_ec_matches_requested(self, dispatcher, ec_msi_state, mock_config):
-        with patch("threshold.commands.write_threshold", return_value=(True, "direct")),              patch("threshold.commands.read_sysfs", return_value="80"):
+        with patch("threshold.commands.write_threshold", return_value=(True, "direct")), \
+                patch("threshold.commands.read_sysfs", return_value="80"):
             result = dispatcher.dispatch(
                 "apply_threshold", args={"threshold": 80}, state=ec_msi_state
             )
@@ -265,7 +269,8 @@ class TestWriteFailures:
             assert result.error_code == ErrorCode.PERMISSION_DENIED
 
     def test_write_os_error(self, dispatcher, ec_msi_state):
-        with patch("threshold.commands.write_threshold", return_value=(False, "Input/output error")):
+        with patch("threshold.commands.write_threshold",
+                   return_value=(False, "Input/output error")):
             result = dispatcher.dispatch(
                 "apply_threshold", args={"threshold": 80}, state=ec_msi_state
             )
@@ -300,7 +305,8 @@ class TestNotificationOnly:
 
 class TestRestoreThreshold:
     def test_restore_sets_100(self, dispatcher, ec_msi_state, mock_config):
-        with patch("threshold.commands.write_threshold", return_value=(True, "direct")),              patch("threshold.commands.read_sysfs", return_value="100"):
+        with patch("threshold.commands.write_threshold", return_value=(True, "direct")), \
+                patch("threshold.commands.read_sysfs", return_value="100"):
             result = dispatcher.dispatch("restore_threshold", state=ec_msi_state)
             assert result.success is True
             assert result.data["threshold"] == THRESHOLD_MAX

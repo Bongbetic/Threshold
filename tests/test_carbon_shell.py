@@ -33,7 +33,9 @@ def fixtures():
         "ready_response": {"id": "req-ready-0", "ok": True, "data": {"acknowledged": True}},
         "get_state_request": {"id": "req-state-1", "cmd": "get_state"},
         "unknown_command_request": {"id": "req-unk-7", "cmd": "nonexistent_command"},
-        "unknown_command_response": {"id": "req-unk-7", "ok": False, "error": "Unknown command: nonexistent_command"},
+        "unknown_command_response": {
+            "id": "req-unk-7", "ok": False,
+            "error": "Unknown command: nonexistent_command"},
     }
 
 
@@ -178,7 +180,8 @@ class TestBridgeHandlerReadyCommand:
             js = call_args[0][0]
 
             assert 'window.threshold._handleMessage(' in js
-            start = js.index('window.threshold._handleMessage(') + len('window.threshold._handleMessage(')
+            start = js.index('window.threshold._handleMessage(') + \
+                len('window.threshold._handleMessage(')
             end = js.rindex(')')
             inner_json = json.loads(json.loads(js[start:end]))
 
@@ -206,7 +209,8 @@ class TestBridgeHandlerGetState:
             call_args = web_view.evaluate_javascript.call_args
             js = call_args[0][0]
 
-            start = js.index('window.threshold._handleMessage(') + len('window.threshold._handleMessage(')
+            start = js.index('window.threshold._handleMessage(') + \
+                len('window.threshold._handleMessage(')
             end = js.rindex(')')
             inner_json = json.loads(json.loads(js[start:end]))
 
@@ -231,7 +235,8 @@ class TestBridgeHandlerUnknownCommand:
             call_args = web_view.evaluate_javascript.call_args
             js = call_args[0][0]
 
-            start = js.index('window.threshold._handleMessage(') + len('window.threshold._handleMessage(')
+            start = js.index('window.threshold._handleMessage(') + \
+                len('window.threshold._handleMessage(')
             end = js.rindex(')')
             inner_json = json.loads(json.loads(js[start:end]))
 
@@ -255,7 +260,8 @@ class TestBridgeHandlerMalformedPayload:
             call_args = web_view.evaluate_javascript.call_args
             js = call_args[0][0]
 
-            start = js.index('window.threshold._handleMessage(') + len('window.threshold._handleMessage(')
+            start = js.index('window.threshold._handleMessage(') + \
+                len('window.threshold._handleMessage(')
             end = js.rindex(')')
             inner_json = json.loads(json.loads(js[start:end]))
 
@@ -269,8 +275,8 @@ class TestBridgeHandlerThresholdCommand:
         from threshold.carbon_shell import BridgeHandler
         web_view = MagicMock()
         with patch.object(BridgeHandler, '_build_state', return_value=ec_msi_state), \
-             patch("threshold.commands.write_threshold", return_value=(True, "direct")), \
-             patch("threshold.commands.read_sysfs", return_value="80"):
+                patch("threshold.commands.write_threshold", return_value=(True, "direct")), \
+                patch("threshold.commands.read_sysfs", return_value="80"):
             handler = BridgeHandler(mock_config, web_view)
             msg = MagicMock()
             msg.to_string.return_value = json.dumps({
@@ -284,7 +290,8 @@ class TestBridgeHandlerThresholdCommand:
             call_args = web_view.evaluate_javascript.call_args
             js = call_args[0][0]
 
-            start = js.index('window.threshold._handleMessage(') + len('window.threshold._handleMessage(')
+            start = js.index('window.threshold._handleMessage(') + \
+                len('window.threshold._handleMessage(')
             end = js.rindex(')')
             inner_json = json.loads(json.loads(js[start:end]))
 
@@ -332,7 +339,8 @@ class TestBatteryIconName:
     def test_charging_suffix(self):
         from threshold.carbon_shell import _battery_icon_name
         assert _battery_icon_name(75, "Charging") == "com.bongbetic.threshold-battery-good-charging"
-        assert _battery_icon_name(100, "Charging") == "com.bongbetic.threshold-battery-full-charging"
+        assert _battery_icon_name(
+            100, "Charging") == "com.bongbetic.threshold-battery-full-charging"
 
     def test_full_and_not_charging_have_no_suffix(self):
         from threshold.carbon_shell import _battery_icon_name
@@ -373,7 +381,8 @@ def _extract_pushed_event(handler):
     handler._web_view.evaluate_javascript.assert_called()
     call_args = handler._web_view.evaluate_javascript.call_args_list
     last_js = call_args[-1][0][0]
-    start = last_js.index('window.threshold._handleMessage(') + len('window.threshold._handleMessage(')
+    start = last_js.index('window.threshold._handleMessage(') + \
+        len('window.threshold._handleMessage(')
     end = last_js.rindex(')')
     return json.loads(json.loads(last_js[start:end]))
 
@@ -563,7 +572,8 @@ class TestPollingPush:
             pending_threshold=80,
         )
         handler = _make_handler(state)
-        with patch.object(handler, '_build_state', return_value=state),              patch.object(handler, '_sync_from_hardware'):
+        with patch.object(handler, '_build_state', return_value=state), \
+                patch.object(handler, '_sync_from_hardware'):
             handler._poll_tick()
         event = _extract_pushed_event(handler)
         assert event["event"] == "battery"
@@ -747,7 +757,8 @@ class TestGSettingsListeners:
         # Verify the title_update event
         calls = web_view.evaluate_javascript.call_args_list
         last_js = calls[-1][0][0]
-        start = last_js.index('window.threshold._handleMessage(') + len('window.threshold._handleMessage(')
+        start = last_js.index('window.threshold._handleMessage(') + \
+            len('window.threshold._handleMessage(')
         end = last_js.rindex(')')
         event = json.loads(json.loads(last_js[start:end]))
         assert event["event"] == "title_update"
@@ -866,7 +877,8 @@ class TestTraySetup:
         )
         handler = _make_handler(state)
         handler._tray = MagicMock()
-        with patch("threshold.carbon_shell._battery_icon_name", return_value="battery-good-charging"):
+        with patch("threshold.carbon_shell._battery_icon_name",
+                   return_value="battery-good-charging"):
             handler._update_tray()
         handler._tray.set_state.assert_called_once_with(
             75, "Charging", "battery-good-charging", 80
@@ -915,8 +927,9 @@ class TestTraySetup:
         )
         handler = _make_handler(state)
         with patch.object(handler, "_build_state", return_value=state), \
-             patch.object(handler._dispatcher, "dispatch", return_value=CommandResult(success=True)) as mock_dispatch, \
-             patch.object(handler, "_push_to_js"):
+                patch.object(handler._dispatcher, "dispatch",
+                             return_value=CommandResult(success=True)) as mock_dispatch, \
+                patch.object(handler, "_push_to_js"):
             handler._on_tray_threshold(70)
         mock_dispatch.assert_called_once_with(
             "apply_threshold", args={"threshold": 70}, state=state
@@ -932,9 +945,10 @@ class TestTraySetup:
         )
         handler = _make_handler(state)
         with patch.object(handler, "_build_state", return_value=state), \
-             patch.object(handler._dispatcher, "dispatch",
-                          return_value=CommandResult(success=False, error_code="write_failed")) as mock_dispatch, \
-             patch.object(handler, "_push_to_js") as mock_push:
+                patch.object(handler._dispatcher, "dispatch",
+                             return_value=CommandResult(
+                                 success=False, error_code="write_failed")) as mock_dispatch, \
+                patch.object(handler, "_push_to_js") as mock_push:
             handler._on_tray_threshold(70)
         mock_dispatch.assert_called_once()
         # State not rebuilt after failure; no push to JS.
@@ -1037,7 +1051,8 @@ class TestPreferenceSync:
     """Test preference change events pushed to JS."""
 
     def test_preference_changed_pushes_event(self):
-        state = ThresholdState(battery_available=False, show_notifications=True, minimize_to_tray=True)
+        state = ThresholdState(battery_available=False,
+                               show_notifications=True, minimize_to_tray=True)
         handler = _make_handler(state)
         with patch.object(handler, "_build_state", return_value=state):
             handler._on_preference_changed(None, "show-notifications")
@@ -1056,7 +1071,8 @@ class TestPreferenceSync:
         calls = handler._web_view.evaluate_javascript.call_args_list
         # First call is the preference event
         first_js = calls[0][0][0]
-        start = first_js.index('window.threshold._handleMessage(') + len('window.threshold._handleMessage(')
+        start = first_js.index('window.threshold._handleMessage(') + \
+            len('window.threshold._handleMessage(')
         end = first_js.rindex(')')
         event = json.loads(json.loads(first_js[start:end]))
         assert event["event"] == "preference"
@@ -1231,7 +1247,9 @@ class TestAlarmEvaluation:
         handler = _make_handler(state)
         handler._alarm_armed = True
         handler._alarm_fired = False
-        with patch("threshold.battery.evaluate_alarm", return_value=True),              patch("threshold.battery.read_sysfs", return_value="Charging"),              patch.object(handler, "_show_notification") as mock_notif:
+        with patch("threshold.battery.evaluate_alarm", return_value=True), \
+                patch("threshold.battery.read_sysfs", return_value="Charging"), \
+                patch.object(handler, "_show_notification") as mock_notif:
             handler._evaluate_alarm()
         assert handler._alarm_fired is True
         mock_notif.assert_called_once()
@@ -1281,7 +1299,6 @@ class TestAlarmEvaluation:
         handler = _make_handler(state)
         handler._alarm_armed = True
         handler._evaluate_alarm()  # Should return early
-
 
 
 def test_shim_source_is_javascript_not_file_uri():

@@ -5,14 +5,11 @@ mapped from EC setup/maintenance state, and the dispatcher exposes
 explicit gestures (setup/repair/diagnostics) with structured failures.
 """
 
-import os
 import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 
-from threshold.battery import ControlMode
 from threshold.commands import CommandDispatcher, ErrorCode
 from threshold.config import Config
 from threshold.ec_state import (
@@ -21,7 +18,6 @@ from threshold.ec_state import (
     ECSetupReason,
     ECMaintenanceStatus,
 )
-from threshold.state import ThresholdState
 
 from test_state_ec_fields import FakeGSettings
 
@@ -99,8 +95,8 @@ class TestECActionCommands:
             return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
 
         with patch.object(Path, "exists", return_value=True), \
-             patch("subprocess.run", side_effect=fake_run), \
-             patch.object(CommandDispatcher, "PACKAGE_OWNED_MARKER", str(tmp_path / "m")):
+                patch("subprocess.run", side_effect=fake_run), \
+                patch.object(CommandDispatcher, "PACKAGE_OWNED_MARKER", str(tmp_path / "m")):
             r = d.dispatch("ec_action", {"action": "setup"})
         assert r.success is True
         assert r.data["exit_class"] == "success"
@@ -117,7 +113,7 @@ class TestECActionCommands:
             return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
 
         with patch.object(Path, "exists", return_value=False), \
-             patch("subprocess.run", side_effect=fake_run):
+                patch("subprocess.run", side_effect=fake_run):
             r = d.dispatch("ec_action", {"action": "repair"})
         assert r.success is True
         assert "threshold-appimage-bootstrap" in calls["cmd"]
@@ -131,7 +127,7 @@ class TestECActionCommands:
             return subprocess.CompletedProcess(cmd, 4, stdout="", stderr="boom")
 
         with patch.object(Path, "exists", return_value=False), \
-             patch("subprocess.run", side_effect=fake_run):
+                patch("subprocess.run", side_effect=fake_run):
             r = d.dispatch("ec_action", {"action": "setup"})
         assert r.success is False
         assert r.error_code == ErrorCode.EC_OPERATION_FAILED
@@ -145,7 +141,7 @@ class TestECActionCommands:
             return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
 
         with patch.object(Path, "exists", return_value=True), \
-             patch("subprocess.run", side_effect=fake_run):
+                patch("subprocess.run", side_effect=fake_run):
             r = d.dispatch("ec_diagnostics", {})
         assert r.success is True
         assert r.data["diagnostics"] == "ok"
@@ -162,14 +158,13 @@ class TestECActionCommands:
             return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
 
         # get_state should not trigger any subprocess
-        config = Config(settings=FakeGSettings())
         r = d.dispatch("get_state", state=None)
         assert r.success is False  # no state available
         assert "subprocess" not in str(calls)
 
         # Only ec_action with action="repair" triggers the lifecycle
         with patch.object(Path, "exists", return_value=True), \
-             patch("subprocess.run", side_effect=fake_run):
+                patch("subprocess.run", side_effect=fake_run):
             r = d.dispatch("ec_action", {"action": "repair"})
         assert r.success is True
         assert calls["cmd"][-1] == "repair"

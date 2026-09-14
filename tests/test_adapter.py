@@ -111,7 +111,7 @@ class TestBuildStateWithBattery:
     ):
         bat_path = Path("/sys/class/power_supply/BAT0")
         mock_find.return_value = bat_path
-        
+
         # Mock read_sysfs for status and threshold
         with patch('threshold.adapter.read_sysfs') as mock_sysfs:
             def sysfs_side_effect(path):
@@ -121,9 +121,9 @@ class TestBuildStateWithBattery:
                     return '80'
                 return None
             mock_sysfs.side_effect = sysfs_side_effect
-            
+
             state = build_state(config)
-        
+
         assert state.battery_available is True
         assert state.control_mode == ControlMode.EC_MSI
         assert state.charge_percent == 85
@@ -150,23 +150,22 @@ class TestBuildStateNotificationOnly:
     ):
         bat_path = Path("/sys/class/power_supply/BAT0")
         mock_find.return_value = bat_path
-        
+
         with patch('threshold.adapter.read_sysfs') as mock_sysfs:
             mock_sysfs.return_value = None  # No threshold file
-            
+
             state = build_state(
                 config,
                 pending_threshold=80,
                 alarm_armed=True,
                 alarm_fired=False,
             )
-        
+
         assert state.control_mode == ControlMode.NOTIFY_ONLY
         assert state.active_threshold is None
         assert state.pending_threshold == 80
         assert state.alarm_armed is True
         assert state.capabilities.supports_alarm is True
-
 
 
 class TestDetectSystemThemeScheme:
@@ -193,7 +192,8 @@ class TestDetectSystemThemeScheme:
             'gtk-theme': 'Adwaita',
         }.get(key, '')
         with patch('gi.repository.Gio.Settings.new', return_value=mock_settings), \
-             patch('gi.repository.Gio.SettingsSchemaSource.get_default', return_value=MagicMock()):
+                patch('gi.repository.Gio.SettingsSchemaSource.get_default',
+                      return_value=MagicMock()):
             from threshold.adapter import detect_system_theme_scheme
             result = detect_system_theme_scheme()
             assert result == "dark"
@@ -206,7 +206,8 @@ class TestDetectSystemThemeScheme:
             'gtk-theme': 'Adwaita',
         }.get(key, '')
         with patch('gi.repository.Gio.Settings.new', return_value=mock_settings), \
-             patch('gi.repository.Gio.SettingsSchemaSource.get_default', return_value=MagicMock()):
+                patch('gi.repository.Gio.SettingsSchemaSource.get_default',
+                      return_value=MagicMock()):
             from threshold.adapter import detect_system_theme_scheme
             result = detect_system_theme_scheme()
             assert result == "light"
@@ -219,7 +220,8 @@ class TestDetectSystemThemeScheme:
             'gtk-theme': 'Adwaita-dark',
         }.get(key, '')
         with patch('gi.repository.Gio.Settings.new', return_value=mock_settings), \
-             patch('gi.repository.Gio.SettingsSchemaSource.get_default', return_value=MagicMock()):
+                patch('gi.repository.Gio.SettingsSchemaSource.get_default',
+                      return_value=MagicMock()):
             from threshold.adapter import detect_system_theme_scheme
             result = detect_system_theme_scheme()
             assert result == "dark"
@@ -232,7 +234,8 @@ class TestDetectSystemThemeScheme:
             'gtk-theme': 'Adwaita',
         }.get(key, '')
         with patch('gi.repository.Gio.Settings.new', return_value=mock_settings), \
-             patch('gi.repository.Gio.SettingsSchemaSource.get_default', return_value=MagicMock()):
+                patch('gi.repository.Gio.SettingsSchemaSource.get_default',
+                      return_value=MagicMock()):
             from threshold.adapter import detect_system_theme_scheme
             result = detect_system_theme_scheme()
             assert result == "light"

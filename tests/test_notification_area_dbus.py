@@ -206,7 +206,7 @@ def test_notification_area_service_probe(tmp_path):
         env=env, capture_output=True, text=True, timeout=60,
     )
     assert r.returncode == 0, r.stderr
-    line = next(l for l in r.stdout.splitlines() if l.startswith("PROBE:"))
+    line = next(ln for ln in r.stdout.splitlines() if ln.startswith("PROBE:"))
     results = json.loads(line[len("PROBE:"):])
 
     # ── Registration evidence ─────────────────────────────────────────────

@@ -5,7 +5,7 @@ Verifies that the CommandDispatcher correctly handles window commands
 and returns appropriate results.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 

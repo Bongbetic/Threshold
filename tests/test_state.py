@@ -3,10 +3,7 @@
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-from dataclasses import asdict
 
-import pytest
 
 # Ensure src is importable
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -93,7 +90,7 @@ class TestThresholdStateConstruction:
         """Effective theme scheme derived from dark_mode preference."""
         state_dark = ThresholdState(battery_available=False, dark_mode=True)
         assert state_dark.effective_theme_scheme == "dark"
-        
+
         state_light = ThresholdState(battery_available=False, dark_mode=False)
         assert state_light.effective_theme_scheme == "light"
 
@@ -204,7 +201,6 @@ class TestThresholdStateFromSysfs:
         assert state.charge_status is None
         assert state.active_threshold is None
         assert state.health_percent is None
-
 
 
 class TestSystemThemeScheme:

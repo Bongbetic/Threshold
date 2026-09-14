@@ -10,7 +10,6 @@ systems without the typelibs (for testing).
 
 import json
 import os
-import sys
 from pathlib import Path
 from typing import Any, Optional
 
@@ -49,11 +48,7 @@ def _load_shim_source() -> str:
     return SHIM_SCRIPT_PATH.read_text(encoding="utf-8")
 
 
-
-
-
 # ── Icon helpers ──────────────────────────────────────────────────────────────
-
 _CHARGING_SUFFIX = {
     'Charging': '-charging',
     'Full': '',
@@ -94,7 +89,6 @@ class BridgeHandler:
     """
 
     def __init__(self, config, web_view):
-        from threshold.adapter import build_state
         from threshold.commands import CommandDispatcher
         from threshold.battery import find_battery_path
 
@@ -326,7 +320,6 @@ class BridgeHandler:
 
     def _poll_tick(self) -> bool:
         """Called every interval_seconds — refresh state and push to JS."""
-        from threshold.battery import detect_control_mode, read_sysfs
         from gi.repository import GLib
 
         # Re-detect mode and follow external EC threshold changes
