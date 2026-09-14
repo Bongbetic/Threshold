@@ -259,6 +259,20 @@ jobs:
           candidates/*.AppImage --appimage-extract >/dev/null
           test -f squashfs-root/AppRun
           test -f squashfs-root/usr/share/threshold/ec-bundle/manifest.json
+          # Dependency closure: compiled GSettings schemas
+          test -f squashfs-root/usr/share/glib-2.0/schemas/gschemas.compiled
+          # Dependency closure: core GI typelibs
+          for tl in GLib-2.0 GObject-2.0 Gio-2.0 Gtk-4.0 Adw-1 Notify-0.7; do
+            test -f "squashfs-root/usr/lib/girepository-1.0/${tl}.typelib"
+          done
+          # Dependency closure: AppRun sets offline environment variables
+          grep -q GSETTINGS_SCHEMA_DIR squashfs-root/AppRun
+          grep -q XDG_DATA_DIRS squashfs-root/AppRun
+          grep -q GI_TYPELIB_PATH squashfs-root/AppRun
+          grep -q LD_LIBRARY_PATH squashfs-root/AppRun
+          # No build-host paths in AppRun
+          ! grep -q '/home/' squashfs-root/AppRun
+          ! grep -q '/tmp/' squashfs-root/AppRun
 
   # ── Draft assembly (manifest + checksums, private) ────────────────────────
 
