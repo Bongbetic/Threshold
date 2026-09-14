@@ -48,7 +48,7 @@ jobs:
 
       - name: Coverage (battery.py >= 80%)
         run: |
-          PYTHONPATH=src python3 -m pytest tests/test_battery.py tests/test_window_ui.py -q \
+          PYTHONPATH=src python3 -m pytest tests/test_battery.py -q \
             --cov=threshold.battery \
             --cov-fail-under=80 \
             --cov-report=term-missing
@@ -262,7 +262,8 @@ jobs:
         run: |
           set -ex
           test -x /usr/bin/threshold
-          test -x /usr/sbin/threshold-ec-lifecycle || {
+          # openSUSE's usrmerge relocates %_sbindir payloads to /usr/bin.
+          test -x /usr/sbin/threshold-ec-lifecycle || test -x /usr/bin/threshold-ec-lifecycle || {
             ls -la /usr/sbin/threshold-ec-lifecycle /usr/bin/threshold-ec-lifecycle /usr/bin/threshold 2>&1 || :
             rpm -ql threshold 2>/dev/null | grep -i lifecycle || :
             exit 1
