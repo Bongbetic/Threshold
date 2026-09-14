@@ -22,7 +22,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 _child = textwrap.dedent("""\
-    import json, os, sys
+    import json, os, sys, threading
     import gi
     gi.require_version('Dbusmenu', '0.4')
     from gi.repository import GLib, Gio
@@ -95,30 +95,45 @@ _child = textwrap.dedent("""\
         # registered with the watcher (bounded by the 8s safety quit).
         if not results["registered_items"]:
             return True
+        # Properties.Get must not run on the main loop (a synchronous call
+        # would deadlock against its own dispatch); probe from a worker.
+        threading.Thread(target=run_checks_body, daemon=True).start()
+        return False
+
+    def run_checks_body():
         try:
+            conn = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+
+            def check(name):
+                v = conn.call_sync(
+                    results["item_owner"], '/StatusNotifierItem',
+                    'org.freedesktop.DBus.Properties', 'Get',
+                    GLib.Variant('(ss)', ('org.kde.StatusNotifierItem', name)),
+                    GLib.VariantType('(v)'), Gio.DBusCallFlags.NONE, -1, None,
+                )
+                return v[0]
+
             results["props"] = {
-                "Id": check("Id").unpack(),
-                "Category": check("Category").unpack(),
-                "IconName": check("IconName").unpack(),
-                "Menu": check("Menu").unpack(),
-                "ItemIsMenu": check("ItemIsMenu").unpack(),
+                "Id": check("Id"),
+                "Category": check("Category"),
+                "IconName": check("IconName"),
+                "Menu": check("Menu"),
+                "ItemIsMenu": check("ItemIsMenu"),
             }
             pix = check("IconPixmap")
             results["pixmap_ok"] = pix is not None
 
             # Menu path must point to the dbusmenu server.
             results["menu_path_ok"] = results["props"]["Menu"] == "/com/bongbetic/threshold/menu"
+
+            # ── Phase 1: Watcher loss revokes readiness immediately ───────────
+            Gio.bus_unown_name(watcher_id)
+            GLib.timeout_add(200, assert_lost)
         except Exception as exc:
             # GLib only logs callback exceptions; surface them in the probe
             # output so the parent test can report the real cause.
             results["check_error"] = repr(exc)
             loop.quit()
-            return False
-
-        # ── Phase 1: Watcher loss revokes readiness immediately ───────────
-        Gio.bus_unown_name(watcher_id)
-        GLib.timeout_add(200, assert_lost)
-        return False
 
     GLib.timeout_add(300, run_checks)
 
