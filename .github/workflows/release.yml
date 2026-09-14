@@ -179,11 +179,78 @@ jobs:
       - name: Check installed layout
         run: |
           set -e
+          # Application binary
           test -x /usr/bin/threshold
+          # EC lifecycle authority
           test -x /usr/sbin/threshold-ec-lifecycle
+          # Boot reconciliation systemd unit
           test -f /usr/lib/systemd/system/threshold-boot-reconcile.service
+          # Vendored msi-ec DKMS source tree
           test -d /usr/src/msi-ec-0.13.112
+          # Notification-area icons
+          test -f /usr/share/icons/hicolor/scalable/apps/com.bongbetic.threshold.svg
+          test -f /usr/share/icons/hicolor/scalable/status/com.bongbetic.threshold-battery-good.svg
+          test -f /usr/share/icons/hicolor/symbolic/apps/com.bongbetic.threshold-symbolic.svg
+          # GSettings schemas (both current + legacy)
+          test -f /usr/share/glib-2.0/schemas/com.bongbetic.threshold.gschema.xml
+          test -f /usr/share/glib-2.0/schemas/com.bongbetic.batteryguard.gschema.xml
+          # Desktop + metainfo
+          test -f /usr/share/applications/com.bongbetic.threshold.desktop
+          test -f /usr/share/metainfo/com.bongbetic.threshold.metainfo.xml
+          # udev rule
+          test -f /usr/lib/udev/rules.d/99-msi-battery.rules
+          # Web UI
+          test -d /usr/share/com.bongbetic.threshold/web/
 
+      - name: Verify package ownership of key files
+        run: |
+          set -e
+          dpkg -S /usr/bin/threshold
+          dpkg -S /usr/sbin/threshold-ec-lifecycle
+          dpkg -S /usr/lib/systemd/system/threshold-boot-reconcile.service
+          dpkg -S /usr/src/msi-ec-0.13.112
+          dpkg -S /usr/share/icons/hicolor/scalable/apps/com.bongbetic.threshold.svg
+          dpkg -S /usr/share/glib-2.0/schemas/com.bongbetic.threshold.gschema.xml
+          dpkg -S /usr/lib/udev/rules.d/99-msi-battery.rules
+
+      - name: Verify lifecycle installs package-owned marker
+        run: |
+          test -f /var/lib/threshold/ec/package-owned
+
+      - name: Verify upgrade preserves charge threshold
+        run: |
+          # Simulate a prior charge threshold preference
+          sudo mkdir -p /var/lib/threshold/ec
+          echo "80" | sudo tee /var/lib/threshold/ec/charge-threshold > /dev/null
+          # Re-install (upgrade path: same version triggers configure again)
+          sudo dpkg --configure threshold || true
+          # Charge threshold must survive
+          test -f /var/lib/threshold/ec/charge-threshold
+          test "80" = "$(cat /var/lib/threshold/ec/charge-threshold)"
+
+      - name: Verify removal preserves EC state
+        run: |
+          # Record state before removal
+          test -f /var/lib/threshold/ec/charge-threshold
+          THRESHOLD_BEFORE=$(cat /var/lib/threshold/ec/charge-threshold)
+          # Remove (not purge)
+          sudo dpkg --remove threshold || sudo dpkg --purge --force-remove-reinstreq threshold || true
+          # Charge threshold must survive ordinary removal
+          test -f /var/lib/threshold/ec/charge-threshold
+          test "$THRESHOLD_BEFORE" = "$(cat /var/lib/threshold/ec/charge-threshold)"
+
+      - name: Re-install for purge test
+        run: sudo apt-get install -y ./candidates/threshold_*_amd64.deb
+
+      - name: Verify purge removes retained state
+        run: |
+          # Write a preference that should only be cleared on purge
+          sudo mkdir -p /var/lib/threshold/ec
+          echo "75" | sudo tee /var/lib/threshold/ec/charge-threshold > /dev/null
+          # Purge
+          sudo dpkg --purge threshold
+          # /var/lib/threshold must be fully removed on purge
+          test ! -d /var/lib/threshold/ec
   rpm-verify:
     needs: rpm
     runs-on: ubuntu-24.04
