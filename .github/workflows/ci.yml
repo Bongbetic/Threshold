@@ -153,7 +153,7 @@ jobs:
       - name: Coverage (battery.py >= 80%)
         run: |
           runuser -u ci -- env PYTHONPATH=src python3 -m pytest \
-            tests/test_battery.py tests/test_window_ui.py -q \
+            tests/test_battery.py -q \
             --cov=threshold.battery \
             --cov-fail-under=80 \
             --cov-report=term-missing
