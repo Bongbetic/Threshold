@@ -152,7 +152,8 @@ def on_command_line(a, cl):
     a.activate()
     return 0
 
-app = Gtk.Application.new("com.bongbetic.threshold.smoke", Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+app = Gtk.Application.new(
+    "com.bongbetic.threshold.smoke", Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
 app.connect("activate", on_activate)
 app.connect("command-line", on_command_line)
 def _record_and_quit():
@@ -202,7 +203,8 @@ class TestCarbonXvfbSmoke:
             try:
                 result = json.loads(result_line)
             except json.JSONDecodeError:
-                msg = "No valid JSON output. stdout=" + proc.stdout + " stderr=" + proc.stderr + " exit=" + str(proc.returncode)
+                msg = "No valid JSON output. stdout=" + proc.stdout + \
+                    " stderr=" + proc.stderr + " exit=" + str(proc.returncode)
                 pytest.fail(msg)
 
             resp = result.get("result", {})

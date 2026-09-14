@@ -321,14 +321,14 @@ class TestFakeSystemLifecycle:
         assert "70" in (fake.battery / "charge_control_end_threshold").read_text()
         state_file = fake.state / "state"
         assert not state_file.exists() or (
-            dict(l.split("=", 1) for l in state_file.read_text().splitlines() if "=" in l)
+            dict(line.split("=", 1) for line in state_file.read_text().splitlines() if "=" in line)
         ).get("setup_state") != "available"
 
     def test_removal_keeps_working_module_and_foreign_assets(self, fake_system):
         fake = fake_system
         make_msi(fake)
         (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
-        dkms_src = Path(fake.env["THRESHOLD_EC_DKMS_SRC"])
+        Path(fake.env["THRESHOLD_EC_DKMS_SRC"])
         foreign = fake.state / "foreign-asset"
         foreign.write_text("do not touch\n")
         run_lifecycle(fake, "install-or-upgrade")
@@ -363,7 +363,7 @@ class TestFakeSystemLifecycle:
         run_lifecycle(fake, "install-or-upgrade")
         status = fake.state / "status"
         assert status.exists()
-        kv = dict(l.split("=", 1) for l in status.read_text().splitlines() if "=" in l)
+        kv = dict(line.split("=", 1) for line in status.read_text().splitlines() if "=" in line)
         assert kv["setup_state"] == "available"
         assert "maintenance" in kv
 
@@ -384,7 +384,7 @@ class TestFakeSystemLifecycle:
         (fake.sysroot / "sys/class/dmi/id/sys_vendor").write_text("Lenovo\n")
         run_lifecycle(fake, "install-or-upgrade")
         status = fake.state / "status"
-        kv = dict(l.split("=", 1) for l in status.read_text().splitlines() if "=" in l)
+        kv = dict(line.split("=", 1) for line in status.read_text().splitlines() if "=" in line)
         assert kv["setup_state"] == "unavailable"
         assert kv["reason"] == "not_msi_hardware"
 
@@ -395,7 +395,7 @@ class TestFakeSystemLifecycle:
         (fake.state / "charge-threshold").write_text("70\n")
         run_lifecycle(fake, "reconcile", boot_id="boot-b")
         status = fake.state / "status"
-        kv = dict(l.split("=", 1) for l in status.read_text().splitlines() if "=" in l)
+        kv = dict(line.split("=", 1) for line in status.read_text().splitlines() if "=" in line)
         assert kv["setup_state"] == "available"
 
     # ── Machine-wide policy persistence (issue #89) ─────────────────────────
@@ -434,7 +434,7 @@ class TestFakeSystemLifecycle:
         fake = fake_system
         make_msi(fake)
         (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
-        dkms_src = Path(fake.env["THRESHOLD_EC_DKMS_SRC"])
+        Path(fake.env["THRESHOLD_EC_DKMS_SRC"])
         # Foreign asset outside the ledger
         foreign_dir = fake.state / "foreign-ec-config"
         foreign_dir.mkdir()
@@ -532,7 +532,7 @@ class TestFakeSystemLifecycle:
         assert read_maintenance(fake) == "ok"
         # Status file reflects the same
         status = fake.state / "status"
-        kv = dict(l.split("=", 1) for l in status.read_text().splitlines() if "=" in l)
+        kv = dict(line.split("=", 1) for line in status.read_text().splitlines() if "=" in line)
         assert kv["setup_state"] == "available"
         assert kv["maintenance"] == "ok"
 
@@ -898,14 +898,14 @@ class TestFakeSystemLifecycle:
         """Support export does not produce a sanitized status file."""
         fake = fake_system
         make_msi(fake)
-        r = run_lifecycle(fake, "support-export")
+        run_lifecycle(fake, "support-export")
         assert not (fake.state / "status").exists()
 
     def test_support_export_not_acquire_lock(self, fake_system):
         """Support export does not acquire the exclusive operation lock."""
         fake = fake_system
         make_msi(fake)
-        r = run_lifecycle(fake, "support-export")
+        run_lifecycle(fake, "support-export")
         # No journal entry should be created (read-only)
         assert not (fake.state / "ops-journal").exists()
 
@@ -920,7 +920,7 @@ class TestFakeSystemLifecycle:
         )
 
     def test_handoff_snapshot_proves_legacy_state_read_only(self, fake_system):
-        """Snapshot records ownership, provenance, DKMS, builds, and live status without mutating anything."""
+        """Snapshot records ownership, provenance, DKMS, builds, live status without mutation."""
         fake = fake_system
         make_msi(fake)
         (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
@@ -1004,7 +1004,7 @@ class TestFakeSystemLifecycle:
         assert read_maintenance(fake) == "ok"
 
     def test_reconstruction_failure_reports_live_capability(self, fake_system):
-        """Forced build failure never fails the package transaction and status reports live EC capability."""
+        """Forced build failure preserves the package transaction and reports live EC capability."""
         fake = fake_system
         make_msi(fake)
         (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)

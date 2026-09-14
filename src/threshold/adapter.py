@@ -1,12 +1,10 @@
 
 """Adapter: builds ThresholdState from sysfs readings and Config."""
 
-import os
 from pathlib import Path
 from typing import Optional
 
 from threshold.battery import (
-    ControlMode,
     battery_health_percent,
     detect_control_mode,
     find_battery_path,
@@ -70,27 +68,27 @@ def build_state(
     ec_status=None,
 ) -> ThresholdState:
     """Build a ThresholdState snapshot from sysfs and config.
-    
+
     Args:
         config: GSettings wrapper for preferences.
         battery_path: Override for sysfs path (None = discover).
         pending_threshold: User's pending threshold value.
         alarm_armed: Whether alarm is armed (notification-only).
         alarm_fired: Whether alarm has fired (notification-only).
-    
+
     Returns:
         Complete ThresholdState snapshot with domain values.
     """
     if battery_path is None:
         battery_path = find_battery_path()
-    
+
     control_mode = detect_control_mode(battery_path)
-    
+
     # Battery telemetry
     charge_percent = read_charge_percent(battery_path) if battery_path else None
     charge_status = read_sysfs(battery_path / "status") if battery_path else None
     power_source = read_power_source() if battery_path else None
-    
+
     # Threshold
     active_threshold = None
     if battery_path:
@@ -100,15 +98,15 @@ def build_state(
                 active_threshold = int(raw)
             except ValueError:
                 pass
-    
+
     # Diagnostics
     health_pct = battery_health_percent(battery_path) if battery_path else None
     cycles = read_cycle_count(battery_path) if battery_path else None
     capacity = read_capacity_wh(battery_path) if battery_path else None
-    
+
     full_wh = capacity[0] if capacity else None
     design_wh = capacity[1] if capacity else None
-    
+
     system_theme = detect_system_theme_scheme()
 
     if ec_status is None:

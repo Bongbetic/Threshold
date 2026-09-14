@@ -168,7 +168,7 @@ def test_lifecycle_dispatch_acquires_lock_for_mutations():
     # diagnostics is read-only and must appear after the lock acquisition
     # section in the dispatch (it's handled by the second case block)
     diag_block = dispatch.index("diagnostics)")
-    lock_block = dispatch.index("acquire_lock")
+    dispatch.index("acquire_lock")
     # The lock acquisition happens in the first case block, diagnostics
     # is in the second case block — diagnostics must NOT acquire the lock
     second_case = dispatch.index("case \"${1", dispatch.index("case \"${1") + 1)

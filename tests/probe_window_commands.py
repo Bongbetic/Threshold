@@ -12,8 +12,7 @@ from unittest.mock import MagicMock
 # Add src to path for imports
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[1] / 'src'))
 
-from threshold.commands import CommandDispatcher, ErrorCode
-from threshold.config import Config
+from threshold.commands import CommandDispatcher
 
 
 def test_window_command_dispatch():
