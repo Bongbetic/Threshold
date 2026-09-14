@@ -69,9 +69,12 @@ def test_charge_threshold_persists_independently_of_active():
     assert state.active_threshold is None
 
 
-def test_adapter_builds_state_with_ec_fields(tmp_path):
+def test_adapter_builds_state_with_ec_fields(tmp_path, monkeypatch):
     from threshold.adapter import build_state
 
+    # Mock find_battery_path to return None so we test the no-battery path
+    monkeypatch.setattr("threshold.adapter.find_battery_path", lambda: None)
+    
     config = Config(settings=FakeGSettings())
     state = build_state(battery_path=None, config=config)
     assert state.charge_threshold == config.get_charge_threshold()
@@ -109,6 +112,9 @@ def test_adapter_reads_ec_status_from_file(tmp_path, monkeypatch):
     monkeypatch.setattr(
         "threshold.ec_status.EC_STATUS_FILE", status_file
     )
+    # Mock find_battery_path to return None so we test the no-battery path
+    monkeypatch.setattr("threshold.adapter.find_battery_path", lambda: None)
+    
     config = Config(settings=FakeGSettings())
     state = build_state(battery_path=None, config=config)
     assert state.ec_setup_state == ECSetupState.UNAVAILABLE
