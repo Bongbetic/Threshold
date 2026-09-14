@@ -42,6 +42,33 @@ for TLB in Dbusmenu-0.4.typelib DbusmenuGtk-0.4.typelib; do
     [ -n "$SRC" ] && install -Dm0644 "$SRC" "$APPDIR/usr/lib/girepository-1.0/$TLB"
 done
 
+# ── Bundle core GI typelibs + shared libraries for offline startup ──────
+# Threshold requires GLib, GObject, Gio, Gtk, Adw, and Notify at runtime.
+# The typelibs and their corresponding .so files must be closed over so
+# the AppImage starts offline on distributions with different library paths.
+GI_TLB_DIR="$APPDIR/usr/lib/girepository-1.0"
+for TLB in GLib-2.0.typelib GObject-2.0.typelib Gio-2.0.typelib \
+           GioUnix-2.0.typelib GLibUnix-2.0.typelib \
+           Gtk-4.0.typelib Gdk-4.0.typelib GdkPixbuf-2.0.typelib \
+           Gsk-4.0.typelib Graphene-1.0.typelib \
+           Adw-1.typelib \
+           Notify-0.7.typelib \
+           Pango-1.0.typelib PangoCairo-1.0.typelib \
+          cairo-1.0.typelib HarfBuzz-0.0.typelib; do
+    SRC=$(find /usr/lib*/girepository-1.0 -name "$TLB" 2>/dev/null | head -1)
+    [ -n "$SRC" ] && install -Dm0644 "$SRC" "$GI_TLB_DIR/$TLB" || true
+done
+
+# Shared libraries: GTK4, Adwaita, Pango, Cairo, HarfBuzz, GdkPixbuf, Notify
+CORE_LIBS="libgtk-4.so.1 libadwaita-1.so.0 libpango-1.0.so.0 \
+           libpangocairo-1.0.so.0 libcairo.so.2 libharfbuzz.so.0 \
+           libgdk_pixbuf-2.0.so.0 libnotify.so.4 \
+           libglib-2.0.so.0 libgobject-2.0.so.0 libgio-2.0.so.0"
+for LIB in $CORE_LIBS; do
+    SRC=$(ldconfig -p | awk -v l="$LIB" '$1 == l {print $NF; exit}')
+    [ -n "$SRC" ] && cp -L "$SRC" "$APPDIR/usr/lib/" || true
+done
+
 # ── Embedded deterministic EC bundle ───────────────────────────────────────
 BUNDLE_DIR=$APPDIR/usr/share/threshold/ec-bundle
 mkdir -p "$BUNDLE_DIR"
@@ -93,6 +120,12 @@ mkdir -p "$APPDIR/usr/share/metainfo"
 [ -f "$APPDIR/$APP_ID.desktop" ] || \
     cp "$APPDIR/usr/share/applications/$APP_ID.desktop" "$APPDIR/"
 
+# ── Compile GSettings schemas for offline resolution ─────────────────────
+SCHEMA_DIR="$APPDIR/usr/share/glib-2.0/schemas"
+if [ -d "$SCHEMA_DIR" ] && command -v glib-compile-schemas >/dev/null 2>&1; then
+    glib-compile-schemas "$SCHEMA_DIR"
+fi
+
 # AppRun: relocate Python paths and launch the launcher shim.
 cat > "$APPDIR/AppRun" <<'RUNEOF'
 #!/bin/sh
@@ -101,6 +134,8 @@ export THRESHOLD_PKGDATADIR="$HERE/usr/share/com.bongbetic.threshold"
 export PYTHONPATH="$HERE/usr/share/com.bongbetic.threshold${PYTHONPATH:+:$PYTHONPATH}"
 export GI_TYPELIB_PATH="$HERE/usr/lib/girepository-1.0${GI_TYPELIB_PATH:+:$GI_TYPELIB_PATH}"
 export LD_LIBRARY_PATH="$HERE/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export GSETTINGS_SCHEMA_DIR="$HERE/usr/share/glib-2.0/schemas${GSETTINGS_SCHEMA_DIR:+:$GSETTINGS_SCHEMA_DIR}"
+export XDG_DATA_DIRS="$HERE/usr/share${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
 exec python3 -m threshold.main "$@"
 RUNEOF
 chmod 0755 "$APPDIR/AppRun"
