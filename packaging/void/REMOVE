@@ -1,0 +1,7 @@
+case "$ACTION" in
+pre)
+	# Remove only assets proven by the lifecycle ledger to be Threshold-managed.
+	# Machine-wide charge policy and bounded diagnostics intentionally survive.
+	/usr/bin/threshold-ec-lifecycle remove || :
+	;;
+esac

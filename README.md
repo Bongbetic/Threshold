@@ -69,6 +69,8 @@ sudo dnf install ./threshold-1.4.1-1.fc44.noarch.rpm
 sudo usermod -aG threshold $USER   # log out and back in
 ```
 
+**Void Linux (`x86_64-glibc`)** uses the XBPS source template under [`packaging/void/`](packaging/void/). The package uses a dedicated `threshold` group and installs boot reconciliation as a disabled runit service. See [INSTALL.md](INSTALL.md#void-linux-x86_64-glibc) for build and activation steps.
+
 Every package includes:
 - The Threshold GTK4 app
 - Desktop entry and icons

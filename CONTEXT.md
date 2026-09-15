@@ -122,6 +122,12 @@ ownership manifests. Distribution-specific package hooks invoke this layer but
 do not reimplement it.
 _Avoid_: maintainer scripts, distro helper, packaging glue
 
+**Supported native platform**:
+A distribution and architecture whose native package, system integration,
+and complete control-mode behavior are continuously verified, with physical
+hardware acceptance required before support is declared.
+_Avoid_: builds on, should work on, compatible distribution
+
 **Release candidate**:
 An immutable, canonically named release artifact built once from the tagged
 source revision and carried unchanged through verification and publication.

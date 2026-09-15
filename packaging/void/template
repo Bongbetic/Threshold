@@ -1,0 +1,35 @@
+# Template for current x86_64-glibc Void Linux.
+pkgname=threshold
+version=2.0.0
+revision=1
+build_style=meson
+hostmakedepends="pkg-config gettext desktop-file-utils glib-devel"
+makedepends="gtk4-devel libadwaita-devel libwebkitgtk60-devel"
+depends="python3-gobject gtk4 libadwaita libnotify libwebkitgtk60 libdbusmenu-glib dkms kmod polkit hicolor-icon-theme"
+short_desc="Battery charge threshold controller for Linux laptops"
+maintainer="Soubarna <Soubarna@live.in>"
+license="GPL-3.0-or-later"
+homepage="https://github.com/Bongbetic/Threshold"
+distfiles="https://github.com/Bongbetic/Threshold/archive/refs/tags/v${version}.tar.gz"
+checksum=6b6dbb28c527078c47d321ebd8b09529ec0f98c7ddd6ae4e7e42d5a1360488a4
+archs="x86_64"
+dkms_modules="msi-ec 0.13.112"
+system_groups="threshold"
+
+case "$XBPS_TARGET_MACHINE" in
+	x86_64-musl) broken="musl is not yet a supported Threshold target" ;;
+esac
+
+post_install() {
+	vlicense LICENSE
+	# Meson also serves systemd-native packages; Void ships only runit integration.
+	rm -f "${DESTDIR}/usr/lib/systemd/system/threshold-boot-reconcile.service"
+	vmkdir usr/src/msi-ec-0.13.112
+	vcopy "msi-ec-src/*" usr/src/msi-ec-0.13.112
+	vinstall "${FILESDIR}/msi-ec.conf" 0644 usr/lib/modules-load.d
+
+	# Void uses a dedicated least-privilege group for threshold writes.
+	sed 's/plugdev/threshold/g' data/99-msi-battery.rules > "${XBPS_BUILDDIR}/99-msi-battery.rules"
+	vinstall "${XBPS_BUILDDIR}/99-msi-battery.rules" 0644 usr/lib/udev/rules.d
+	vsv threshold-boot-reconcile
+}

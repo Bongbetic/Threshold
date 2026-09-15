@@ -19,6 +19,7 @@ from threshold.config import Config
 from threshold.state import ThresholdState
 from threshold.ec_state import ECMaintenanceStatus
 from threshold.ec_status import read_ec_status
+from threshold.integration_status import detect_boot_reconciliation
 
 
 def detect_system_theme_scheme() -> str:
@@ -118,6 +119,8 @@ def build_state(
         ec_status.maintenance if ec_status is not None else None
     )
 
+    boot_enabled, boot_enable_command = detect_boot_reconciliation()
+
     return ThresholdState(
         battery_available=battery_path is not None,
         battery_path=battery_path,
@@ -134,6 +137,8 @@ def build_state(
         ec_recovery_actions=(
             ec_status.recovery_actions if ec_status is not None else ()
         ),
+        boot_reconciliation_enabled=boot_enabled,
+        boot_reconciliation_enable_command=boot_enable_command,
         health_percent=health_pct,
         health_grade=health_grade(health_pct),
         cycle_count=cycles,

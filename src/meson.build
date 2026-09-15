@@ -12,6 +12,7 @@ python_sources = [
     'threshold/state.py',
     'threshold/ec_state.py',
     'threshold/ec_status.py',
+    'threshold/integration_status.py',
     'threshold/notification_area_readiness.py',
     'threshold/tray.py',
     'threshold/resources.py',

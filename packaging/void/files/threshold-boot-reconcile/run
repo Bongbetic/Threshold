@@ -1,0 +1,5 @@
+#!/bin/sh
+# Bounded one-shot under a supervisor that expects a long-running process.
+exec 2>&1
+/usr/bin/threshold-ec-lifecycle reconcile || :
+exec pause
