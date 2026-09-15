@@ -21,6 +21,24 @@ notification alarm.
 
 ---
 
+### Void Linux (`x86_64-glibc`)
+
+Void support is provided as an XBPS source template in `packaging/void/` while submission to the official `void-packages` repository is prepared. Copy that directory into a `void-packages` checkout as `srcpkgs/threshold`, then build and install it through `xbps-src`:
+
+```bash
+./xbps-src binary-bootstrap
+./xbps-src pkg threshold
+sudo xbps-install --repository=hostdir/binpkgs threshold
+sudo usermod -aG threshold "$USER"  # log out and back in
+sudo ln -s /etc/sv/threshold-boot-reconcile /var/service/
+```
+
+The runit service is intentionally installed disabled. Once enabled, it performs one bounded boot reconciliation and then remains paused instead of retrying. Threshold reports disabled reconciliation but never enables it from the UI. Secure Boot module signing and key enrollment are administrator-owned; Void support does not automate them.
+
+Only current `x86_64-glibc` Void is supported. Musl is excluded until its GTK, WebKitGTK, Python GI, polkit, DKMS, and hardware paths pass the same acceptance suite. A successful package CI run is necessary but not sufficient: support is declared only after a physical-machine run is recorded in `evidence/void-acceptance.md`.
+
+---
+
 ## Install from a GitHub Release (recommended)
 
 ### Ubuntu / Debian (.deb)

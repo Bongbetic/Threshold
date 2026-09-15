@@ -77,6 +77,9 @@ class ThresholdState:
     ec_maintenance_status: ECMaintenanceStatus = ECMaintenanceStatus.OK
     # Actions the UI may offer for current EC state (never automatic).
     ec_recovery_actions: tuple = ()
+    # Native boot reconciliation is None when no supported integration exists.
+    boot_reconciliation_enabled: Optional[bool] = None
+    boot_reconciliation_enable_command: Optional[str] = None
 
     # ── Diagnostics ───────────────────────────────────────────────────────
     health_percent: Optional[int] = None

@@ -1,0 +1,9 @@
+case "$ACTION" in
+post)
+	mkdir -p /var/lib/threshold/ec
+	touch /var/lib/threshold/ec/package-owned
+	/usr/bin/threshold-ec-lifecycle install-or-upgrade || :
+	udevadm control --reload 2>/dev/null || :
+	udevadm trigger --subsystem-match=power_supply 2>/dev/null || :
+	;;
+esac

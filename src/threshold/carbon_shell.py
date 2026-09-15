@@ -553,6 +553,8 @@ class BridgeHandler:
             "ec_setup_reason": state.ec_setup_reason.value if state.ec_setup_reason else None,
             "ec_maintenance_status": state.ec_maintenance_status.value,
             "ec_recovery_actions": list(state.ec_recovery_actions),
+            "boot_reconciliation_enabled": state.boot_reconciliation_enabled,
+            "boot_reconciliation_enable_command": state.boot_reconciliation_enable_command,
         }
 
     def _serialize_appearance(self, state) -> dict[str, Any]:

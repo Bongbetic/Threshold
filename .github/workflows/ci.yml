@@ -341,6 +341,29 @@ jobs:
           test -n "$SHA"
           sha256sum -c sha256s.txt
 
+  void-x86_64-glibc:
+    runs-on: ubuntu-24.04
+    container: ghcr.io/void-linux/void-glibc-full:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build native XBPS package
+        run: |
+          xbps-install -Suy xbps git
+          git clone --depth=1 https://github.com/void-linux/void-packages.git /tmp/void-packages
+          mkdir -p /tmp/void-packages/srcpkgs/threshold
+          cp packaging/void/template packaging/void/INSTALL packaging/void/REMOVE packaging/void/INSTALL.msg /tmp/void-packages/srcpkgs/threshold/
+          cp -a packaging/void/files /tmp/void-packages/srcpkgs/threshold/
+          cd /tmp/void-packages
+          ./xbps-src binary-bootstrap
+          ./xbps-src pkg threshold
+      - name: Verify XBPS payload
+        run: |
+          PKG=$(find /tmp/void-packages/hostdir/binpkgs -name 'threshold-*.xbps' | head -1)
+          test -n "$PKG"
+          xbps-query --repository=/tmp/void-packages/hostdir/binpkgs -Rf threshold | grep -q 'usr/bin/threshold'
+          xbps-query --repository=/tmp/void-packages/hostdir/binpkgs -Rf threshold | grep -q 'etc/sv/threshold-boot-reconcile/run'
+          xbps-query --repository=/tmp/void-packages/hostdir/binpkgs -Rf threshold | grep -q 'usr/src/msi-ec-0.13.112'
+
   web:
     runs-on: ubuntu-24.04
     steps:

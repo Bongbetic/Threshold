@@ -52,6 +52,8 @@ export interface BatteryState {
   ec_setup_reason: string | null;
   ec_maintenance_status: string;
   ec_recovery_actions: string[];
+  boot_reconciliation_enabled?: boolean | null;
+  boot_reconciliation_enable_command?: string | null;
 }
 
 /** Theme appearance pushed by Python. */

@@ -357,6 +357,9 @@ function renderEcStatus(state: BatteryState): void {
   const ecMaintenanceEl = document.getElementById('ec-maintenance-status');
   const ecRecoveryEl = document.getElementById('ec-recovery-actions');
   const ecActionBtnsEl = document.getElementById('ec-action-buttons');
+  const bootRowEl = document.getElementById('boot-reconciliation-row');
+  const bootStatusEl = document.getElementById('boot-reconciliation-status');
+  const bootCommandEl = document.getElementById('boot-reconciliation-command');
 
   // EC fields are only meaningful when battery is available and control mode is not notify-only
   const hasEcData = state.battery_available && state.ec_setup_state !== null;
@@ -386,6 +389,23 @@ function renderEcStatus(state: BatteryState): void {
   // EC Maintenance status
   if (ecMaintenanceEl) {
     ecMaintenanceEl.textContent = EC_MAINTENANCE_LABELS[state.ec_maintenance_status] || state.ec_maintenance_status;
+  }
+
+  // Native boot reconciliation is status-only; privilege stays outside the UI.
+  if (bootRowEl && bootStatusEl && bootCommandEl) {
+    if (state.boot_reconciliation_enabled === null || state.boot_reconciliation_enabled === undefined) {
+      bootRowEl.setAttribute('hidden', 'true');
+      bootCommandEl.setAttribute('hidden', 'true');
+    } else {
+      bootRowEl.removeAttribute('hidden');
+      bootStatusEl.textContent = state.boot_reconciliation_enabled ? 'Enabled' : 'Not enabled';
+      if (!state.boot_reconciliation_enabled && state.boot_reconciliation_enable_command) {
+        bootCommandEl.textContent = `Enable as administrator: ${state.boot_reconciliation_enable_command}`;
+        bootCommandEl.removeAttribute('hidden');
+      } else {
+        bootCommandEl.setAttribute('hidden', 'true');
+      }
+    }
   }
 
   // EC Recovery actions
