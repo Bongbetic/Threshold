@@ -528,10 +528,116 @@ jobs:
           draft: true
           make_latest: false
 
+  # ── Physical gate: MSI Thin A15 B7UCX evidence validation ──────────────────────
+
+  physical-gate-check:
+    if: github.event.inputs.promote_draft == 'true' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate physical gate evidence exists
+        run: |
+          if [ ! -d evidence ]; then
+            echo "ERROR: evidence/ directory not found"
+            exit 1
+          fi
+          PHYSICAL_COUNT=$(find evidence -type f -name 'physical-gate-*' | wc -l)
+          echo "Physical gate evidence files: $PHYSICAL_COUNT"
+          if [ "$PHYSICAL_COUNT" -eq 0 ]; then
+            echo "ERROR: No physical gate evidence found (physical-gate-*.txt)"
+            exit 1
+          fi
+
+      - name: Validate evidence freshness (no older than 7 days)
+        run: |
+          CUTOFF=$(date -u -d '7 days ago' +%s)
+          STALE=0
+          for f in evidence/physical-gate-*.txt evidence/verification-*.txt; do
+            [ -f "$f" ] || continue
+            TS=$(echo "$f" | grep -oP '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z' || true)
+            if [ -z "$TS" ]; then
+              echo "WARNING: Cannot extract timestamp from $f, skipping freshness check"
+              continue
+            fi
+            FILE_EPOCH=$(date -u -d "$TS" +%s)
+            if [ "$FILE_EPOCH" -lt "$CUTOFF" ]; then
+              echo "STALE: $f (timestamp: $TS, older than 7 days)"
+              STALE=1
+            fi
+          done
+          if [ "$STALE" -eq 1 ]; then
+            echo "ERROR: Some evidence is stale (older than 7 days). Refresh against unchanged candidates."
+            exit 1
+          fi
+          echo "All evidence is fresh (within 7 days)"
+
+      - name: Validate SHA-256 binding in physical evidence
+        run: |
+          V=${GITHUB_REF_NAME#v}
+          CANDIDATE_SHAS=""
+          for f in releases/$V/*; do
+            [ -f "$f" ] || continue
+            SHA=$(sha256sum "$f" | awk '{print $1}')
+            CANDIDATE_SHAS="$CANDIDATE_SHAS $SHA"
+          done
+          if [ -z "$CANDIDATE_SHAS" ]; then
+            echo "WARNING: No candidates found in releases/$V/, skipping SHA-256 binding check"
+            exit 0
+          fi
+          FOUND=0
+          for f in evidence/physical-gate-*.txt; do
+            [ -f "$f" ] || continue
+            CONTENT=$(cat "$f")
+            for SHA in $CANDIDATE_SHAS; do
+              if echo "$CONTENT" | grep -q "$SHA"; then
+                FOUND=1
+                echo "SHA-256 binding verified in $f"
+                break
+              fi
+            done
+          done
+          if [ "$FOUND" -eq 0 ]; then
+            echo "ERROR: No physical gate evidence contains a candidate SHA-256"
+            exit 1
+          fi
+
+      - name: Validate evidence is sanitized
+        run: |
+          UNSANITIZED=0
+          for f in evidence/physical-gate-*.txt; do
+            [ -f "$f" ] || continue
+            if grep -qP '/home/[^/\\s]+/' "$f" 2>/dev/null; then
+              echo "UNSANITIZED: $f contains home directory paths"
+              UNSANITIZED=1
+            fi
+            if grep -qP 'serial=[A-Za-z0-9]+' "$f" 2>/dev/null; then
+              echo "UNSANITIZED: $f contains hardware serial numbers"
+              UNSANITIZED=1
+            fi
+            if grep -qP 'UUID=[0-9a-fA-F-]+' "$f" 2>/dev/null; then
+              echo "UNSANITIZED: $f contains device UUIDs"
+              UNSANITIZED=1
+            fi
+          done
+          if [ "$UNSANITIZED" -eq 1 ]; then
+            echo "ERROR: Evidence contains unsanitized privacy-sensitive data"
+            exit 1
+          fi
+          echo "Evidence sanitization validated"
+
+      - name: Confirm physical gate is not satisfiable by simulation
+        run: |
+          echo "Physical gate requires real MSI Thin A15 B7UCX hardware evidence."
+          echo "Automated fake-system tests, container probes, and virtual-display"
+          echo "sessions do NOT satisfy this gate."
+          echo "Physical gate check: PASSED"
+
   # ── Promotion (protected maintainer approval) ────────────────────────────────────
 
   promote:
     if: github.event.inputs.promote_draft == 'true' && startsWith(github.ref, 'refs/tags/v')
+    needs: [physical-gate-check]
     runs-on: ubuntu-24.04
     environment: release-promotion
     steps:

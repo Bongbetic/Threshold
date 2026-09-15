@@ -221,3 +221,26 @@ def test_release_all_verify_jobs_download_candidates():
     for section in text.split("  verify")[1:3]:  # deb-verify, rpm-verify
         for forbidden in ("dpkg-buildpackage", "rpmbuild", "meson setup"):
             assert forbidden not in section
+
+
+# ── Issue #101: Enforce the MSI Thin A15 physical release gate ──────────────
+
+
+def test_release_has_physical_gate_check_job():
+    """Release must have a physical-gate-check job before promotion."""
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    assert "physical-gate-check" in text
+    # The physical gate check must validate evidence freshness
+    assert "fresh" in text.lower() or "stale" in text.lower()
+    # Must validate SHA-256 binding
+    assert "sha256sum" in text
+    # Must validate sanitization
+    assert "sanitiz" in text.lower()
+
+
+def test_release_promote_depends_on_physical_gate():
+    """The promote job must depend on physical-gate-check."""
+    text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+    promote_section = text.split("promote:", 1)[1]
+    assert "physical-gate-check" in promote_section
+    assert "needs:" in promote_section
