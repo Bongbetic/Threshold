@@ -1,0 +1,77 @@
+name: Withdraw Release
+
+# Withdraw a published Threshold release by marking it withdrawn, removing
+# the Latest flag, and adding a visible notice.  Published assets are never
+# silently replaced or deleted; defective releases are superseded by a patch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to withdraw (e.g. v2.0.0)'
+        required: true
+      reason:
+        description: 'Reason for withdrawal'
+        required: true
+      confirm_withdraw:
+        description: 'Type the tag name again to confirm withdrawal'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  withdraw:
+    runs-on: ubuntu-24.04
+    environment: release-promotion
+    steps:
+      - name: Validate confirmation matches tag
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          CONFIRM="${{ github.event.inputs.confirm_withdraw }}"
+          if [ "$TAG" != "$CONFIRM" ]; then
+            echo "ERROR: Confirmation '$CONFIRM' does not match tag '$TAG'"
+            exit 1
+          fi
+          echo "Withdrawal confirmed for $TAG"
+
+      - name: Validate release exists and is not already withdrawn
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          RELEASE_BODY=$(gh release view "$TAG" --json body --jq '.body')
+          if echo "$RELEASE_BODY" | grep -qi "WITHDRAWN"; then
+            echo "ERROR: Release $TAG is already marked withdrawn"
+            exit 1
+          fi
+          echo "Release $TAG is active, proceeding with withdrawal"
+
+      - name: Mark release as withdrawn and remove Latest
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          REASON="${{ github.event.inputs.reason }}"
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          CURRENT_BODY=$(gh release view "$TAG" --json body --jq '.body')
+          # Prepend withdrawal notice to release body
+          WITHDRAWN_BODY="## ⚠️ WITHDRAWN
+
+This release has been withdrawn on $DATE.
+
+**Reason:** $REASON
+
+Assets remain available for historical reference only. This release
+supersedes the original publication. Do not use for new installations.
+Instead, use the latest non-withdrawn release.
+
+---
+
+$CURRENT_BODY"
+          gh release edit "$TAG" --latest=false --notes "$WITHDRAWN_BODY"
+          echo "Release $TAG marked as withdrawn, Latest removed"
+
+      - name: Verify withdrawal is visible
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          BODY=$(gh release view "$TAG" --json body --jq '.body')
+          echo "$BODY" | head -10
+          echo "$BODY" | grep -q "WITHDRAWN"
+          echo "Withdrawal notice verified in release body"

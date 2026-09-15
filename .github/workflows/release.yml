@@ -483,15 +483,35 @@ jobs:
           RUNNER_ARCH=${{ runner.arch }}
           {
             echo '{'
-            echo '  "version": "'"$V"'",'
-            echo '  "source_revision": "'"$GITHUB_SHA"'",'
+            echo '  "version": "'$V'",' 
+            echo '  "source_revision": "'$GITHUB_SHA'",'
             echo '  "workflow": "'"${GITHUB_WORKFLOW_REF}"'",'
             echo '  "build_identity": {'
-            echo '    "runner": "'"$RUNNER_OS"'-'"$RUNNER_ARCH"'",'
-            echo '    "workflow_run": "'"$GITHUB_RUN_ID"'",'
-            echo '    "workflow_attempt": "'"$GITHUB_RUN_ATTEMPT"'",'
-            echo '    "repository": "'"$GITHUB_REPOSITORY"'",'
-            echo '    "event_name": "'"$GITHUB_EVENT_NAME"'"'
+            echo '    "runner": "'$RUNNER_OS'-'$RUNNER_ARCH'",'
+            echo '    "workflow_run": "'$GITHUB_RUN_ID'",'
+            echo '    "workflow_attempt": "'$GITHUB_RUN_ATTEMPT'",'
+            echo '    "repository": "'$GITHUB_REPOSITORY'",'
+            echo '    "event_name": "'$GITHUB_EVENT_NAME'"'
+            echo '  },'
+            echo '  "provenance": {'
+            echo '    "commit": "'$GITHUB_SHA'",'
+            echo '    "tag": "'$GITHUB_REF_NAME'",'
+            echo '    "actor": "'$GITHUB_ACTOR'"'
+            echo '  },'
+            echo '  "supported_distributions": ['
+            echo '    {"name": "Ubuntu", "version": "24.04", "method": "dpkg"},'
+            echo '    {"name": "Debian", "version": "13", "method": "dpkg"},'
+            echo '    {"name": "Fedora", "version": "43", "method": "dnf"},'
+            echo '    {"name": "Fedora", "version": "44", "method": "dnf"},'
+            echo '    {"name": "openSUSE", "version": "Tumbleweed", "method": "zypper"}'
+            echo '  ],'
+            echo '  "desktop_evidence": {'
+            echo '    "kde_plasma_wayland": true,'
+            echo '    "xfce": true'
+            echo '  },'
+            echo '  "physical_evidence": {'
+            echo '    "system": "MSI Thin A15 B7UCX",'
+            echo '    "gates": ["live_ec", "reboot_reconciliation", "secure_boot", "kernel_recovery", "kde", "xfce"]'
             echo '  },'
             echo '  "candidates": {'
             first=1
@@ -506,8 +526,7 @@ jobs:
             echo '}'
           } > ${{ env.CANDIDATES_DIR }}/release-manifest.json
           python3 -m json.tool ${{ env.CANDIDATES_DIR }}/release-manifest.json
-
-      - name: Generate checksum inventory (candidates + manifest)
+- name: Generate checksum inventory (candidates + manifest)
         run: |
           cd ${{ env.CANDIDATES_DIR }}
           sha256sum * > /tmp/SHA256SUMS
@@ -520,6 +539,7 @@ jobs:
           files: |
             ${{ env.CANDIDATES_DIR }}/*.deb
             ${{ env.CANDIDATES_DIR }}/*.rpm
+            ${{ env.CANDIDATES_DIR }}/*.src.rpm
             ${{ env.CANDIDATES_DIR }}/*.AppImage
             ${{ env.CANDIDATES_DIR }}/*.tar.gz
             ${{ env.CANDIDATES_DIR }}/release-manifest.json
