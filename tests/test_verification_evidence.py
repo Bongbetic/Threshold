@@ -79,6 +79,7 @@ def test_verification_documents_exist():
         "desktop-sessions.md",
         "fake-system-lifecycle.md",
         "fedora-rpm.md",  # already existed
+        "msi-physical-gate.md",  # issue #101
     ]
     
     for doc in required_docs:
