@@ -142,6 +142,7 @@ jobs:
             ca-certificates \
             git \
             passwd \
+            sudo \
             util-linux \
             meson \
             ninja-build \
@@ -171,6 +172,8 @@ jobs:
           useradd --create-home ci
           chown -R ci:ci "$GITHUB_WORKSPACE"
           chown ci:ci "$(dirname "$GITHUB_WORKSPACE")"
+          echo "ci ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/ci
+          chmod 0440 /etc/sudoers.d/ci
 
       - name: Configure
         run: runuser -u ci -- meson setup builddir
@@ -345,7 +348,10 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: ghcr.io/void-linux/void-glibc-full:latest
-      options: --privileged
+      options: >-
+        --privileged
+        --security-opt seccomp=unconfined
+        --security-opt apparmor=unconfined
     steps:
       - uses: actions/checkout@v4
       - name: Install prerequisites
@@ -353,6 +359,8 @@ jobs:
         run: |
           xbps-install -Suy xbps bash git shadow
           useradd -m builder
+          echo "builder:100000:65536" >> /etc/subuid
+          echo "builder:100000:65536" >> /etc/subgid
       - name: Build native XBPS package
         run: |
           set -e
