@@ -107,8 +107,8 @@ jobs:
           sudo dpkg -i artifacts/threshold_*_amd64.deb || sudo apt-get install -f -y
           # Package-owned marker must exist after install
           test -f /var/lib/threshold/ec/package-owned
-          # Verify upgrade path (re-install = configure)
-          sudo dpkg --configure threshold
+          # Verify upgrade path (re-install re-runs configure cleanly)
+          sudo dpkg -i artifacts/threshold_*_amd64.deb
           # Verify removal preserves charge threshold
           sudo mkdir -p /var/lib/threshold/ec
           echo "80" | sudo tee /var/lib/threshold/ec/charge-threshold > /dev/null
@@ -210,8 +210,8 @@ jobs:
           runuser -u ci -- sudo dpkg -i "$DEB" || runuser -u ci -- sudo apt-get install -f -y
           # Package-owned marker
           test -f /var/lib/threshold/ec/package-owned
-          # Upgrade path
-          runuser -u ci -- sudo dpkg --configure threshold
+          # Upgrade path (re-install re-runs configure cleanly)
+          runuser -u ci -- sudo dpkg -i "$DEB"
           # Removal preserves charge threshold
           runuser -u ci -- sudo mkdir -p /var/lib/threshold/ec
           echo "80" | runuser -u ci -- sudo tee /var/lib/threshold/ec/charge-threshold > /dev/null
@@ -346,9 +346,11 @@ jobs:
     container: ghcr.io/void-linux/void-glibc-full:latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install prerequisites
+        shell: sh
+        run: xbps-install -Suy xbps bash git
       - name: Build native XBPS package
         run: |
-          xbps-install -Suy xbps git
           git clone --depth=1 https://github.com/void-linux/void-packages.git /tmp/void-packages
           mkdir -p /tmp/void-packages/srcpkgs/threshold
           cp packaging/void/template packaging/void/INSTALL packaging/void/REMOVE packaging/void/INSTALL.msg /tmp/void-packages/srcpkgs/threshold/
