@@ -68,8 +68,11 @@
           Fixes an application startup crash present in every 2.0.0
           package (DEB, RPM, Void, AppImage): the Carbon UI failed to
           find its own bundle and UserScript shim once installed, so
-          the app exited immediately on first launch. Also repairs the
-          CI and release pipelines, which had been failing since 2.0.0.
+          the app exited immediately on first launch. Adds a real light
+          mode, fixing the Dark mode switch's "off" state, which
+          previously did nothing visible on systems that prefer a dark
+          color scheme. Also repairs the CI and release pipelines,
+          which had been failing since 2.0.0.
         </p>
       </description>
     </release>
