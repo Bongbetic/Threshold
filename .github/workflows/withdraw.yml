@@ -54,17 +54,17 @@ jobs:
           # Prepend withdrawal notice to release body
           WITHDRAWN_BODY="## ⚠️ WITHDRAWN
 
-This release has been withdrawn on $DATE.
+          This release has been withdrawn on $DATE.
 
-**Reason:** $REASON
+          **Reason:** $REASON
 
-Assets remain available for historical reference only. This release
-supersedes the original publication. Do not use for new installations.
-Instead, use the latest non-withdrawn release.
+          Assets remain available for historical reference only. This release
+          supersedes the original publication. Do not use for new installations.
+          Instead, use the latest non-withdrawn release.
 
----
+          ---
 
-$CURRENT_BODY"
+          $CURRENT_BODY"
           gh release edit "$TAG" --latest=false --notes "$WITHDRAWN_BODY"
           echo "Release $TAG marked as withdrawn, Latest removed"
 

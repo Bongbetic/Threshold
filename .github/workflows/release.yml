@@ -526,7 +526,8 @@ jobs:
             echo '}'
           } > ${{ env.CANDIDATES_DIR }}/release-manifest.json
           python3 -m json.tool ${{ env.CANDIDATES_DIR }}/release-manifest.json
-- name: Generate checksum inventory (candidates + manifest)
+
+      - name: Generate checksum inventory (candidates + manifest)
         run: |
           cd ${{ env.CANDIDATES_DIR }}
           sha256sum * > /tmp/SHA256SUMS
