@@ -448,6 +448,16 @@ function applyAppearance(appearance: AppearanceState): void {
   root.classList.add(
     appearance.scheme === 'dark' ? 'cds--g100' : 'cds--white',
   );
+
+  // The wordmark glyph is drawn for one background: "-dark" is light-on-dark
+  // (for the dark theme's header), "-light" is dark-on-light (for the light
+  // theme's header). Swap it so it stays visible in both.
+  const logo = document.querySelector<HTMLImageElement>('.header-logo');
+  if (logo) {
+    logo.src = appearance.scheme === 'dark'
+      ? './bongbetic-icon-dark.png'
+      : './bongbetic-icon-light.png';
+  }
 }
 
 /** Apply accent color token class to the document root. */
@@ -714,7 +724,9 @@ async function init(): Promise<void> {
     // ── Listen for state updates from Python poll ──────────────────────────
     bridge.on('battery', (data) => {
       if (data) {
-        renderBattery(data as unknown as BatteryState);
+        const batteryState = data as unknown as BatteryState;
+        renderBattery(batteryState);
+        syncAppearanceControls(batteryState);
       }
     });
 

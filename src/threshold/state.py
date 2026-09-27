@@ -105,16 +105,16 @@ class ThresholdState:
     alarm_armed: bool = False
     alarm_fired: bool = False
 
-    # ── System theme (read by adapter, not authoritative) ─────────────────
+    # ── System theme (detected but not consulted by effective_theme_scheme;
+    # the Dark mode control is a direct on/off switch, not a "follow system"
+    # tri-state, so an explicit off must always render light) ─────────────
     system_theme_scheme: str = "light"
 
     # ── Derived values ────────────────────────────────────────────────────
     @property
     def effective_theme_scheme(self) -> str:
-        """Effective theme scheme: dark_mode forces dark, otherwise follows system."""
-        if self.dark_mode:
-            return "dark"
-        return self.system_theme_scheme
+        """Effective theme scheme: directly follows the dark_mode switch."""
+        return "dark" if self.dark_mode else "light"
 
     @property
     def capabilities(self) -> Capabilities:

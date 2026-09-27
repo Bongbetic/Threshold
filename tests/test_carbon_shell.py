@@ -639,8 +639,8 @@ class TestAppearanceSerialization:
         assert serialized["compact_mode"] is False
         assert serialized["title_percentage"] is True  # default in ThresholdState
 
-    def test_serialize_appearance_with_system_theme(self):
-        """Appearance uses effective_theme_scheme, not raw dark_mode."""
+    def test_serialize_appearance_dark_mode_off_is_light_even_if_system_dark(self):
+        """Appearance uses effective_theme_scheme, which ignores system_theme_scheme."""
         state = ThresholdState(
             battery_available=False,
             dark_mode=False,
@@ -649,8 +649,8 @@ class TestAppearanceSerialization:
         )
         handler = _make_handler(state)
         appearance = handler._serialize_appearance(state)
-        # dark_mode=False but system is dark → effective scheme is dark
-        assert appearance["scheme"] == "dark"
+        # dark_mode=False is a direct request for light, regardless of system theme
+        assert appearance["scheme"] == "light"
         assert appearance["accent_color"] == "purple"
 
     def test_serialize_appearance_dark_mode_forces_dark(self):
