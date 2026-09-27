@@ -346,35 +346,33 @@ jobs:
 
   void-x86_64-glibc:
     runs-on: ubuntu-24.04
-    container:
-      image: ghcr.io/void-linux/void-glibc-full:latest
-      options: >-
-        --privileged
-        --security-opt seccomp=unconfined
-        --security-opt apparmor=unconfined
+    container: ghcr.io/void-linux/void-glibc-full:latest
     steps:
       - uses: actions/checkout@v4
       - name: Install prerequisites
         shell: sh
-        run: |
-          xbps-install -Suy xbps bash git shadow
-          useradd -m builder
-          echo "builder:100000:65536" >> /etc/subuid
-          echo "builder:100000:65536" >> /etc/subgid
+        run: xbps-install -Suy xbps bash git
       - name: Build native XBPS package
+        # GitHub Actions container jobs run as root with no unprivileged
+        # user namespaces available, so xbps-src's default unshare-based
+        # chroot (uunshare) can't work here. Use the "ethereal" chroot
+        # style instead: it's void-packages' own documented mechanism for
+        # disposable CI containers, operating directly on the container's
+        # root filesystem (via a masterdir -> / symlink) instead of an
+        # isolated namespace. XBPS_ALLOW_CHROOT_BREAKOUT is what permits
+        # xbps-src to run as root under this mode.
         run: |
-          set -e
-          WS="$PWD"
-          su -m builder -c "
-            set -e
-            git clone --depth=1 https://github.com/void-linux/void-packages.git /tmp/void-packages
-            mkdir -p /tmp/void-packages/srcpkgs/threshold
-            cp '$WS/packaging/void/template' '$WS/packaging/void/INSTALL' '$WS/packaging/void/REMOVE' '$WS/packaging/void/INSTALL.msg' /tmp/void-packages/srcpkgs/threshold/
-            cp -a '$WS/packaging/void/files' /tmp/void-packages/srcpkgs/threshold/
-            cd /tmp/void-packages
-            ./xbps-src binary-bootstrap
-            ./xbps-src pkg threshold
-          "
+          git clone --depth=1 https://github.com/void-linux/void-packages.git /tmp/void-packages
+          mkdir -p /tmp/void-packages/srcpkgs/threshold
+          cp packaging/void/template packaging/void/INSTALL packaging/void/REMOVE packaging/void/INSTALL.msg /tmp/void-packages/srcpkgs/threshold/
+          cp -a packaging/void/files /tmp/void-packages/srcpkgs/threshold/
+          cd /tmp/void-packages
+          ln -s / masterdir
+          xbps-uhelper arch > /.xbps_chroot_init
+          export XBPS_CHROOT_CMD=ethereal
+          export XBPS_ALLOW_CHROOT_BREAKOUT=yes
+          ./xbps-src binary-bootstrap
+          ./xbps-src pkg threshold
       - name: Verify XBPS payload
         run: |
           PKG=$(find /tmp/void-packages/hostdir/binpkgs -name 'threshold-*.xbps' | head -1)
