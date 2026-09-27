@@ -21,14 +21,24 @@ WINDOW_HEIGHT = 860
 MIN_WIDTH = 960
 MIN_HEIGHT = 700
 
-SHIM_SCRIPT_PATH = Path(__file__).resolve().parent.parent.parent / "web" / "src" / "shim.js"
+_SOURCE_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # Bundle search paths (committed dist in source tree)
 _BUNDLE_CANDIDATES = [
     # Dev: relative to source root
-    Path(__file__).resolve().parent.parent.parent / "web" / "dist" / "index.html",
-    # Installed: under pkgdatadir/web/
-    Path(os.environ.get("THRESHOLD_PKGDATADIR", "")) / "web" / "index.html"
+    _SOURCE_ROOT / "web" / "dist" / "index.html",
+    # Installed: under pkgdatadir/web/dist/ (matches debian/threshold.install,
+    # packaging/threshold.spec %files, and packaging/void/template)
+    Path(os.environ.get("THRESHOLD_PKGDATADIR", "")) / "web" / "dist" / "index.html"
+    if os.environ.get("THRESHOLD_PKGDATADIR") else None,
+]
+
+# shim.js is a raw UserScript, deliberately not processed by Vite; the web
+# build copies it to dist/shim.js so it ships alongside the bundle in every
+# package (see web/package.json's build script).
+_SHIM_CANDIDATES = [
+    _SOURCE_ROOT / "web" / "dist" / "shim.js",
+    Path(os.environ.get("THRESHOLD_PKGDATADIR", "")) / "web" / "dist" / "shim.js"
     if os.environ.get("THRESHOLD_PKGDATADIR") else None,
 ]
 
@@ -43,9 +53,24 @@ def _find_bundle() -> Optional[Path]:
     return None
 
 
+def _find_shim() -> Optional[Path]:
+    """Locate the document-start UserScript shim."""
+    for candidate in _SHIM_CANDIDATES:
+        if candidate is None:
+            continue
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def _load_shim_source() -> str:
     """Load document-start bridge JavaScript for WebKit injection."""
-    return SHIM_SCRIPT_PATH.read_text(encoding="utf-8")
+    shim_path = _find_shim()
+    if shim_path is None:
+        raise FileNotFoundError(
+            "Carbon shim.js not found. Build with: cd web && npm run build"
+        )
+    return shim_path.read_text(encoding="utf-8")
 
 
 # ── Icon helpers ──────────────────────────────────────────────────────────────

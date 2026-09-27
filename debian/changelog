@@ -1,10 +1,22 @@
-threshold (2.0.1-1) trixie; urgency=medium
+threshold (2.0.1-1) trixie; urgency=high
 
-  * CI pipeline repair: fixed a chain of issues that had kept every workflow
-    run red since the 2.0.0 release cycle (missing evidence directory,
-    a duplicate dpkg --configure call, invalid workflow YAML, pre-existing
-    flake8 violations, a missing sudo dependency, and the Void Linux job's
-    chroot sandboxing). No functional changes to the application.
+  * Fix application startup crash on every installed package (DEB, RPM,
+    Void, AppImage): the Carbon UI's bundle and UserScript shim path
+    lookup omitted the "dist/" directory segment that every packaging
+    format actually installs to, so the app exited immediately with
+    "Carbon bundle not found" on first launch. 2.0.0 never actually ran
+    once installed from a package; this was only caught by launching the
+    installed .deb for real, which no CI job did.
+  * Ship web/dist/shim.js (the WebKit document-start UserScript) as part
+    of the web build; it was previously read from a source-tree-only
+    path with no installed fallback.
+  * CI pipeline repair: fixed a chain of issues that had kept every
+    workflow run red since the 2.0.0 release cycle (missing evidence
+    directory, a duplicate dpkg --configure call, invalid workflow YAML,
+    pre-existing flake8 violations, a missing sudo dependency, the Void
+    Linux job's chroot sandboxing, a stale EC manifest checksum, two
+    self-referential file races, RPM verification gaps, and a canonical
+    filename check that ignored the Debian revision suffix).
 
  -- Soubarna <Soubarna@live.in>  Sun, 27 Sep 2026 19:28:02 +0000
 
