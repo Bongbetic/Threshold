@@ -25,12 +25,10 @@ debian/threshold/
 /.pi/
 /web/node_modules/
 /graphify-out/
-
-# Physical gate evidence is per-release and must be regenerated fresh
-# (see tests/test_physical_gate.py); only the directory itself is tracked.
-/evidence/*
-!/evidence/.gitkeep
 .gitignore
 releases/2.0.0/*.deb
 releases/2.0.0/*.rpm
 releases/2.0.0/*.src.rpm
+releases/2.0.1/*.deb
+releases/2.0.1/*.rpm
+releases/2.0.1/*.src.rpm

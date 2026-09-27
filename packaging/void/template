@@ -1,6 +1,6 @@
 # Template for current x86_64-glibc Void Linux.
 pkgname=threshold
-version=2.0.0
+version=2.0.1
 revision=1
 build_style=meson
 hostmakedepends="pkg-config gettext desktop-file-utils glib-devel"

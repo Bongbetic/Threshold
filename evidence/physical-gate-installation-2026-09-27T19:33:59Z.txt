@@ -1,0 +1,41 @@
+=== Physical Gate: Installation ===
+Candidate: threshold_2.0.1-1_amd64.deb
+SHA-256: fde6e07b926735ca1717d4d6b719c5f46471cbe8507867e07fcc5dca99a19046
+System: MSI Thin A15 B7UCX
+Date: 2026-09-27T19:33:59Z
+Secure Boot: disabled
+Kernel: 7.2.6+deb14-amd64
+
+Installed via: sudo dpkg -i threshold_2.0.1-1_amd64.deb (+ apt-get install -f
+to resolve gir1.2-dbusmenu-glib-0.4 and gir1.2-webkit-6.0, not present on this
+system beforehand).
+
+postinst output (sanitized):
+  Deprecated feature: CLEAN (/usr/src/msi-ec-0.13.112/dkms.conf)
+  Creating symlink /var/lib/dkms/msi-ec/0.13.112/source -> /usr/src/msi-ec-0.13.112
+  Sign command: <build>/scripts/sign-file
+  Signing key: /var/lib/dkms/mok.key
+  Public certificate (MOK): /var/lib/dkms/mok.pub
+  Building module(s)... done.
+  Signing module /var/lib/dkms/msi-ec/0.13.112/build/msi-ec.ko
+  Installing /lib/modules/7.2.6+deb14-amd64/updates/dkms/msi-ec.ko.xz
+  Running depmod.... done.
+  threshold-ec: EC setup available and verified.
+  Created symlink graphical.target.wants/threshold-boot-reconcile.service
+
+Installation layout verification:
+  usr/bin/threshold: PRESENT (POSIX shell launcher)
+  usr/sbin/threshold-ec-lifecycle: PRESENT
+  usr/lib/systemd/system/threshold-boot-reconcile.service: PRESENT
+  usr/src/msi-ec-0.13.112/: PRESENT
+  usr/lib/udev/rules.d/99-msi-battery.rules: PRESENT
+  usr/share/applications/com.bongbetic.threshold.desktop: PRESENT
+
+Package ownership: dpkg -l threshold reports "ii  threshold  2.0.1-1  amd64"
+(fully configured, no errors).
+
+msi-ec module: loaded automatically by DKMS during postinst, no manual
+modprobe required. lsmod confirms msi_ec (and its battery dependency)
+loaded immediately after install completed.
+
+Result: PASS

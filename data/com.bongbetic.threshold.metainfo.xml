@@ -62,6 +62,15 @@
     <content_attribute id="money-advertising">none</content_attribute>
   </content_rating>
   <releases>
+    <release version="2.0.1" date="2026-09-27">
+      <description>
+        <p>
+          Release pipeline repair: fixed the chain of CI issues that had
+          kept every workflow run failing since 2.0.0. No functional
+          changes to the application.
+        </p>
+      </description>
+    </release>
     <release version="2.0.0" date="2026-09-02">
       <description>
         <p>

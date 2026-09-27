@@ -3,7 +3,7 @@
 ## Overview
 
 The MSI Thin A15 B7UCX is the mandatory physical validation system for
-Threshold v2.0.0. This gate ensures that live EC control, reboot
+Threshold v2.0.1. This gate ensures that live EC control, reboot
 reconciliation, Secure Boot/MOK behavior, kernel recovery, notification-area
 integration, and removal are proven on real hardware before any release
 candidate is promoted to public.

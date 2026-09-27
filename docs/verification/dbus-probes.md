@@ -153,7 +153,7 @@ dbus-send --session --type=method_call --print-reply \
 ### 8. Evidence Recording
 ```bash
 # Record all evidence with SHA-256 binding
-echo "Candidate: threshold_2.0.0-1_amd64.deb" > evidence.txt
+echo "Candidate: threshold_2.0.1-1_amd64.deb" > evidence.txt
 echo "SHA-256: <exact-sha-256>" >> evidence.txt
 echo "Probe: D-Bus StatusNotifierItem" >> evidence.txt
 echo "Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> evidence.txt

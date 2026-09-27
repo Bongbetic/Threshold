@@ -1,5 +1,5 @@
 #!/bin/bash
-# Threshold v2.0.0 Release Candidate Verification Script
+# Threshold v2.0.1 Release Candidate Verification Script
 # Binds all results to exact candidate SHA-256
 
 set -euo pipefail
@@ -32,7 +32,7 @@ sanitize_evidence() {
     sed -i 's|UUID=[^ ]*|UUID=<redacted>|g' "$file"
 }
 
-echo "Starting Threshold v2.0.0 verification..."
+echo "Starting Threshold v2.0.1 verification..."
 echo "Timestamp: $TIMESTAMP"
 
 # 1. Verify DEB candidates
@@ -105,7 +105,7 @@ echo "Evidence directory: $EVIDENCE_DIR"
 echo "Timestamp: $TIMESTAMP"
 
 cat > "$EVIDENCE_DIR/summary-$TIMESTAMP.txt" << SUMMARY
-Threshold v2.0.0 Release Candidate Verification
+Threshold v2.0.1 Release Candidate Verification
 Timestamp: $TIMESTAMP
 Evidence Directory: $EVIDENCE_DIR
 

@@ -4,14 +4,14 @@
 ## Prerequisites
 - Clean Ubuntu 24.04 or Debian 13 system
 - Network access for package dependencies
-- SHA-256 of the exact DEB candidate: `threshold_2.0.0-1_amd64.deb`
+- SHA-256 of the exact DEB candidate: `threshold_2.0.1-1_amd64.deb`
 
 ## Verification Steps
 
 ### 1. Candidate Integrity
 ```bash
 # Verify the exact candidate SHA-256
-sha256sum threshold_2.0.0-1_amd64.deb
+sha256sum threshold_2.0.1-1_amd64.deb
 # Expected: <exact-sha-256-from-release-manifest>
 ```
 
@@ -19,7 +19,7 @@ sha256sum threshold_2.0.0-1_amd64.deb
 ```bash
 # Install on clean system
 sudo apt update
-sudo apt install ./threshold_2.0.0-1_amd64.deb
+sudo apt install ./threshold_2.0.1-1_amd64.deb
 
 # Verify installation success
 dpkg -l threshold | grep ^ii
@@ -76,7 +76,7 @@ ls /usr/share/com.bongbetic.threshold/ 2>/dev/null || echo "EC assets cleaned"
 ### 7. Evidence Recording
 ```bash
 # Record all evidence with SHA-256 binding
-echo "Candidate: threshold_2.0.0-1_amd64.deb" > evidence.txt
+echo "Candidate: threshold_2.0.1-1_amd64.deb" > evidence.txt
 echo "SHA-256: <exact-sha-256>" >> evidence.txt
 echo "Distribution: Ubuntu 24.04/Debian 13" >> evidence.txt
 echo "Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> evidence.txt
