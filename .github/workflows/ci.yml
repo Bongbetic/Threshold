@@ -348,16 +348,23 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install prerequisites
         shell: sh
-        run: xbps-install -Suy xbps bash git
+        run: |
+          xbps-install -Suy xbps bash git shadow
+          useradd -m builder
       - name: Build native XBPS package
         run: |
-          git clone --depth=1 https://github.com/void-linux/void-packages.git /tmp/void-packages
-          mkdir -p /tmp/void-packages/srcpkgs/threshold
-          cp packaging/void/template packaging/void/INSTALL packaging/void/REMOVE packaging/void/INSTALL.msg /tmp/void-packages/srcpkgs/threshold/
-          cp -a packaging/void/files /tmp/void-packages/srcpkgs/threshold/
-          cd /tmp/void-packages
-          ./xbps-src binary-bootstrap
-          ./xbps-src pkg threshold
+          set -e
+          WS="$PWD"
+          su -m builder -c "
+            set -e
+            git clone --depth=1 https://github.com/void-linux/void-packages.git /tmp/void-packages
+            mkdir -p /tmp/void-packages/srcpkgs/threshold
+            cp '$WS/packaging/void/template' '$WS/packaging/void/INSTALL' '$WS/packaging/void/REMOVE' '$WS/packaging/void/INSTALL.msg' /tmp/void-packages/srcpkgs/threshold/
+            cp -a '$WS/packaging/void/files' /tmp/void-packages/srcpkgs/threshold/
+            cd /tmp/void-packages
+            ./xbps-src binary-bootstrap
+            ./xbps-src pkg threshold
+          "
       - name: Verify XBPS payload
         run: |
           PKG=$(find /tmp/void-packages/hostdir/binpkgs -name 'threshold-*.xbps' | head -1)
