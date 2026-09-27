@@ -274,7 +274,16 @@ jobs:
           grep -F "$(awk '{print $1}' candidates/candidate.sha256 | head -1)" got.sha256
 
       - name: Install the exact DEB
-        run: sudo apt-get install -y ./candidates/threshold_*_amd64.deb
+        run: |
+          # Azure's Ubuntu mirror has repeatedly 404'd on specific
+          # webkit-transitive packages (gstreamer plugins, xdg-desktop-
+          # portal) here while the index still lists them; retry once
+          # against a refreshed index before giving up.
+          sudo apt-get install -y ./candidates/threshold_*_amd64.deb || {
+            echo "First install attempt failed, refreshing index and retrying..."
+            sudo apt-get update
+            sudo apt-get install -y ./candidates/threshold_*_amd64.deb
+          }
 
       - name: Check installed layout
         run: |
