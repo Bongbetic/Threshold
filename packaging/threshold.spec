@@ -176,6 +176,9 @@ fi
   directory segment that every packaging format actually installs to,
   so the app exited immediately with "Carbon bundle not found" on
   first launch. 2.0.0 never actually ran once installed from a package.
+- Add a real light mode: the UI had no light-theme CSS at all, and the
+  Dark mode switch's "off" state silently followed the system color
+  scheme instead of forcing light. The switch is now a direct on/off.
 - CI pipeline repair: fixed the chain of issues that had kept every
   workflow run red since the 2.0.0 release cycle.
 

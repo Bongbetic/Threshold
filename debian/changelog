@@ -10,6 +10,14 @@ threshold (2.0.1-1) trixie; urgency=high
   * Ship web/dist/shim.js (the WebKit document-start UserScript) as part
     of the web build; it was previously read from a source-tree-only
     path with no installed fallback.
+  * Add a real light mode: the UI had no light-theme CSS at all (every
+    color was hardcoded dark), and the Dark mode switch's "off" state
+    silently followed the system color scheme instead of forcing light,
+    so turning it off did nothing visible on a system that itself
+    prefers dark. The switch is now a direct on/off: off always renders
+    light, on always renders dark. Also fixes the switch's own knob not
+    staying in sync when appearance changes arrive outside the initial
+    load.
   * CI pipeline repair: fixed a chain of issues that had kept every
     workflow run red since the 2.0.0 release cycle (missing evidence
     directory, a duplicate dpkg --configure call, invalid workflow YAML,
