@@ -3,7 +3,7 @@
   "msi_ec": {
     "version": "0.13.112",
     "source_dir": "msi-ec-src",
-    "checksum": "fc5fcc54847fcafd480bc44094ce2d202a6c482576df14df037327727842aa20"
+    "checksum": "5b4c36cccc346f2e5c2e6764b890af2f3ca4e31cab7b1d45c3e99630617cbb96"
   },
   "dkms": {
     "name": "msi-ec",
