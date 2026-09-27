@@ -137,7 +137,7 @@ jobs:
         run: lintian ${{ env.CANDIDATES_DIR }}/*.deb
 
       - name: Record candidate checksum
-        run: (cd ${{ env.CANDIDATES_DIR }} && sha256sum *) > candidate.sha256
+        run: (cd ${{ env.CANDIDATES_DIR }} && sha256sum *) > ${{ env.CANDIDATES_DIR }}/candidate.sha256
 
       - name: Upload DEB candidate
         uses: actions/upload-artifact@v4
@@ -145,7 +145,7 @@ jobs:
           name: candidate-deb
           path: |
             ${{ env.CANDIDATES_DIR }}/*.deb
-            candidate.sha256
+            ${{ env.CANDIDATES_DIR }}/candidate.sha256
           retention-days: 7
           if-no-files-found: error
 
@@ -184,7 +184,7 @@ jobs:
           cp source-archive/Threshold-*.tar.gz ${{ env.CANDIDATES_DIR }}/
 
       - name: Record candidate checksums
-        run: (cd ${{ env.CANDIDATES_DIR }} && sha256sum *) > candidate.sha256
+        run: (cd ${{ env.CANDIDATES_DIR }} && sha256sum *) > ${{ env.CANDIDATES_DIR }}/candidate.sha256
 
       - name: Upload RPM candidates
         uses: actions/upload-artifact@v4
@@ -192,7 +192,6 @@ jobs:
           name: candidate-rpm
           path: |
             ${{ env.CANDIDATES_DIR }}/*
-            candidate.sha256
           retention-days: 7
           if-no-files-found: error
 
@@ -212,8 +211,14 @@ jobs:
       - name: Install AppImage build dependencies
         run: |
           sudo apt-get update
+          # Mirrors debian/control's Build-Depends: meson.build hard-requires
+          # gtk4 and libadwaita-1, and build-appimage.sh bundles their GI
+          # typelibs + shared libraries (plus Notify) into the AppDir for
+          # offline startup, so all of these must be present at build time,
+          # not just the minimal meson/wget toolchain.
           sudo apt-get install -y meson ninja-build python3-gi gir1.2-dbusmenu-glib-0.4 \
-            libgirepository1.0-dev wget
+            libgirepository1.0-dev wget libgtk-4-dev libadwaita-1-dev \
+            gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-notify-0.7 libnotify-dev
           wget -qO appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
           chmod +x appimagetool
           sudo mv appimagetool /usr/local/bin/
@@ -227,13 +232,13 @@ jobs:
           ./packaging/appimage/build-appimage.sh /tmp/threshold-2.AppImage
           A=$(sha256sum /tmp/threshold-1.AppImage | awk '{print $1}')
           B=$(sha256sum /tmp/threshold-2.AppImage | awk '{print $1}')
-          echo "$A" > appimage.sha256
           if [ "$A" != "$B" ]; then
             echo "AppImage is not reproducible: $A != $B"
             exit 1
           fi
           mkdir -p ${{ env.CANDIDATES_DIR }}
           cp /tmp/threshold-1.AppImage ${{ env.CANDIDATES_DIR }}/
+          echo "$A" > ${{ env.CANDIDATES_DIR }}/appimage.sha256
 
       - name: Upload AppImage candidate
         uses: actions/upload-artifact@v4
@@ -241,7 +246,7 @@ jobs:
           name: candidate-appimage
           path: |
             ${{ env.CANDIDATES_DIR }}/*.AppImage
-            appimage.sha256
+            ${{ env.CANDIDATES_DIR }}/appimage.sha256
           retention-days: 7
           if-no-files-found: error
 
