@@ -376,7 +376,7 @@ jobs:
       - name: Install the exact Unified RPM via ${{ matrix.tool }}
         run: |
           if [ "${{ matrix.tool }}" = "dnf" ]; then
-            dnf -y install candidates/threshold-*.noarch.rpm
+            dnf -y install --setopt=optional_metadata_types=filelists candidates/threshold-*.noarch.rpm
           else
             zypper -n --no-gpg-checks install candidates/threshold-*.noarch.rpm
           fi
@@ -386,8 +386,9 @@ jobs:
           set -e
           # Application binary
           test -x /usr/bin/threshold
-          # EC lifecycle authority
-          test -x /usr/sbin/threshold-ec-lifecycle
+          # EC lifecycle authority (merged-usr distros define _sbindir as
+          # /usr/bin; see ci.yml's rpm job for the same accommodation)
+          test -x /usr/sbin/threshold-ec-lifecycle || test -x /usr/bin/threshold-ec-lifecycle
           # Vendored msi-ec source
           test -d /usr/src/msi-ec-0.13.112
           # Boot reconciliation systemd unit
