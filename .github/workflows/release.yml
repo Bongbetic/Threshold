@@ -706,15 +706,30 @@ jobs:
     needs: [physical-gate-check]
     runs-on: ubuntu-24.04
     environment: release-promotion
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Freeze, re-verify, sign, and publish the existing draft
         run: |
-          V=${GITHUB_REF_NAME#v}
-          echo "Promoting draft for $V after maintainer approval."
-          echo "Signing SHA256SUMS with protected OpenPGP key and publishing the"
-          echo "unchanged draft (candidates and metadata are never modified)."
-          # Implemented with gh + gpg in the promotion runner:
-          #   gh release download <tag> --pattern 'SHA256SUMS'
-          #   gpg --detach-sign --armor SHA256SUMS
-          #   gh release upload <tag> SHA256SUMS.asc --clobber
-          #   gh release edit <tag> --draft=false --latest
+          set -e
+          TAG="$GITHUB_REF_NAME"
+          echo "Promoting draft for $TAG after maintainer approval."
+
+          WORKDIR=$(mktemp -d)
+          cd "$WORKDIR"
+
+          # Sign the unchanged draft's own SHA256SUMS — candidates and
+          # metadata already on the draft are never re-touched.
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern 'SHA256SUMS'
+
+          export GNUPGHOME="$WORKDIR/gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          echo "$RELEASE_SIGNING_KEY" | gpg --batch --import
+          gpg --batch --yes --detach-sign --armor SHA256SUMS
+
+          gh release upload "$TAG" SHA256SUMS.asc --repo "$GITHUB_REPOSITORY" --clobber
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+
+          echo "Published $TAG and marked it Latest."
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
