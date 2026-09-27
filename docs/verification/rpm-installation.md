@@ -4,21 +4,21 @@
 ## Prerequisites
 - Clean Fedora 43/44 or openSUSE Tumbleweed system
 - Network access for package dependencies
-- SHA-256 of the exact RPM candidate: `threshold-2.0.0-1.noarch.rpm`
+- SHA-256 of the exact RPM candidate: `threshold-2.0.1-1.noarch.rpm`
 
 ## Verification Steps
 
 ### 1. Candidate Integrity
 ```bash
 # Verify the exact candidate SHA-256
-sha256sum threshold-2.0.0-1.noarch.rpm
+sha256sum threshold-2.0.1-1.noarch.rpm
 # Expected: <exact-sha-256-from-release-manifest>
 ```
 
 ### 2. Installation (Fedora - dnf)
 ```bash
 # Install on clean system
-sudo dnf install ./threshold-2.0.0-1.noarch.rpm
+sudo dnf install ./threshold-2.0.1-1.noarch.rpm
 
 # Verify installation success
 rpm -q threshold
@@ -27,7 +27,7 @@ rpm -q threshold
 ### 3. Installation (openSUSE - zypper)
 ```bash
 # Install on clean system
-sudo zypper install ./threshold-2.0.0-1.noarch.rpm
+sudo zypper install ./threshold-2.0.1-1.noarch.rpm
 
 # Verify installation success
 rpm -q threshold
@@ -84,7 +84,7 @@ ls /usr/share/com.bongbetic.threshold/ 2>/dev/null || echo "EC assets cleaned"
 ### 8. Evidence Recording
 ```bash
 # Record all evidence with SHA-256 binding
-echo "Candidate: threshold-2.0.0-1.noarch.rpm" > evidence.txt
+echo "Candidate: threshold-2.0.1-1.noarch.rpm" > evidence.txt
 echo "SHA-256: <exact-sha-256>" >> evidence.txt
 echo "Distribution: Fedora 43/44 or openSUSE Tumbleweed" >> evidence.txt
 echo "Package Manager: dnf/zypper" >> evidence.txt

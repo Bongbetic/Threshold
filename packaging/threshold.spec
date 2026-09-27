@@ -12,8 +12,8 @@
 %global msi_ec_ver 0.13.112
 
 Name:           threshold
-Version:        2.0.0
-Release:        3
+Version:        2.0.1
+Release:        1
 Summary:        Battery charge threshold controller for Linux laptops
 License:        GPL-3.0-or-later
 URL:            https://github.com/Bongbetic/Threshold
@@ -170,6 +170,11 @@ fi
 %{_modulesloaddir}/msi-ec.conf
 
 %changelog
+* Sun Sep 27 2026 Soubarna <Soubarna@live.in> - 2.0.1-1
+- CI pipeline repair: fixed the chain of issues that had kept every
+  workflow run red since the 2.0.0 release cycle. No functional changes
+  to the application.
+
 * Fri Sep 11 2026 Soubarna <Soubarna@live.in> - 2.0.0-3
 - Safe in-place handoff from every official paired RPM release: the
   lifecycle verifies DKMS source provenance before reconstruction,

@@ -3,7 +3,7 @@
 
 ## Prerequisites
 - Clean systems for each distribution: Ubuntu 24.04, Debian 13, Fedora 43, Fedora 44, openSUSE Tumbleweed
-- SHA-256 of the exact AppImage candidate: `threshold-2.0.0-x86_64.AppImage`
+- SHA-256 of the exact AppImage candidate: `threshold-2.0.1-x86_64.AppImage`
 - FUSE support installed (for AppImage execution)
 
 ## Verification Steps
@@ -11,7 +11,7 @@
 ### 1. Candidate Integrity
 ```bash
 # Verify the exact candidate SHA-256
-sha256sum threshold-2.0.0-x86_64.AppImage
+sha256sum threshold-2.0.1-x86_64.AppImage
 # Expected: <exact-sha-256-from-release-manifest>
 ```
 
@@ -21,10 +21,10 @@ sha256sum threshold-2.0.0-x86_64.AppImage
 # sudo nmcli radio wifi off
 
 # Make executable
-chmod +x threshold-2.0.0-x86_64.AppImage
+chmod +x threshold-2.0.1-x86_64.AppImage
 
 # Launch application
-./threshold-2.0.0-x86_64.AppImage &
+./threshold-2.0.1-x86_64.AppImage &
 
 # Verify window appears
 xdotool search --name "Threshold"
@@ -39,7 +39,7 @@ kill %1
 ### 3. Dependency Closure Verification
 ```bash
 # Verify no build-host paths in AppImage
-strings threshold-2.0.0-x86_64.AppImage | grep -E '/home/|/tmp/|/build/' | head -5
+strings threshold-2.0.1-x86_64.AppImage | grep -E '/home/|/tmp/|/build/' | head -5
 # Expected: no output or only benign references
 
 # Verify embedded EC bundle
@@ -49,7 +49,7 @@ ls -la squashfs-root/usr/share/threshold/trust/ 2>/dev/null || echo "No trust di
 ### 4. Relocatability Test
 ```bash
 # Copy to different location
-cp threshold-2.0.0-x86_64.AppImage /tmp/test-threshold.AppImage
+cp threshold-2.0.1-x86_64.AppImage /tmp/test-threshold.AppImage
 
 # Launch from new location
 chmod +x /tmp/test-threshold.AppImage
@@ -68,7 +68,7 @@ rm /tmp/test-threshold.AppImage
 ### 5. Evidence Recording
 ```bash
 # Record all evidence with SHA-256 binding
-echo "Candidate: threshold-2.0.0-x86_64.AppImage" > evidence.txt
+echo "Candidate: threshold-2.0.1-x86_64.AppImage" > evidence.txt
 echo "SHA-256: <exact-sha-256>" >> evidence.txt
 echo "Distribution: $(cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2)" >> evidence.txt
 echo "Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> evidence.txt

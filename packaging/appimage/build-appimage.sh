@@ -143,7 +143,7 @@ chmod 0755 "$APPDIR/AppRun"
 # ── Reproducibility ────────────────────────────────────────────────────────
 find "$APPDIR" -exec touch -h -d "@$EPOCH" {} +
 
-OUT=${1:-Threshold-$($APPDIR/AppRun --version 2>/dev/null || echo 2.0.0)-x86_64.AppImage}
+OUT=${1:-Threshold-$($APPDIR/AppRun --version 2>/dev/null || echo 2.0.1)-x86_64.AppImage}
 OUT=${OUT%.AppImage}.AppImage
 appimagetool --comp zstd -u "$APPDIR" "$OUT" >/dev/null
 echo "$OUT"

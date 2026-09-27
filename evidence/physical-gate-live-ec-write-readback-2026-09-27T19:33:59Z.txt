@@ -1,0 +1,28 @@
+=== Physical Gate: Live msi-ec Threshold Write and Readback ===
+Candidate: threshold_2.0.1-1_amd64.deb
+SHA-256: fde6e07b926735ca1717d4d6b719c5f46471cbe8507867e07fcc5dca99a19046
+System: MSI Thin A15 B7UCX
+Date: 2026-09-27T19:33:59Z
+Secure Boot: disabled
+Kernel: 7.2.6+deb14-amd64
+
+EC setup availability (threshold-ec-lifecycle diagnostics):
+  setup_state=available
+  msi_hardware=yes
+  module_loaded=yes
+  pending_reboot: (none)
+
+Sysfs path: /sys/class/power_supply/BAT1/charge_control_end_threshold
+Permissions after udev rule reload: -rw-rw-r-- root:plugdev (matches
+99-msi-battery.rules; current user is already a plugdev member, so no
+sudo is required for writes at runtime).
+
+Write/readback sequence (all performed as the unprivileged invoking
+user directly, no sudo, confirming the udev rule grants passwordless
+plugdev writes as designed):
+  Immediately post-install: default was 100; a prior sudo-write test in
+  this same session had already set it to 80 before this sequence began.
+  Wrote:   75   -> readback: 75
+  Wrote:   80   -> readback: 80   (restored to preferred value)
+
+Result: PASS

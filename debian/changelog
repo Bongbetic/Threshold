@@ -1,3 +1,13 @@
+threshold (2.0.1-1) trixie; urgency=medium
+
+  * CI pipeline repair: fixed a chain of issues that had kept every workflow
+    run red since the 2.0.0 release cycle (missing evidence directory,
+    a duplicate dpkg --configure call, invalid workflow YAML, pre-existing
+    flake8 violations, a missing sudo dependency, and the Void Linux job's
+    chroot sandboxing). No functional changes to the application.
+
+ -- Soubarna <Soubarna@live.in>  Sun, 27 Sep 2026 19:28:02 +0000
+
 threshold (2.0.0-1) trixie; urgency=medium
 
   * Unified packages (issue #86): one complete DEB, one distribution-neutral
