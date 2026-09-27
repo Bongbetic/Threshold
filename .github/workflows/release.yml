@@ -58,13 +58,27 @@ jobs:
           test "$TAG_VERSION" = "$SPEC_VERSION"
 
       - name: Validate EC manifest checksum matches vendored source
+        # Must match the exact algorithm used by
+        # packaging/threshold-ec-lifecycle's installed_source_checksum()
+        # (a single sha256 over sorted "path\n" + file-bytes, not a hash
+        # of per-file hashes) and tests/test_packaging_versions.py's
+        # _vendored_checksum(), or this check verifies nothing.
         run: |
-          MANIFEST_CKSUM=$(python3 -c "import json; print(json.load(open('packaging/ec-manifest.json'))['msi_ec']['checksum'])")
-          SOURCE_DIR=$(python3 -c "import json; print(json.load(open('packaging/ec-manifest.json'))['msi_ec']['source_dir'])")
-          VENDORED_CKSUM=$(find "$SOURCE_DIR" -type f | sort | xargs sha256sum | sha256sum | awk '{print $1}')
-          echo "Manifest: $MANIFEST_CKSUM"
-          echo "Vendored: $VENDORED_CKSUM"
-          test "$MANIFEST_CKSUM" = "$VENDORED_CKSUM"
+          python3 -c "
+          import hashlib, json
+          from pathlib import Path
+          manifest = json.load(open('packaging/ec-manifest.json'))['msi_ec']
+          h = hashlib.sha256()
+          root = Path('.')
+          source_dir = root / manifest['source_dir']
+          for p in sorted(p for p in source_dir.rglob('*') if p.is_file()):
+              h.update(f'{p.relative_to(root)}\n'.encode())
+              h.update(p.read_bytes())
+          vendored = h.hexdigest()
+          print(f'Manifest: {manifest[\"checksum\"]}')
+          print(f'Vendored: {vendored}')
+          assert manifest['checksum'] == vendored
+          "
 
       - name: Validate canonical filenames will use tag version
         run: |

@@ -171,9 +171,13 @@ fi
 
 %changelog
 * Sun Sep 27 2026 Soubarna <Soubarna@live.in> - 2.0.1-1
+- Fix application startup crash on every installed package: the Carbon
+  UI's bundle and UserScript shim path lookup omitted the "dist/"
+  directory segment that every packaging format actually installs to,
+  so the app exited immediately with "Carbon bundle not found" on
+  first launch. 2.0.0 never actually ran once installed from a package.
 - CI pipeline repair: fixed the chain of issues that had kept every
-  workflow run red since the 2.0.0 release cycle. No functional changes
-  to the application.
+  workflow run red since the 2.0.0 release cycle.
 
 * Fri Sep 11 2026 Soubarna <Soubarna@live.in> - 2.0.0-3
 - Safe in-place handoff from every official paired RPM release: the
