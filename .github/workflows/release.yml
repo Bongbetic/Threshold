@@ -85,9 +85,14 @@ jobs:
       - name: Build canonical source archive
         run: |
           V=${GITHUB_REF_NAME#v}
+          # Write outside the tree being archived: tar reading "." while
+          # writing its own output file into "." races itself ("file
+          # changed as we read it") once the growing archive is large
+          # enough for tar to notice it mid-read.
           tar --exclude=.git --exclude=release-candidates --exclude=rpmbuild \
               --transform "s,^\.,Threshold-$V," \
-              -czf "Threshold-$V.tar.gz" .
+              -czf "/tmp/Threshold-$V.tar.gz" .
+          mv "/tmp/Threshold-$V.tar.gz" "Threshold-$V.tar.gz"
           echo "Built: Threshold-$V.tar.gz"
           ls -l "Threshold-$V.tar.gz"
 
