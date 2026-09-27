@@ -315,7 +315,7 @@ class TestCanonicalDataRejection:
         m["backdoor"] = True
         signed = sign_manifest(e.priv, m)
         raw = json.dumps(signed, sort_keys=True, separators=(",", ":")).encode()
-        r = run_bootstrap(e, raw + b"\n" + _empty_payload())
+        run_bootstrap(e, raw + b"\n" + _empty_payload())
         # Should succeed — extra fields don't break anything,
         # but the signature must still be valid.
         # (This verifies that unknown fields don't cause rejection.)
@@ -340,7 +340,7 @@ class TestOverflowAndTruncation:
         """An empty tar.gz payload is rejected."""
         e = app_env
         empty_tar = io.BytesIO()
-        with tarfile.open(fileobj=empty_tar, mode="w:gz") as tar:
+        with tarfile.open(fileobj=empty_tar, mode="w:gz"):
             pass  # empty archive
         payload = empty_tar.getvalue()
         bundle = make_bundle(e.tmp, e.priv, sequence=1, payload=payload)
@@ -490,8 +490,6 @@ class TestInventoryAdversarial:
         with tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz") as tar:
             for member in tar.getmembers():
                 if member.isfile():
-                    info = tar.extractfile(member)
-                    content = info.read() if info else b""
                     inventory.append({
                         "path": member.name,
                         "mode": oct(member.mode)[2:],

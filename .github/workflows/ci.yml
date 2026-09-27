@@ -343,7 +343,9 @@ jobs:
 
   void-x86_64-glibc:
     runs-on: ubuntu-24.04
-    container: ghcr.io/void-linux/void-glibc-full:latest
+    container:
+      image: ghcr.io/void-linux/void-glibc-full:latest
+      options: --privileged
     steps:
       - uses: actions/checkout@v4
       - name: Install prerequisites

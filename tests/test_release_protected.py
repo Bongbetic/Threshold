@@ -6,7 +6,6 @@ signature.  Draft is private, approval-controlled, immutable on promotion,
 and audibly withdrawn when defective.
 """
 
-import re
 from pathlib import Path
 
 
@@ -67,7 +66,11 @@ def test_release_manifest_includes_provenance_and_evidence():
     assert "source_revision" in text
     assert "build_identity" in text or "build_identity" in text
     # Must include evidence binding (supported-distribution results, desktop results, physical)
-    assert "supported_distribution" in text or "distro" in text.lower() or "distribution" in text.lower()
+    assert (
+        "supported_distribution" in text
+        or "distro" in text.lower()
+        or "distribution" in text.lower()
+    )
     assert "desktop" in text.lower()
     assert "physical" in text.lower() or "msi" in text.lower()
 

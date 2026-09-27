@@ -7,7 +7,6 @@ WebKit (optional), GSettings schemas compiled, dbusmenu, web content,
 and notification-area icons.
 """
 
-import stat
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,8 +43,8 @@ def test_build_bundles_core_gi_typelibs():
     gi.require_version() resolves offline."""
     text = _build()
     for typelib in ("GLib-2.0.typelib", "GObject-2.0.typelib",
-                     "Gio-2.0.typelib", "Gtk-4.0.typelib",
-                     "Adw-1.typelib", "Notify-0.7.typelib"):
+                    "Gio-2.0.typelib", "Gtk-4.0.typelib",
+                    "Adw-1.typelib", "Notify-0.7.typelib"):
         assert typelib in text, f"build script must bundle {typelib}"
 
 
