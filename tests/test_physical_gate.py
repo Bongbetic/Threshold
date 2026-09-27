@@ -250,9 +250,11 @@ def test_release_workflow_promote_has_evidence_freshness_check():
 def test_physical_gate_document_specifies_no_simulation_rule():
     """The protocol must explicitly state that no simulation can complete the gate."""
     content = PHYSICAL_GATE_DOC.read_text(encoding="utf-8").lower()
-    assert "no automated" in content or "no simulation" in content or "cannot be simulated" in content, (
-        "Protocol must state that automated simulation cannot satisfy the gate"
-    )
+    assert (
+        "no automated" in content
+        or "no simulation" in content
+        or "cannot be simulated" in content
+    ), "Protocol must state that automated simulation cannot satisfy the gate"
 
 
 def test_physical_gate_document_specifies_freshness_requirement():

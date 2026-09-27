@@ -27,7 +27,7 @@ def test_candidate_sha256_binding():
     releases_dir = ROOT / "releases"
     if not releases_dir.exists():
         pytest.skip("no releases directory")
-    
+
     candidates = []
     for deb in releases_dir.rglob("*.deb"):
         candidates.append(deb)
@@ -35,10 +35,10 @@ def test_candidate_sha256_binding():
         candidates.append(rpm)
     for appimage in releases_dir.rglob("*.AppImage"):
         candidates.append(appimage)
-    
+
     if not candidates:
         pytest.skip("no release candidates found")
-    
+
     for candidate in candidates:
         sha256 = sha256_of_file(candidate)
         # SHA-256 should be 64 hex characters
@@ -60,7 +60,7 @@ def test_evidence_sanitization():
         ("serial=ABC12345", "serial=<redacted>"),
         ("UUID=12345678-1234-1234-1234-123456789abc", "UUID=<redacted>"),
     ]
-    
+
     # This is a simple test - in production, the sanitization function
     # from the verification script would be used
     for input_str, expected_pattern in test_cases:
@@ -81,7 +81,7 @@ def test_verification_documents_exist():
         "fedora-rpm.md",  # already existed
         "msi-physical-gate.md",  # issue #101
     ]
-    
+
     for doc in required_docs:
         doc_path = verification_dir / doc
         assert doc_path.exists(), f"Missing verification document: {doc}"
@@ -96,7 +96,7 @@ def test_sha256_binding_in_verification_script():
     script_path = ROOT / "scripts" / "verify-release-candidates.sh"
     if not script_path.exists():
         pytest.skip("verification script not found")
-    
+
     content = script_path.read_text()
     # Script should compute SHA-256 for candidates
     assert "sha256sum" in content, "Verification script missing sha256sum"

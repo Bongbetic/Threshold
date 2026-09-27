@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from threshold.integration_status import (
     RUNIT_ENABLE_COMMAND,
     detect_boot_reconciliation,

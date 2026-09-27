@@ -480,4 +480,3 @@ def test_deb_systemd_integration():
     assert "usr/lib/systemd/system/threshold-boot-reconcile.service" in manifest
     assert "systemctl" not in _DEB_POSTINST.read_text(encoding="utf-8")
     assert "systemctl" not in _DEB_PRERM.read_text(encoding="utf-8")
-

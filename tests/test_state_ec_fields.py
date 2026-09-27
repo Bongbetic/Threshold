@@ -74,7 +74,7 @@ def test_adapter_builds_state_with_ec_fields(tmp_path, monkeypatch):
 
     # Mock find_battery_path to return None so we test the no-battery path
     monkeypatch.setattr("threshold.adapter.find_battery_path", lambda: None)
-    
+
     config = Config(settings=FakeGSettings())
     state = build_state(battery_path=None, config=config)
     assert state.charge_threshold == config.get_charge_threshold()
@@ -114,7 +114,7 @@ def test_adapter_reads_ec_status_from_file(tmp_path, monkeypatch):
     )
     # Mock find_battery_path to return None so we test the no-battery path
     monkeypatch.setattr("threshold.adapter.find_battery_path", lambda: None)
-    
+
     config = Config(settings=FakeGSettings())
     state = build_state(battery_path=None, config=config)
     assert state.ec_setup_state == ECSetupState.UNAVAILABLE
