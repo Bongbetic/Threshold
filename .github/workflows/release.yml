@@ -502,8 +502,8 @@ jobs:
           V=${GITHUB_REF_NAME#v}
           # Source archive must use Threshold-<version>.tar.gz
           ls "Threshold-$V.tar.gz"
-          # DEB must use threshold_<version>_amd64.deb
-          ls "threshold_${V}_amd64.deb"
+          # DEB must use threshold_<version>-<debian-revision>_amd64.deb
+          ls threshold_${V}-*_amd64.deb
           # RPM must use threshold-<version> or threshold-<version>-*
           ls threshold-$V*.noarch.rpm
 
