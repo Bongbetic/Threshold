@@ -18,8 +18,8 @@ from typing import Any, Optional
 
 WINDOW_WIDTH = 1180
 WINDOW_HEIGHT = 860
-MIN_WIDTH = 960
-MIN_HEIGHT = 700
+MIN_WIDTH = 480
+MIN_HEIGHT = 400
 
 _SOURCE_ROOT = Path(__file__).resolve().parent.parent.parent
 

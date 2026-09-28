@@ -22,11 +22,11 @@ Threshold's UI is being rebuilt as an IBM Carbon Design System web UI (`@carbon/
 
 ## Decision
 
-### 1. Layout: Industrial grid, scroll-free
+### 1. Layout: Industrial grid with adaptive stacking
 
-One-screen control panel at target size (`~1180×860`, usable floor `960×700`). No page scroll at the floor. Resolved in [#36](https://github.com/Bongbetic/Threshold/issues/36).
+One-screen control panel at target size (`~1180×860`). The original `960×700` scroll-free floor was amended by [Fix normal-size clipping and define adaptive dashboard bounds](https://github.com/Bongbetic/Threshold/issues/106): content-sized rows, page scrolling when needed, two columns at 900px and one column at 600px. The native window minimum is `480×400`.
 
-Layout regions: header → top status grid (3 columns) → dominant charge limit panel → lower settings grid (3 columns) → footer device bar. CSS grid fills available space. Existing geometry-save logic carries over.
+Layout regions: header, top status grid, dominant charge limit panel, lower settings grid, footer device bar. CSS grid fills available space and grows with content. Existing geometry-save logic carries over.
 
 ### 2. Window chrome: full web, no GTK HeaderBar
 
@@ -34,10 +34,10 @@ Layout regions: header → top status grid (3 columns) → dominant charge limit
 
 - **Window controls:** minimize, maximize/restore, close as `cds-button` components in the header trailing edge, routed through the bridge to Python (`self.minimize()`, `self.maximize()`/`self.unmaximize()`, `_on_close_request`).
 - **Title + live percentage:** header shows `"Threshold — {pct}%"`, updated live over the bridge.
-- **Nav:** region focus anchors (Overview / Threshold / Settings / About). Active = orange underline. About opens a `cds-modal`. One-screen contract preserved — nav moves keyboard focus, not pages.
+- **Nav:** region focus anchors (Overview / Threshold / Settings / About). Active = orange underline. About opens a `cds-modal`. The single-page contract remains: nav moves keyboard focus, not pages.
 - **Menu button:** dropped for v1 (nothing to open in a one-screen design).
 - **Drag:** JS mousedown on header drag zone → bridge `window.begin-drag` → Python `self.begin_move_drag()`. Double-click on drag zone → toggle maximize/restore.
-- **Resizable.** Default `~1180×860`, minimum `960×700`, no maximum.
+- **Resizable.** Default `~1180×860`, minimum `480×400`, no maximum. The minimum was lowered by the adaptive layout decision above.
 
 Resolved in [#55](https://github.com/Bongbetic/Threshold/issues/55).
 
@@ -99,10 +99,11 @@ Resolved in [#40](https://github.com/Bongbetic/Threshold/issues/40).
 
 ### 8. Test strategy: Vitest + mirrored contract fixtures + Xvfb smoke
 
-- **JS unit:** Vitest + jsdom, logic only. Covers view-controller logic, state→DOM mapping, formatting, event wiring, bridge client against mocked `webkit.messageHandlers`. No Chromium component tests (wrong engine). Carbon components never re-tested.
+- **JS unit:** Vitest + jsdom, logic only. Covers view-controller logic, state→DOM mapping, formatting, event wiring, bridge client against mocked `webkit.messageHandlers`. Carbon components are not re-tested.
+- **Rendered layout:** Chromium checks bounds and scroll reachability in the compiled bundle at normal, narrow, short, and enlarged-text viewports. Native WebKitGTK remains the desktop acceptance engine.
 - **Bridge contract:** mirrored pytest/vitest suites over shared `web/test/fixtures/messages.json` golden fixtures. Covers every message type: state snapshot, `set_threshold` ack (incl. pkexec errors), settings writes, push events, unknown-cmd error.
 - **CI smoke:** Xvfb launch of real WebKitGTK shell on Ubuntu — loads committed `web/dist` via offline scheme, waits for JS `ready` ping, performs one request→ack round-trip. `gir1.2-webkit-6.0` + `xvfb` on the runner.
-- **Gating:** separate required `web` CI job (`npm ci → tsc --noEmit → eslint → vitest run`). Meson/deb stay npm-free. No web-layer coverage gate in v1.
+- **Gating:** separate required `web` CI job (`npm ci → tsc --noEmit → eslint → vitest run → build → rendered layout checks`). Meson/deb stay npm-free. No web-layer coverage gate in v1.
 
 Resolved in [#41](https://github.com/Bongbetic/Threshold/issues/41).
 
