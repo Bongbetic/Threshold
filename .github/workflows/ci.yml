@@ -408,6 +408,12 @@ jobs:
       - name: Production build
         run: cd web && npm run build
 
+      - name: Install browser for layout checks
+        run: cd web && npx playwright-core install --with-deps chromium-headless-shell
+
+      - name: Check rendered dashboard bounds
+        run: cd web && npm run test:layout
+
       - name: Verify bundle is committed
         run: |
           if [ -n "$(git status --porcelain web/dist/)" ]; then

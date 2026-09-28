@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build && cp src/shim.js dist/shim.js",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:layout": "node test/layout-browser.mjs",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/ test/"
@@ -23,6 +24,7 @@
     "jsdom": "^26.0.0",
     "eslint": "^9.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0"
+    "@typescript-eslint/parser": "^8.0.0",
+    "playwright-core": "^1.55.0"
   }
 }
