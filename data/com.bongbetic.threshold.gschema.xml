@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema path="/com/bongbetic/threshold/" id="com.bongbetic.threshold">
+    <key name="appearance-mode" type="s">
+      <default>'legacy'</default>
+      <choices>
+        <choice value="legacy"/><choice value="system"/>
+        <choice value="light"/><choice value="dark"/>
+      </choices>
+      <summary>Appearance mode</summary>
+      <description>System follows desktop colors. Legacy preserves saved dark-mode choices; untouched installations follow System.</description>
+    </key>
     <key name="dark-mode" type="b">
       <default>true</default>
       <summary>Dark mode</summary>

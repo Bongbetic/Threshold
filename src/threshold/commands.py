@@ -308,6 +308,14 @@ class CommandDispatcher:
 
     # ── Preferences ────────────────────────────────────────────────────────────
 
+    def _cmd_set_appearance_mode(self, args, state) -> CommandResult:
+        mode = args.get('mode')
+        if mode not in ('system', 'light', 'dark'):
+            return CommandResult(success=False, error_code=ErrorCode.INVALID_ARGS,
+                                 message='Expected system, light, or dark')
+        self._config.set_appearance_mode(mode)
+        return CommandResult(success=True, data={'appearance_mode': mode})
+
     def _cmd_set_dark_mode(
         self, args: dict, state: ThresholdState | None
     ) -> CommandResult:
@@ -467,10 +475,10 @@ class CommandDispatcher:
                 error_code=ErrorCode.WINDOW_NOT_AVAILABLE,
                 message="Window reference not set",
             )
-        # begin_move_drag takes (button, window_x, window_y, timestamp)
-        # Use -1 for timestamp to let GTK use current time
-        self._window.begin_move_drag(1, -1, -1, -1)
-        return CommandResult(success=True, data={"dragging": True})
+        # Moving a Wayland surface requires a real native input event. The
+        # native GtkHeaderBar owns that gesture; an asynchronous web request
+        # cannot manufacture a valid input serial.
+        return CommandResult(success=True, data={"dragging": False})
 
     def set_window(self, window) -> None:
         """Set the window reference for window commands."""

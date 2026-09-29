@@ -52,7 +52,7 @@ _child = textwrap.dedent("""\
         conn.register_object(
             '/StatusNotifierWatcher',
             node.lookup_interface('org.kde.StatusNotifierWatcher'),
-            watcher_register, lambda *a: None, None,
+            watcher_register, lambda *a: GLib.Variant('b', True), None,
         )
 
     def on_name_lost(_conn):
@@ -114,6 +114,7 @@ _child = textwrap.dedent("""\
                 return v[0]
 
             results["props"] = {
+                "ToolTip": check("ToolTip"),
                 "Id": check("Id"),
                 "Category": check("Category"),
                 "IconName": check("IconName"),
@@ -148,7 +149,7 @@ _child = textwrap.dedent("""\
             conn2.register_object(
                 '/StatusNotifierWatcher',
                 node.lookup_interface('org.kde.StatusNotifierWatcher'),
-                watcher_register, lambda *a: None, None,
+                watcher_register, lambda *a: GLib.Variant('b', True), None,
             )
 
         def on_recovery_name_lost(_conn):
@@ -196,10 +197,13 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def test_notification_area_service_probe(tmp_path):
+@pytest.mark.parametrize("host_registered", [True, False])
+def test_notification_area_service_probe(tmp_path, host_registered):
     srcdir = ROOT / "src"
     script = tmp_path / "probe_child.py"
-    script.write_text(_child % {"srcdir": str(srcdir)})
+    script.write_text(_child.replace(
+        "GLib.Variant('b', True)", f"GLib.Variant('b', {host_registered})",
+    ) % {"srcdir": str(srcdir)})
     env = dict(os.environ, GI_TYPELIB_PATH=os.environ.get("GI_TYPELIB_PATH", ""))
     r = subprocess.run(
         ["dbus-run-session", "--", sys.executable, str(script)],
@@ -232,7 +236,7 @@ def test_notification_area_service_probe(tmp_path):
     assert results["readiness_after_loss"] == "lost"
 
     # ── Watcher recovery re-registers automatically ───────────────────────
-    assert results["readiness_after_recovery"] == "ready"
+    assert results["readiness_after_recovery"] == ("ready" if host_registered else "unavailable")
     assert results["recovery_registered_items"] >= 2
 
     # ── Clean unregister succeeds without error ───────────────────────────

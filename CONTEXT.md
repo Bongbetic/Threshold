@@ -169,22 +169,22 @@ _Avoid_: notification-area item, AppIndicator, XEmbed icon
 **Notification-area readiness**:
 Whether Threshold can safely hide its window behind a usable notification-area
 item. It progresses through unavailable, registering, ready, or lost based on
-live watcher registration evidence; only ready permits close-to-notification-area.
+live watcher registration and host presence; only ready permits close-to-notification-area.
 _Avoid_: tray existence, StatusNotifierItem status, desktop notification status
 
 ### Appearance
 
-**Dark mode**:
-The appearance setting that forces the dark theme when on; when off, the UI
-follows the system's light/dark preference instead.
+**Appearance mode**:
+The user's choice of System, Light, or Dark. System follows desktop appearance;
+Light and Dark preserve an explicit application preference.
 _Avoid_: night mode, force dark
 
 **Theme scheme**:
-Which of the light or dark themes the UI renders right now: dark when Dark
-mode is on, otherwise whatever the system currently prefers.
+The light or dark appearance currently rendered, as resolved from the appearance
+mode and the desktop's preference.
 _Avoid_: color scheme, theme
 
 **Accent color**:
-The highlight hue applied across the UI, chosen from five presets
-(orange, blue, green, purple, red); orange is the default.
+The saved highlight hue chosen from five presets (orange, blue, green, purple,
+red). System appearance may use desktop colors while retaining the saved preset.
 _Avoid_: theme color, highlight color
