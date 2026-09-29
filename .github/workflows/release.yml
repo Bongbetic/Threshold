@@ -696,6 +696,7 @@ jobs:
           chmod 700 "$GNUPGHOME"
           trap 'rm -rf "$GNUPGHOME"' EXIT
           printf '%s' "$RELEASE_SIGNING_KEY" | gpg --batch --import
+          git verify-tag "$TAG"
           if [ -f draft/SHA256SUMS.asc ]; then
             gpg --verify draft/SHA256SUMS.asc draft/SHA256SUMS
           else
