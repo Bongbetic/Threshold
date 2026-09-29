@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-09-29T18:55:14.170482Z",
+  "phase": "before",
+  "candidate": {
+    "version": "2.0.4",
+    "package": "threshold-2.0.4_1",
+    "asset": "threshold-2.0.4_1.x86_64.xbps",
+    "sha256": "62d55b0b7814472fdf2effb3efbe2c85eb1f90278b23777941e187af01af74f6",
+    "source_revision": "3682e414b40918ff7c1a8071ae26830e1dd858c4"
+  },
+  "physical_machine": "MSI Thin A15 B7UCX",
+  "os": "Void Linux",
+  "kernel": "7.2.8_1",
+  "boot_identity_sha256": "be92dbb4b814eb8c91d2a96063416b65e35e3ec6facbc4ed4c7c0c10a702d316",
+  "installed_package": "threshold-2.0.4_1",
+  "installed_package_matches_candidate_version": true,
+  "machine_policy": "70",
+  "session_preference_threshold": "70",
+  "session_preference_matches_policy": true,
+  "active_thresholds": [
+    {
+      "battery": "BAT1",
+      "value": "70"
+    }
+  ],
+  "active_thresholds_match_policy": true,
+  "module_loaded": true,
+  "module_path": "/lib/modules/7.2.8_1/kernel/drivers/platform/x86/msi-ec.ko.zst",
+  "reconciliation_service": {
+    "name": "threshold-boot-reconcile",
+    "enabled": true,
+    "running": true,
+    "bounded_timeout_seconds": 30,
+    "bounded": true
+  },
+  "lifecycle_state": {
+    "setup_state": "available",
+    "kernel": "7.2.8_1",
+    "belongs_to_current_boot": true
+  },
+  "known_good_marker": true,
+  "known_good_marker_updated_this_boot": true,
+  "known_good_marker_timestamp": "2026-09-29T18:09:18Z",
+  "secure_boot_enabled": false,
+  "reconciliation_events": [
+    "2026-09-29T23:17:56+05:30 module=msi-ec-0.13.112 kernel=7.2.8_1 dkms=built trust=signed load=loaded live=yes reconciliation=verified",
+    "2026-09-29T23:20:12+05:30 module=msi-ec-0.13.112 kernel=7.2.8_1 dkms=- trust=- load=loaded live=yes reconciliation=noop",
+    "2026-09-29T23:39:18+05:30 module=msi-ec-0.13.112 kernel=7.2.8_1 dkms=- trust=- load=loaded live=yes reconciliation=noop"
+  ]
+}
