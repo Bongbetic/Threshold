@@ -56,3 +56,23 @@ The existing source-level recovery tests are not physical proof.
 This is partial evidence, not a passing `release-acceptance.json`. Keep the
 release task open and every draft unpublished until required gates pass.
 Logs are sanitized; boot identities are hashed and no screenshots are included.
+
+## First actual reboot observation
+
+The laptop rebooted into kernel `7.2.8_1` with a different boot identity.
+The installed XBPS is still `threshold-2.0.4_1`. The EC module is loaded,
+the service is enabled and running, the lifecycle state belongs to this new
+boot, and the known-good marker exists. The new-boot kernel log records a
+reconciliation at 23:39:18 IST. See [`after-boot.json`](after-boot.json).
+
+At capture time (23:53 IST), machine policy and hardware readback both showed
+70%. The pre-reboot record showed 60%; the policy file modification time was
+23:40:51 IST, after the 23:39:18 reconciliation. The desktop user's GSettings
+preference also read 70%. The user confirmed changing the threshold to 70%
+after reboot. Consequently `policy_preserved=false` compares the post-action
+state against the pre-reboot state; it does not indicate that reconciliation
+changed the preference. The reboot service recorded a no-op while the prior
+60% policy was in effect. There is no pre-action hardware capture on the new
+boot, so initial policy/readback preservation remains an inference from the
+service log rather than a direct measurement. No threshold was changed during
+this capture.
