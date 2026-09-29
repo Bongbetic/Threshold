@@ -1088,3 +1088,35 @@ def test_named_kernel_repair_targets_dkms_without_verifying_running_kernel(fake_
     assert (fake.state / "kernels/repair-target.known-good").exists()
     assert not (fake.state / "pending-reboot").exists()
     assert read_maintenance(fake) == "ok"
+
+
+def test_same_boot_reinstall_reestablishes_removed_ec_assets(fake_system):
+    fake = fake_system
+    make_msi(fake)
+    add_threshold_interface(fake)
+    (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+    assert run_lifecycle(fake, "install-or-upgrade").returncode == 0
+    assert run_lifecycle(fake, "remove").returncode == 0
+    assert not (fake.state / "state").exists()
+    # The package manager unpacks the official source again during upgrade.
+    shutil.copytree(ROOT / "msi-ec-src", fake.env["THRESHOLD_EC_DKMS_SRC"])
+    assert run_lifecycle(fake, "install-or-upgrade").returncode == 0
+    assert read_state(fake)["setup_state"] == "available"
+    # A later same-boot removal must act on the newly installed assets too.
+    assert run_lifecycle(fake, "remove").returncode == 0
+    assert not Path(fake.env["THRESHOLD_EC_DKMS_SRC"]).exists()
+
+
+def test_explicit_repair_retries_after_same_boot_failure(fake_system):
+    fake = fake_system
+    make_msi(fake)
+    add_threshold_interface(fake)
+    (fake.sysroot / "lib/modules/fake-kernel/build").mkdir(parents=True)
+    dkms = Path(fake.env["PATH"].split(":")[0]) / "dkms"
+    stub(dkms, '#!/bin/sh\n[ "$1" != build ]\n')
+    run_lifecycle(fake, "repair")
+    assert read_maintenance(fake) == "failed"
+    stub(dkms, '#!/bin/sh\nexit 0\n')
+    run_lifecycle(fake, "repair")
+    assert read_maintenance(fake) == "ok"
+    assert read_state(fake)["setup_state"] == "available"
