@@ -9,7 +9,7 @@ commit `20bc0d7`. Its SHA-256 is
 `dd23116b5cc562ace672560a68d1be693960cac4f3a0add2dcb347cb60f321c2`.
 The complete build was rejected during review because the disposable container
 lacked `file`, causing upstream lint/strip hooks to emit errors despite producing
-an archive. The builder now installs `base-chroot`, rejects reported hook errors,
+an archive. The builder now installs the native `base-devel`, `file`, and `bsdtar` toolset, rejects reported hook errors,
 and preserves build dependencies until their exact versions have been recorded.
 The qualification package cannot become the final release candidate.
 

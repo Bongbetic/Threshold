@@ -9,7 +9,8 @@ source "$source_root/packaging/void/build-pins.env"
 test ! -e "$out"
 xbps-install -Suy xbps
 xbps-install -Sy bash git python3
-xbps-install -Sy -R https://repo-default.voidlinux.org/current/bootstrap base-chroot
+# Ethereal uses the native container root. base-chroot conflicts with its shells.
+xbps-install -Sy base-devel file bsdtar
 build_root=$(mktemp -d)
 git init -q "$build_root/void-packages"
 git -C "$build_root/void-packages" fetch -q --depth 1 https://github.com/void-linux/void-packages.git "$VOID_PACKAGES_COMMIT"
