@@ -17,6 +17,12 @@ from threshold.battery import ControlMode
 from threshold.ec_state import ECSetupState, ECSetupReason, ECMaintenanceStatus
 
 
+@pytest.fixture(autouse=True)
+def isolated_machine_policy(tmp_path, monkeypatch):
+    """Command tests must never modify the host's boot policy."""
+    monkeypatch.setattr("threshold.commands.EC_THRESHOLD_FILE", str(tmp_path / "policy"))
+
+
 # ── Golden fixtures (mirrored from web/test/fixtures/messages.json) ────────
 
 
@@ -944,9 +950,15 @@ class TestTraySetup:
                 patch.object(handler._dispatcher, "dispatch",
                              return_value=CommandResult(
                                  success=False, error_code="write_failed")) as mock_dispatch, \
-                patch.object(handler, "_push_to_js") as mock_push:
+                patch.object(handler, "_push_to_js") as mock_push, \
+                patch.object(handler, "_show_notification") as notify:
             handler._on_tray_threshold(70)
         mock_dispatch.assert_called_once()
+        # A hidden window must still report a failed notification-area change.
+        notify.assert_called_once_with(
+            'Threshold change failed',
+            'The charge threshold could not be saved.', is_error=True,
+        )
         # State not rebuilt after failure; no push to JS.
         mock_push.assert_not_called()
 

@@ -12,7 +12,7 @@
 %global msi_ec_ver 0.13.112
 
 Name:           threshold
-Version:        2.0.2
+Version:        2.0.3
 Release:        1
 Summary:        Battery charge threshold controller for Linux laptops
 License:        GPL-3.0-or-later
