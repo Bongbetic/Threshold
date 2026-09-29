@@ -59,6 +59,8 @@ export interface BatteryState {
 /** Theme appearance pushed by Python. */
 export interface AppearanceState {
   scheme: 'light' | 'dark';
+  mode?: 'system' | 'light' | 'dark';
+  palette?: Record<string, string>;
   accent_color: string;
 }
 

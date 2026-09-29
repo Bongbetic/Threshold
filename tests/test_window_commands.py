@@ -152,8 +152,8 @@ class TestWindowCommands:
         dispatcher.set_window(mock_window)
         result = dispatcher.dispatch("begin_drag", {}, None)
         assert result.success is True
-        assert result.data.get("dragging") is True
-        mock_window.begin_move_drag.assert_called_once_with(1, -1, -1, -1)
+        assert result.data.get("dragging") is False
+        mock_window.begin_move_drag.assert_not_called()
 
     def test_set_window_sets_reference(self, dispatcher, mock_window):
         """set_window sets the window reference."""

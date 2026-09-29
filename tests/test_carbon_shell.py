@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from threshold.carbon_shell import BridgeHandler
 
 # Ensure src is importable
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -42,6 +43,7 @@ def fixtures():
 @pytest.fixture
 def mock_config():
     config = MagicMock()
+    config.get_appearance_mode.return_value = "light"
     config.get_dark_mode.return_value = False
     config.get_accent_color.return_value = "orange"
     config.get_compact_mode.return_value = False
@@ -85,11 +87,11 @@ class TestBridgeHandlerSerialization:
     """Test that state serialization produces valid bridge payloads."""
 
     def test_serialize_state_battery_fields(self, ec_msi_state):
-        from threshold.carbon_shell import BridgeHandler
         config = MagicMock()
         web_view = MagicMock()
-        handler = BridgeHandler.__new__(BridgeHandler)
+        handler = _bare_handler()
         handler._config = config
+        config.get_appearance_mode.return_value = "light"
         handler._web_view = web_view
         handler._dispatcher = CommandDispatcher(config)
         handler._state = ec_msi_state
@@ -121,24 +123,22 @@ class TestBridgeHandlerSerialization:
         assert serialized["ec_recovery_actions"] == []
 
     def test_serialize_appearance(self, ec_msi_state):
-        from threshold.carbon_shell import BridgeHandler
-        handler = BridgeHandler.__new__(BridgeHandler)
+        handler = _bare_handler()
         appearance = handler._serialize_appearance(ec_msi_state)
         assert appearance["scheme"] == "light"
         assert appearance["accent_color"] == "orange"
 
     def test_serialize_appearance_dark(self):
-        from threshold.carbon_shell import BridgeHandler
         state = ThresholdState(battery_available=False, dark_mode=True, accent_color="blue")
-        handler = BridgeHandler.__new__(BridgeHandler)
+        handler = _bare_handler()
+        handler._config.get_appearance_mode.return_value = "dark"
         appearance = handler._serialize_appearance(state)
         assert appearance["scheme"] == "dark"
         assert appearance["accent_color"] == "blue"
 
     def test_serialize_state_no_battery(self):
-        from threshold.carbon_shell import BridgeHandler
         state = ThresholdState(battery_available=False)
-        handler = BridgeHandler.__new__(BridgeHandler)
+        handler = _bare_handler()
         serialized = handler._serialize_state(state)
         assert serialized["battery_available"] is False
         assert serialized["charge_percent"] is None
@@ -163,7 +163,6 @@ class TestBridgeHandlerSerialization:
 class TestBridgeHandlerReadyCommand:
 
     def test_ready_returns_full_state(self, mock_config, ec_msi_state, fixtures):
-        from threshold.carbon_shell import BridgeHandler
         web_view = MagicMock()
         with patch.object(BridgeHandler, '_build_state', return_value=ec_msi_state):
             handler = BridgeHandler(mock_config, web_view)
@@ -195,7 +194,6 @@ class TestBridgeHandlerReadyCommand:
 class TestBridgeHandlerGetState:
 
     def test_get_state_returns_snapshot(self, mock_config, ec_msi_state, fixtures):
-        from threshold.carbon_shell import BridgeHandler
         web_view = MagicMock()
         with patch.object(BridgeHandler, '_build_state', return_value=ec_msi_state):
             handler = BridgeHandler(mock_config, web_view)
@@ -221,7 +219,6 @@ class TestBridgeHandlerGetState:
 class TestBridgeHandlerUnknownCommand:
 
     def test_unknown_command_error(self, mock_config, ec_msi_state, fixtures):
-        from threshold.carbon_shell import BridgeHandler
         web_view = MagicMock()
         with patch.object(BridgeHandler, '_build_state', return_value=ec_msi_state):
             handler = BridgeHandler(mock_config, web_view)
@@ -248,7 +245,6 @@ class TestBridgeHandlerUnknownCommand:
 class TestBridgeHandlerMalformedPayload:
 
     def test_malformed_json_returns_error(self, mock_config, ec_msi_state):
-        from threshold.carbon_shell import BridgeHandler
         web_view = MagicMock()
         with patch.object(BridgeHandler, '_build_state', return_value=ec_msi_state):
             handler = BridgeHandler(mock_config, web_view)
@@ -272,7 +268,6 @@ class TestBridgeHandlerMalformedPayload:
 class TestBridgeHandlerThresholdCommand:
 
     def test_apply_threshold_success(self, mock_config, ec_msi_state, fixtures):
-        from threshold.carbon_shell import BridgeHandler
         web_view = MagicMock()
         with patch.object(BridgeHandler, '_build_state', return_value=ec_msi_state), \
                 patch("threshold.commands.write_threshold", return_value=(True, "direct")), \
@@ -358,11 +353,11 @@ class TestBatteryIconName:
 
 def _make_handler(state, config=None):
     """Create a BridgeHandler with mocked web_view for event testing."""
-    from threshold.carbon_shell import BridgeHandler
     from threshold.commands import CommandDispatcher
     cfg = config or MagicMock()
-    handler = BridgeHandler.__new__(BridgeHandler)
+    handler = _bare_handler()
     handler._config = cfg
+    cfg.get_appearance_mode.return_value = state.effective_theme_scheme
     handler._web_view = MagicMock()
     handler._dispatcher = CommandDispatcher(cfg)
     handler._state = state
@@ -661,6 +656,7 @@ class TestAppearanceSerialization:
             accent_color="red",
         )
         handler = _make_handler(state)
+        handler._config.get_appearance_mode.return_value = "dark"
         appearance = handler._serialize_appearance(state)
         assert appearance["scheme"] == "dark"
         assert appearance["accent_color"] == "red"
@@ -673,11 +669,11 @@ class TestGSettingsListeners:
     """Test GSettings change listeners push events to JS."""
 
     def test_start_gsettings_listeners_connects_handlers(self):
-        from threshold.carbon_shell import BridgeHandler
         config = MagicMock()
         web_view = MagicMock()
-        handler = BridgeHandler.__new__(BridgeHandler)
+        handler = _bare_handler()
         handler._config = config
+        config.get_appearance_mode.return_value = "light"
         handler._web_view = web_view
         handler._dispatcher = CommandDispatcher(config)
         handler._state = ThresholdState(battery_available=False)
@@ -688,13 +684,12 @@ class TestGSettingsListeners:
 
         handler.start_gsettings_listeners()
 
-        # Should have connected to 7 keys (4 appearance + 3 preference)
-        assert len(handler._gsettings_handler_ids) == 7
-        assert config.connect.call_count == 7
+        # Should have connected to 8 keys (5 appearance + 3 preference)
+        assert len(handler._gsettings_handler_ids) == 8
+        assert config.connect.call_count == 8
 
     def test_stop_gsettings_listeners_clears_handlers(self):
-        from threshold.carbon_shell import BridgeHandler
-        handler = BridgeHandler.__new__(BridgeHandler)
+        handler = _bare_handler()
         handler._gsettings_handler_ids = [1, 2, 3, 4]
 
         handler.stop_gsettings_listeners()
@@ -702,11 +697,11 @@ class TestGSettingsListeners:
         assert handler._gsettings_handler_ids == []
 
     def test_on_appearance_changed_pushes_events(self):
-        from threshold.carbon_shell import BridgeHandler
         config = MagicMock()
         web_view = MagicMock()
-        handler = BridgeHandler.__new__(BridgeHandler)
+        handler = _bare_handler()
         handler._config = config
+        config.get_appearance_mode.return_value = "light"
         handler._web_view = web_view
         handler._dispatcher = CommandDispatcher(config)
         handler._state = ThresholdState(battery_available=False)
@@ -730,11 +725,11 @@ class TestGSettingsListeners:
         assert web_view.evaluate_javascript.call_count >= 2
 
     def test_on_appearance_changed_pushes_title_update(self):
-        from threshold.carbon_shell import BridgeHandler
         config = MagicMock()
         web_view = MagicMock()
-        handler = BridgeHandler.__new__(BridgeHandler)
+        handler = _bare_handler()
         handler._config = config
+        config.get_appearance_mode.return_value = "light"
         handler._web_view = web_view
         handler._dispatcher = CommandDispatcher(config)
         handler._state = ThresholdState(battery_available=False)
@@ -878,7 +873,8 @@ class TestTraySetup:
         handler = _make_handler(state)
         handler._tray = MagicMock()
         with patch("threshold.carbon_shell._battery_icon_name",
-                   return_value="battery-good-charging"):
+                   return_value="battery-good-charging"), patch(
+                       "gi.repository.Gdk.Display.get_default", return_value=None):
             handler._update_tray()
         handler._tray.set_state.assert_called_once_with(
             75, "Charging", "battery-good-charging", 80
@@ -1085,7 +1081,7 @@ class TestPreferenceSync:
         handler._gsettings_handler_ids = []
         handler.start_gsettings_listeners()
         # 4 appearance + 3 preference = 7
-        assert len(handler._gsettings_handler_ids) == 7
+        assert len(handler._gsettings_handler_ids) == 8
 
 
 # ── State serialization preference fields ──────────────────────────────────
@@ -1625,3 +1621,14 @@ class TestEcStatePushEvents:
         assert data["ec_setup_state"] is None
         assert data["ec_maintenance_status"] == "ok"
         assert data["ec_recovery_actions"] == []
+
+
+def _bare_handler():
+    from threshold.appearance import DesktopAppearance
+    handler = BridgeHandler.__new__(BridgeHandler)
+    handler._config = MagicMock()
+    handler._config.get_appearance_mode.return_value = 'light'
+    handler._appearance = DesktopAppearance(Path('/nonexistent/threshold-palette'))
+    handler._appearance_source_id = None
+    handler._last_appearance = None
+    return handler

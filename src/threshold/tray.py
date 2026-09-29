@@ -37,6 +37,9 @@ SNI_INTROSPECT = """\
       <arg name="x" type="i" direction="in"/>
       <arg name="y" type="i" direction="in"/>
     </method>
+    <method name="ProvideXdgActivationToken">
+      <arg name="token" type="s" direction="in"/>
+    </method>
     <method name="Scroll">
       <arg name="delta" type="i" direction="in"/>
       <arg name="orientation" type="s" direction="in"/>
@@ -50,11 +53,11 @@ SNI_INTROSPECT = """\
     <property name="IconPixmap" type="a(iiay)" access="read"/>
     <property name="Menu" type="o" access="read"/>
     <property name="ItemIsMenu" type="b" access="read"/>
-    <property name="ToolTip" type="(sa(iiay)sbs)" access="read"/>
+    <property name="ToolTip" type="(sa(iiay)ss)" access="read"/>
     <signal name="NewTitle"/>
     <signal name="NewIcon"/>
     <signal name="NewToolTip"/>
-    <signal name="NewStatus"/>
+    <signal name="NewStatus"><arg name="status" type="s"/></signal>
   </interface>
 </node>"""
 
@@ -68,10 +71,18 @@ ITEM_ID = 'com.bongbetic.threshold'
 class TrayIcon:
     """System tray icon with dbusmenu threshold presets."""
 
-    def __init__(self, on_activate=None, on_threshold=None, on_quit=None):
+    def __init__(self, on_activate=None, on_threshold=None, on_quit=None,
+                 on_readiness_lost=None, on_activation_token=None):
         if not HAS_DBUSMENU:
             raise RuntimeError('Dbusmenu 0.4 typelib not available')
 
+        self._on_readiness_lost = on_readiness_lost
+        self._on_activation_token = on_activation_token
+        self._host_registered = False
+        self._host_revision = 0
+        self._owner = None
+        self._closed = False
+        self._host_subscriptions = []
         self._on_activate = on_activate
         self._on_threshold = on_threshold
         self._on_quit = on_quit
@@ -82,7 +93,7 @@ class TrayIcon:
         self._tooltip = ('battery-good', '', 'Threshold', '')
         self._status = 'Active'
         self._pixmap = self._render_pixmap(None)
-        self._readiness = NotificationAreaReadiness()
+        self._readiness = NotificationAreaReadiness(now_ms=time.monotonic() * 1000)
         self._clock_source_id = 0
         # Drive the readiness timeout from the GLib clock.
         self._clock_source_id = GLib.timeout_add_seconds(
@@ -107,6 +118,16 @@ class TrayIcon:
             self._on_sni_get_property,
             None,
         )
+
+        for interface, signal in (
+            (WATCHER_NAME, 'StatusNotifierHostRegistered'),
+            (WATCHER_NAME, 'StatusNotifierHostUnregistered'),
+            ('org.freedesktop.DBus.Properties', 'PropertiesChanged'),
+        ):
+            self._host_subscriptions.append(self._conn.signal_subscribe(
+                WATCHER_NAME, interface, signal, WATCHER_PATH, None,
+                Gio.DBusSignalFlags.NONE, self._on_host_signal, None,
+            ))
 
         # Watch for watcher and register; loss revokes readiness immediately.
         self._watcher_id = Gio.bus_watch_name(
@@ -179,6 +200,8 @@ class TrayIcon:
     # ── SNI D-Bus interface ──────────────────────────────────────────────
 
     def _on_sni_method_call(self, _conn, _sender, _path, _iface, method, params, invocation):
+        if method == 'ProvideXdgActivationToken' and self._on_activation_token:
+            self._on_activation_token(params[0])
         if method == 'Activate' or method == 'SecondaryActivate':
             if self._on_activate:
                 self._on_activate()
@@ -205,12 +228,11 @@ class TrayIcon:
             return GLib.Variant('b', False)
         if name == 'ToolTip':
             icon, _path2, title, body = self._tooltip
-            return GLib.Variant('(sa(iiay)sbs)', (
+            return GLib.Variant('(sa(iiay)ss)', (
                 icon,
                 [],
                 title,
                 body,
-                '',
             ))
         return None
 
@@ -219,13 +241,51 @@ class TrayIcon:
     @property
     def readiness(self) -> ReadinessState:
         """Current notification-area readiness (evidence-based)."""
+        if self._readiness.state is ReadinessState.READY and not self._host_registered:
+            return ReadinessState.UNAVAILABLE
         return self._readiness.state
+
+    def _set_host(self, registered):
+        was_ready = self.readiness is ReadinessState.READY
+        self._host_registered = registered
+        if was_ready and not registered and self._on_readiness_lost:
+            self._on_readiness_lost()
+
+    def _on_host_signal(self, _conn, sender, _path, _interface, signal, _params, _data):
+        if sender != self._owner or self._closed:
+            return
+        self._host_revision += 1
+        if signal == 'StatusNotifierHostUnregistered':
+            self._set_host(False)
+        self._query_host()
+
+    def _query_host(self):
+        if not self._owner or self._closed:
+            return
+        self._host_revision += 1
+        revision, owner = self._host_revision, self._owner
+
+        def done(conn, result, _data):
+            try:
+                value = conn.call_finish(result).unpack()[0]
+            except GLib.Error:
+                value = False
+            if not self._closed and revision == self._host_revision and owner == self._owner:
+                self._set_host(value is True)
+
+        self._conn.call(owner, WATCHER_PATH, 'org.freedesktop.DBus.Properties', 'Get',
+                        GLib.Variant('(ss)', (WATCHER_NAME, 'IsStatusNotifierHostRegistered')),
+                        GLib.VariantType('(v)'), Gio.DBusCallFlags.NONE, 2000, None, done, None)
 
     def _on_clock_tick(self):
         self._readiness.advance_clock(time.monotonic() * 1000)
         return True  # keep ticking
 
     def _on_watcher_appeared(self, _conn, _name, _name_owner):
+        if self._closed:
+            return
+        self._owner = _name_owner
+        self._readiness.advance_clock(time.monotonic() * 1000)
         if not self._readiness.watcher_appeared():
             return  # duplicate event; an attempt is already in flight
         generation = self._readiness.generation
@@ -236,7 +296,8 @@ class TrayIcon:
         def _on_register_reply(_source_object, res, _user_data):
             try:
                 _conn.call_finish(res)
-                self._readiness.registration_confirmed(generation)
+                if not self._closed and self._readiness.registration_confirmed(generation):
+                    self._query_host()
             except GLib.Error as e:
                 log.warning('Failed to register with StatusNotifierWatcher: %s', e)
                 self._readiness.registration_failed(generation)
@@ -256,6 +317,9 @@ class TrayIcon:
         )
 
     def _on_watcher_vanished(self, _conn, _name):
+        self._host_revision += 1
+        self._owner = None
+        self._set_host(False)
         if self._readiness.watcher_lost():
             log.info('StatusNotifierWatcher lost; notification-area readiness revoked')
 
@@ -266,7 +330,7 @@ class TrayIcon:
                 SNI_OBJECT_PATH,
                 'org.kde.StatusNotifierItem',
                 signal_name,
-                None,
+                GLib.Variant('(s)', (self._status,)) if signal_name == 'NewStatus' else None,
             )
 
     # ── Public API ───────────────────────────────────────────────────────
@@ -297,8 +361,8 @@ class TrayIcon:
                 )
                 filled = 2 + fill > x >= 2 and 3 <= y <= size - 4 and fill > 0
                 if filled:
-                    b, g, r = color
-                    row[x * 4:x * 4 + 4] = bytes((b, g, r, alpha))
+                    r, g, b = color
+                    row[x * 4:x * 4 + 4] = bytes((alpha, r, g, b))
                 elif border:
                     row[x * 4:x * 4 + 4] = bytes((alpha, alpha, alpha, alpha))
             rows.append(bytes(row))
@@ -328,6 +392,11 @@ class TrayIcon:
 
     def unregister(self):
         """Clean up all D-Bus registrations."""
+        self._closed = True
+        self._host_revision += 1
+        for subscription in self._host_subscriptions:
+            self._conn.signal_unsubscribe(subscription)
+        self._host_subscriptions.clear()
         if self._clock_source_id:
             GLib.source_remove(self._clock_source_id)
             self._clock_source_id = 0
