@@ -1,6 +1,10 @@
 """Contracts for the supported x86_64-glibc Void package."""
 
 from pathlib import Path
+import os
+import subprocess
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 VOID = ROOT / "packaging" / "void"
@@ -42,3 +46,17 @@ def test_void_package_is_a_verified_release_candidate():
     assert "candidate-xbps" in workflow
     assert "xbps-verify" in workflow
     assert "x86_64-repodata" in workflow
+
+
+@pytest.mark.parametrize("action,update,removed", [
+    ("pre", "yes", False), ("pre", "no", True), ("post", "no", False),
+])
+def test_void_remove_hook_distinguishes_upgrade_from_removal(action, update, removed):
+    script = (VOID / "REMOVE").read_text().replace(
+        "/usr/bin/threshold-ec-lifecycle remove", "printf 'removed\\n'"
+    )
+    result = subprocess.run(
+        ["sh", "-c", script], env=dict(os.environ, ACTION=action, UPDATE=update),
+        capture_output=True, text=True, check=True,
+    )
+    assert (result.stdout == "removed\n") is removed

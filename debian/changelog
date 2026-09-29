@@ -1,3 +1,11 @@
+threshold (2.0.4-1) trixie; urgency=high
+
+  * Give package transactions and explicit repairs fresh lifecycle attempts.
+  * Preserve managed EC builds during Void upgrades.
+  * Include zstd for kernel module compression on Void.
+
+ -- Soubarna <Soubarna@live.in>  Tue, 29 Sep 2026 23:32:00 +0530
+
 threshold (2.0.3-1) trixie; urgency=high
 
   * Pass the explicit repair kernel to DKMS; verify only after booting it.
