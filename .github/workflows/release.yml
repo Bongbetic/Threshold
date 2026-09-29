@@ -637,6 +637,9 @@ jobs:
   # ── Physical gate: MSI Thin A15 B7UCX evidence validation ──────────────────────
 
   physical-gate-check:
+    permissions:
+      contents: read
+      actions: read
     if: github.event.inputs.promote_draft == 'true' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     env:
