@@ -28,3 +28,19 @@ older untracked XBPS was not used or replaced. Final CI construction and
 qualification must pass from the selected release revision before immutable
 draft assets are assembled. Physical evidence must then reference those final
 assets; none of the observations here substitutes for it.
+
+## Corrected CI qualification
+
+[CI run 36598068587](https://github.com/Bongbetic/Threshold/actions/runs/36598068587)
+passed every job on source commit `e1b2734`, including the corrected Void build,
+installed-package verification, both Ubuntu test/package targets, Debian 13,
+both Fedora RPM builds, dnf/zypper installation checks, web tests, and bundle
+freshness. [The CI package report](ci-qualification.json) binds its container
+checks to XBPS SHA-256
+`494a7ac3d9e3c3e63d3e2e3650709fc95004280080832248eaebaff05338fdae`.
+The downloaded artifact's package, repository metadata, build provenance and
+dependency inventory all passed their recorded checksums locally.
+
+This successful CI package supersedes the failed local construction for package
+qualification. It remains a qualification package, not the final tagged release
+candidate. Physical acceptance and signed-tag construction remain outstanding.
