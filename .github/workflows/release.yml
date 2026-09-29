@@ -309,10 +309,10 @@ jobs:
     runs-on: ubuntu-24.04
     container: ghcr.io/void-linux/void-glibc-full@sha256:abfccb6abc1462d9e1fcf19d1e76b40d770d10a251be4340d1a46edfb5b35041
     steps:
-      - uses: actions/checkout@v4
       - name: Install Void runner prerequisites
         shell: sh
         run: xbps-install -Suy xbps && xbps-install -Sy bash git python3
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: candidate-source
@@ -331,10 +331,10 @@ jobs:
     runs-on: ubuntu-24.04
     container: ghcr.io/void-linux/void-glibc-full@sha256:abfccb6abc1462d9e1fcf19d1e76b40d770d10a251be4340d1a46edfb5b35041
     steps:
-      - uses: actions/checkout@v4
       - name: Install Void runner prerequisites
         shell: sh
         run: xbps-install -Suy xbps && xbps-install -Sy bash git python3
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: candidate-xbps
