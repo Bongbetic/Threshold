@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-09-29T17:47:17.111001+00:00",
+  "phase": "after-upgrade",
+  "candidate": "threshold-2.0.4_1.x86_64.xbps",
+  "candidate_sha256": "62d55b0b7814472fdf2effb3efbe2c85eb1f90278b23777941e187af01af74f6",
+  "source_revision": "3682e414b40918ff7c1a8071ae26830e1dd858c4",
+  "boot_identity_sha256": "c2f907b62c136083f0f5ffa0f00ef66031302a010d6e7b60650c2bd721f666d4",
+  "package": {
+    "status": 0,
+    "stdout": "threshold-2.0.4_1",
+    "stderr": ""
+  },
+  "msi_ec_registrations": [
+    "msi-ec/0.13.112, 7.2.8_1, x86_64: installed (Original modules exist)"
+  ],
+  "other_dkms_registrations": [
+    "nvidia/595.99.02, 6.18.54_1, x86_64: installed",
+    "nvidia/595.99.02, 7.2.8_1, x86_64: installed"
+  ],
+  "module_loaded": true,
+  "policy": "60",
+  "active": [
+    {
+      "battery": "BAT1",
+      "threshold": "60"
+    }
+  ],
+  "lifecycle_status": "setup_state=available\nlive=yes\nmaintenance=ok"
+}
