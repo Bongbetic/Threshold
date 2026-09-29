@@ -81,7 +81,8 @@ def test_release_manifest_binds_sha256_for_every_candidate():
     # Manifest generation uses sha256sum
     assert "sha256sum" in text
     # Manifest JSON structure includes sha256 per candidate
-    assert '"sha256"' in text or "'sha256'" in text
+    assert "release_inventory.py" in text
+    assert "sha256" in (ROOT / "scripts/release_inventory.py").read_text()
 
 
 # ── Checksum inventory: covers candidates + manifest ───────────────────

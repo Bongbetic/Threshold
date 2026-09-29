@@ -2,8 +2,8 @@ name: Release
 
 # Issue #86 release contract:
 # - A signed version tag triggers a concurrency-locked workflow.
-# - The five built candidates (DEB, Unified RPM, AppImage, source archive,
-#   SRPM) are produced exactly once from the tagged source and carried
+# - The built candidates (DEB, Unified RPM, optional AppImage, source archive,
+#   SRPM, XBPS, repository metadata and provenance) are produced exactly once from the tagged source and carried
 #   unchanged through verification, draft assembly, and publication. No
 #   downstream job rebuilds, repacks, or renames them.
 # - A release manifest binds each candidate to its SHA-256, source revision,
@@ -19,6 +19,9 @@ on:
     tags: ['v*']
   workflow_dispatch:
     inputs:
+      evidence_ref:
+        description: 'Full commit ID containing evidence/release-acceptance.json (promotion only)'
+        required: false
       promote_draft:
         description: 'Promote the existing draft release (requires tag)'
         required: false
@@ -56,6 +59,24 @@ jobs:
           SPEC_VERSION=$(sed -n 's/^Version:\s*\([0-9.]*\)/\1/p' packaging/threshold.spec | head -1)
           echo "Tag: $TAG_VERSION  Spec: $SPEC_VERSION"
           test "$TAG_VERSION" = "$SPEC_VERSION"
+
+      - name: Validate Void and Debian versions
+        run: |
+          V=${GITHUB_REF_NAME#v}
+          test "$(sed -n 's/^version=//p' packaging/void/template)" = "$V"
+          head -1 debian/changelog | grep -F "threshold ($V-1)"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Verify committed offline web bundle
+        run: |
+          cd web
+          npm ci
+          npm run build
+          test -z "$(git status --porcelain dist/)"
 
       - name: Validate EC manifest checksum matches vendored source
         # Must match the exact algorithm used by
@@ -99,14 +120,7 @@ jobs:
       - name: Build canonical source archive
         run: |
           V=${GITHUB_REF_NAME#v}
-          # Write outside the tree being archived: tar reading "." while
-          # writing its own output file into "." races itself ("file
-          # changed as we read it") once the growing archive is large
-          # enough for tar to notice it mid-read.
-          tar --exclude=.git --exclude=release-candidates --exclude=rpmbuild \
-              --transform "s,^\.,Threshold-$V," \
-              -czf "/tmp/Threshold-$V.tar.gz" .
-          mv "/tmp/Threshold-$V.tar.gz" "Threshold-$V.tar.gz"
+          git archive --format=tar --prefix="Threshold-$V/" HEAD | gzip -n > "Threshold-$V.tar.gz"
           echo "Built: Threshold-$V.tar.gz"
           ls -l "Threshold-$V.tar.gz"
 
@@ -143,9 +157,12 @@ jobs:
 
       - name: Build .deb candidate from canonical source
         run: |
-          dpkg-buildpackage -us -uc -b
+          V=${GITHUB_REF_NAME#v}
+          mkdir /tmp/canonical-deb
+          tar -xzf source-archive/Threshold-*.tar.gz -C /tmp/canonical-deb
+          (cd "/tmp/canonical-deb/Threshold-$V" && dpkg-buildpackage -us -uc -b)
           mkdir -p ${{ env.CANDIDATES_DIR }}
-          cp ../threshold_*_amd64.deb ${{ env.CANDIDATES_DIR }}/
+          cp /tmp/canonical-deb/threshold_*_amd64.deb ${{ env.CANDIDATES_DIR }}/
 
       - name: Lintian
         run: lintian ${{ env.CANDIDATES_DIR }}/*.deb
@@ -257,8 +274,10 @@ jobs:
             exit 1
           fi
           mkdir -p ${{ env.CANDIDATES_DIR }}
-          cp /tmp/threshold-1.AppImage ${{ env.CANDIDATES_DIR }}/
-          echo "$A" > ${{ env.CANDIDATES_DIR }}/appimage.sha256
+          V=${GITHUB_REF_NAME#v}
+          cp /tmp/threshold-1.AppImage "${{ env.CANDIDATES_DIR }}/Threshold-$V-x86_64.AppImage"
+          (cd ${{ env.CANDIDATES_DIR }} && sha256sum *.AppImage) > /tmp/appimage.sha256
+          mv /tmp/appimage.sha256 ${{ env.CANDIDATES_DIR }}/appimage.sha256
 
       - name: Upload AppImage candidate
         uses: actions/upload-artifact@v4
@@ -269,6 +288,45 @@ jobs:
             ${{ env.CANDIDATES_DIR }}/appimage.sha256
           retention-days: 7
           if-no-files-found: error
+
+  xbps:
+    if: github.event.inputs.promote_draft != 'true'
+    needs: [preflight, source]
+    runs-on: ubuntu-24.04
+    container: ghcr.io/void-linux/void-glibc-full@sha256:abfccb6abc1462d9e1fcf19d1e76b40d770d10a251be4340d1a46edfb5b35041
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: candidate-source
+          path: source-archive
+      - name: Build exact-source XBPS and local repository
+        run: bash scripts/build-void-candidate.sh "$PWD" "$PWD/source-archive/Threshold-${GITHUB_REF_NAME#v}.tar.gz" "$PWD/xbps-candidate"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: candidate-xbps
+          path: xbps-candidate/*
+          if-no-files-found: error
+          retention-days: 30
+
+  xbps-verify:
+    needs: xbps
+    runs-on: ubuntu-24.04
+    container: ghcr.io/void-linux/void-glibc-full@sha256:abfccb6abc1462d9e1fcf19d1e76b40d770d10a251be4340d1a46edfb5b35041
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: candidate-xbps
+          path: candidates
+      - name: Install, reinstall, and remove the unchanged XBPS
+        run: bash scripts/verify-void-candidate.sh "$PWD/candidates" "$PWD/void-verification.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verification-xbps
+          path: void-verification.json
+          if-no-files-found: error
+          retention-days: 30
 
   # ── Candidate verification (against the immutable artifacts) ──────────────────────────────
 
@@ -471,7 +529,7 @@ jobs:
 
   assemble-draft:
     if: github.event.inputs.promote_draft != 'true'
-    needs: [deb, rpm, appimage, source, deb-verify, rpm-verify, appimage-verify]
+    needs: [deb, rpm, appimage, source, deb-verify, rpm-verify, appimage-verify, xbps, xbps-verify]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -485,14 +543,14 @@ jobs:
         run: |
           mkdir -p ${{ env.CANDIDATES_DIR }}
           find dist -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \
-            -o -name '*.tar.gz' -o -name '*.src.rpm' \) -exec cp {} ${{ env.CANDIDATES_DIR }}/ \;
+            -o -name '*.tar.gz' -o -name '*.src.rpm' -o -name '*.xbps' \
+            -o -name 'x86_64-repodata' -o -name 'void-build.json' -o -name 'void-dependencies.txt' \) -exec cp {} ${{ env.CANDIDATES_DIR }}/ \;
           ls -l ${{ env.CANDIDATES_DIR }}
           COUNT=$(ls ${{ env.CANDIDATES_DIR }} | wc -l)
           echo "Candidate count: $COUNT"
-          # Normally 5 (DEB, Unified RPM, SRPM, source archive, AppImage).
-          # Temporarily 4: see the continue-on-error note on the appimage
-          # job. Restore to 5 once EC bundle trust-key packaging lands.
-          test "$COUNT" -ge 4
+          # Eight required files; optional AppImage makes nine.
+          # Exact names and cardinality are enforced by the inventory validator.
+          test "$COUNT" -ge 8
 
       - name: Verify candidate hashes against recorded build checksums
         run: |
@@ -521,63 +579,15 @@ jobs:
           # RPM must use threshold-<version> or threshold-<version>-*
           ls threshold-$V*.noarch.rpm
 
-      - name: Generate release manifest
+      - name: Generate release manifest and checksum inventory
+        # source_revision, build_identity and sha256 are validated by the inventory tool.
+        # No supported-distribution, desktop or physical success is inferred from package CI.
         run: |
-          V=${GITHUB_REF_NAME#v}
-          RUNNER_OS=${{ runner.os }}
-          RUNNER_ARCH=${{ runner.arch }}
-          {
-            echo '{'
-            echo '  "version": "'$V'",' 
-            echo '  "source_revision": "'$GITHUB_SHA'",'
-            echo '  "workflow": "'"${GITHUB_WORKFLOW_REF}"'",'
-            echo '  "build_identity": {'
-            echo '    "runner": "'$RUNNER_OS'-'$RUNNER_ARCH'",'
-            echo '    "workflow_run": "'$GITHUB_RUN_ID'",'
-            echo '    "workflow_attempt": "'$GITHUB_RUN_ATTEMPT'",'
-            echo '    "repository": "'$GITHUB_REPOSITORY'",'
-            echo '    "event_name": "'$GITHUB_EVENT_NAME'"'
-            echo '  },'
-            echo '  "provenance": {'
-            echo '    "commit": "'$GITHUB_SHA'",'
-            echo '    "tag": "'$GITHUB_REF_NAME'",'
-            echo '    "actor": "'$GITHUB_ACTOR'"'
-            echo '  },'
-            echo '  "supported_distributions": ['
-            echo '    {"name": "Ubuntu", "version": "24.04", "method": "dpkg"},'
-            echo '    {"name": "Debian", "version": "13", "method": "dpkg"},'
-            echo '    {"name": "Fedora", "version": "43", "method": "dnf"},'
-            echo '    {"name": "Fedora", "version": "44", "method": "dnf"},'
-            echo '    {"name": "openSUSE", "version": "Tumbleweed", "method": "zypper"}'
-            echo '  ],'
-            echo '  "desktop_evidence": {'
-            echo '    "kde_plasma_wayland": true,'
-            echo '    "xfce": true'
-            echo '  },'
-            echo '  "physical_evidence": {'
-            echo '    "system": "MSI Thin A15 B7UCX",'
-            echo '    "gates": ["live_ec", "reboot_reconciliation", "secure_boot", "kernel_recovery", "kde", "xfce"]'
-            echo '  },'
-            echo '  "candidates": {'
-            first=1
-            (cd ${{ env.CANDIDATES_DIR }} && sha256sum *) | while IFS= read -r line; do
-              h=${line%% *}; f=${line#* }
-              [ $first -eq 0 ] && echo ','
-              printf '    "%s": {"sha256": "%s", "source_revision": "%s"}' "$f" "$h" "$GITHUB_SHA"
-              first=0
-            done
-            echo ''
-            echo '  }'
-            echo '}'
-          } > ${{ env.CANDIDATES_DIR }}/release-manifest.json
-          python3 -m json.tool ${{ env.CANDIDATES_DIR }}/release-manifest.json
-
-      - name: Generate checksum inventory (candidates + manifest)
-        run: |
-          cd ${{ env.CANDIDATES_DIR }}
-          sha256sum * > /tmp/SHA256SUMS
-          mv /tmp/SHA256SUMS SHA256SUMS
-          cat SHA256SUMS
+          python3 scripts/release_inventory.py manifest "$CANDIDATES_DIR" \
+            --version "${GITHUB_REF_NAME#v}" --revision "$(git rev-parse HEAD)" \
+            --identity "$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT"
+          python3 scripts/release_inventory.py verify "$CANDIDATES_DIR" \
+            --version "${GITHUB_REF_NAME#v}" --revision "$(git rev-parse HEAD)"
 
       - name: Assemble protected draft
         uses: softprops/action-gh-release@v2
@@ -588,6 +598,10 @@ jobs:
             ${{ env.CANDIDATES_DIR }}/*.src.rpm
             ${{ env.CANDIDATES_DIR }}/*.AppImage
             ${{ env.CANDIDATES_DIR }}/*.tar.gz
+            ${{ env.CANDIDATES_DIR }}/*.xbps
+            ${{ env.CANDIDATES_DIR }}/x86_64-repodata
+            ${{ env.CANDIDATES_DIR }}/void-build.json
+            ${{ env.CANDIDATES_DIR }}/void-dependencies.txt
             ${{ env.CANDIDATES_DIR }}/release-manifest.json
             ${{ env.CANDIDATES_DIR }}/SHA256SUMS
           generate_release_notes: true
@@ -599,107 +613,26 @@ jobs:
   physical-gate-check:
     if: github.event.inputs.promote_draft == 'true' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Validate physical gate evidence exists
+      - name: Require an immutable evidence revision
+        env:
+          EVIDENCE_REF: ${{ inputs.evidence_ref }}
+        run: test "${#EVIDENCE_REF}" -eq 40 && [[ "$EVIDENCE_REF" =~ ^[0-9a-f]+$ ]]
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.evidence_ref }}
+          path: acceptance
+          persist-credentials: false
+      - name: Validate actual draft assets and fresh physical evidence
         run: |
-          if [ ! -d evidence ]; then
-            echo "ERROR: evidence/ directory not found"
-            exit 1
-          fi
-          PHYSICAL_COUNT=$(find evidence -type f -name 'physical-gate-*' | wc -l)
-          echo "Physical gate evidence files: $PHYSICAL_COUNT"
-          if [ "$PHYSICAL_COUNT" -eq 0 ]; then
-            echo "ERROR: No physical gate evidence found (physical-gate-*.txt)"
-            exit 1
-          fi
-
-      - name: Validate evidence freshness (no older than 7 days)
-        run: |
-          CUTOFF=$(date -u -d '7 days ago' +%s)
-          STALE=0
-          for f in evidence/physical-gate-*.txt evidence/verification-*.txt; do
-            [ -f "$f" ] || continue
-            TS=$(echo "$f" | grep -oP '\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z' || true)
-            if [ -z "$TS" ]; then
-              echo "WARNING: Cannot extract timestamp from $f, skipping freshness check"
-              continue
-            fi
-            FILE_EPOCH=$(date -u -d "$TS" +%s)
-            if [ "$FILE_EPOCH" -lt "$CUTOFF" ]; then
-              echo "STALE: $f (timestamp: $TS, older than 7 days)"
-              STALE=1
-            fi
-          done
-          if [ "$STALE" -eq 1 ]; then
-            echo "ERROR: Some evidence is stale (older than 7 days). Refresh against unchanged candidates."
-            exit 1
-          fi
-          echo "All evidence is fresh (within 7 days)"
-
-      - name: Validate SHA-256 binding in physical evidence
-        run: |
-          V=${GITHUB_REF_NAME#v}
-          CANDIDATE_SHAS=""
-          for f in releases/$V/*; do
-            [ -f "$f" ] || continue
-            SHA=$(sha256sum "$f" | awk '{print $1}')
-            CANDIDATE_SHAS="$CANDIDATE_SHAS $SHA"
-          done
-          if [ -z "$CANDIDATE_SHAS" ]; then
-            echo "WARNING: No candidates found in releases/$V/, skipping SHA-256 binding check"
-            exit 0
-          fi
-          FOUND=0
-          for f in evidence/physical-gate-*.txt; do
-            [ -f "$f" ] || continue
-            CONTENT=$(cat "$f")
-            for SHA in $CANDIDATE_SHAS; do
-              if echo "$CONTENT" | grep -q "$SHA"; then
-                FOUND=1
-                echo "SHA-256 binding verified in $f"
-                break
-              fi
-            done
-          done
-          if [ "$FOUND" -eq 0 ]; then
-            echo "ERROR: No physical gate evidence contains a candidate SHA-256"
-            exit 1
-          fi
-
-      - name: Validate evidence is sanitized
-        run: |
-          UNSANITIZED=0
-          for f in evidence/physical-gate-*.txt; do
-            [ -f "$f" ] || continue
-            if grep -qP '/home/[^/\\s]+/' "$f" 2>/dev/null; then
-              echo "UNSANITIZED: $f contains home directory paths"
-              UNSANITIZED=1
-            fi
-            if grep -qP 'serial=[A-Za-z0-9]+' "$f" 2>/dev/null; then
-              echo "UNSANITIZED: $f contains hardware serial numbers"
-              UNSANITIZED=1
-            fi
-            if grep -qP 'UUID=[0-9a-fA-F-]+' "$f" 2>/dev/null; then
-              echo "UNSANITIZED: $f contains device UUIDs"
-              UNSANITIZED=1
-            fi
-          done
-          if [ "$UNSANITIZED" -eq 1 ]; then
-            echo "ERROR: Evidence contains unsanitized privacy-sensitive data"
-            exit 1
-          fi
-          echo "Evidence sanitization validated"
-
-      - name: Confirm physical gate is not satisfiable by simulation
-        run: |
-          echo "Physical gate requires real MSI Thin A15 B7UCX hardware evidence."
-          echo "Automated fake-system tests, container probes, and virtual-display"
-          echo "sessions do NOT satisfy this gate."
-          echo "Physical gate check: PASSED"
-
-  # ── Promotion (protected maintainer approval) ────────────────────────────────────
+          gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft | grep -x true
+          gh release download "$GITHUB_REF_NAME" --dir draft
+          python3 scripts/release_inventory.py physical draft \
+            --version "${GITHUB_REF_NAME#v}" --revision "$(git rev-parse HEAD)" \
+            --evidence acceptance/evidence/release-acceptance.json
 
   promote:
     if: github.event.inputs.promote_draft == 'true' && startsWith(github.ref, 'refs/tags/v')
@@ -709,27 +642,38 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - name: Freeze, re-verify, sign, and publish the existing draft
-        run: |
-          set -e
-          TAG="$GITHUB_REF_NAME"
-          echo "Promoting draft for $TAG after maintainer approval."
-
-          WORKDIR=$(mktemp -d)
-          cd "$WORKDIR"
-
-          # Sign the unchanged draft's own SHA256SUMS — candidates and
-          # metadata already on the draft are never re-touched.
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern 'SHA256SUMS'
-
-          export GNUPGHOME="$WORKDIR/gnupg"
-          mkdir -m 700 "$GNUPGHOME"
-          echo "$RELEASE_SIGNING_KEY" | gpg --batch --import
-          gpg --batch --yes --detach-sign --armor SHA256SUMS
-
-          gh release upload "$TAG" SHA256SUMS.asc --repo "$GITHUB_REPOSITORY" --clobber
-          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
-
-          echo "Published $TAG and marked it Latest."
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.evidence_ref }}
+          path: acceptance
+          persist-credentials: false
+      - name: Re-verify, sign, and publish the unchanged draft
         env:
           RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          TAG="$GITHUB_REF_NAME"
+          gh release view "$TAG" --json isDraft --jq .isDraft | grep -x true
+          gh release download "$TAG" --dir draft
+          python3 scripts/release_inventory.py physical draft \
+            --version "${TAG#v}" --revision "$(git rev-parse HEAD)" \
+            --evidence acceptance/evidence/release-acceptance.json
+          export GNUPGHOME=$(mktemp -d)
+          chmod 700 "$GNUPGHOME"
+          trap 'rm -rf "$GNUPGHOME"' EXIT
+          printf '%s' "$RELEASE_SIGNING_KEY" | gpg --batch --import
+          if [ -f draft/SHA256SUMS.asc ]; then
+            gpg --verify draft/SHA256SUMS.asc draft/SHA256SUMS
+          else
+            gpg --batch --detach-sign --armor draft/SHA256SUMS
+            gh release upload "$TAG" draft/SHA256SUMS.asc
+          fi
+          # Download once more after signing, catching changes while awaiting promotion.
+          gh release download "$TAG" --dir final-draft
+          cmp draft/SHA256SUMS final-draft/SHA256SUMS
+          gpg --verify final-draft/SHA256SUMS.asc final-draft/SHA256SUMS
+          python3 scripts/release_inventory.py physical final-draft \
+            --version "${TAG#v}" --revision "$(git rev-parse HEAD)" \
+            --evidence acceptance/evidence/release-acceptance.json
+          gh release edit "$TAG" --draft=false --latest
