@@ -2,6 +2,10 @@ case "$ACTION" in
 pre)
 	# Remove only assets proven by the lifecycle ledger to be Threshold-managed.
 	# Machine-wide charge policy and bounded diagnostics intentionally survive.
-	/usr/bin/threshold-ec-lifecycle remove || :
+	# XBPS also invokes pre-remove during upgrades. Preserve working builds
+	# and their known-good records while the new package prepares its inputs.
+	if [ "${UPDATE:-no}" != yes ]; then
+		/usr/bin/threshold-ec-lifecycle remove || :
+	fi
 	;;
 esac
