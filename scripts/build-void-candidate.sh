@@ -19,14 +19,15 @@ ln -s / masterdir
 xbps-uhelper arch > /.xbps_chroot_init
 export XBPS_CHROOT_CMD=ethereal XBPS_ALLOW_CHROOT_BREAKOUT=yes
 ./xbps-src binary-bootstrap
-./xbps-src pkg threshold
+# Preserve build dependencies until their exact versions are recorded.
+./xbps-src -C pkg threshold
 version=$(sed -n 's/^version=//p' srcpkgs/threshold/template)
 revision=$(sed -n 's/^revision=//p' srcpkgs/threshold/template)
 mkdir "$out"
 cp "hostdir/binpkgs/threshold-${version}_${revision}.x86_64.xbps" "$out/"
 xbps-rindex -a "$out/threshold-${version}_${revision}.x86_64.xbps"
 xbps-query -l > "$out/void-dependencies.txt"
-python3 - "$out" "$archive" "$VOID_PACKAGES_COMMIT" "$VOID_IMAGE" <<'PY'
+python3 - "$out" "$archive" "$VOID_PACKAGES_COMMIT" "$VOID_IMAGE" "$PWD/srcpkgs/threshold/template" <<'PY'
 import hashlib, json, sys
 from pathlib import Path
 out, archive = map(Path, sys.argv[1:3])
@@ -34,6 +35,7 @@ out, archive = map(Path, sys.argv[1:3])
     'source_sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
     'void_packages_commit': sys.argv[3], 'image': sys.argv[4],
     'dependencies': 'void-dependencies.txt',
+    'build_template_sha256': hashlib.sha256(Path(sys.argv[5]).read_bytes()).hexdigest(),
 }, indent=2) + '\n')
 PY
 (cd "$out" && sha256sum *.xbps x86_64-repodata void-build.json void-dependencies.txt > candidate.sha256)

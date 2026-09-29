@@ -46,6 +46,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Refuse to replace an existing release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --slurp > /tmp/releases.json
+          python3 - <<'PYCODE'
+          import json, os
+          releases = [r for page in json.load(open('/tmp/releases.json')) for r in page]
+          assert all(r['tag_name'] != os.environ['GITHUB_REF_NAME'] for r in releases), "Release already exists"
+          PYCODE
+
       - name: Validate tag version matches Meson version
         run: |
           TAG_VERSION=${GITHUB_REF_NAME#v}
@@ -236,6 +247,8 @@ jobs:
     # so THRESHOLD_EC_SIGNING_KEY has nowhere to be verified at runtime
     # even once it's set. Remove this once that packaging work lands.
     continue-on-error: true
+    outputs:
+      candidate_ready: ${{ steps.upload.outcome == 'success' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -280,6 +293,7 @@ jobs:
           mv /tmp/appimage.sha256 ${{ env.CANDIDATES_DIR }}/appimage.sha256
 
       - name: Upload AppImage candidate
+        id: upload
         uses: actions/upload-artifact@v4
         with:
           name: candidate-appimage
@@ -296,6 +310,9 @@ jobs:
     container: ghcr.io/void-linux/void-glibc-full@sha256:abfccb6abc1462d9e1fcf19d1e76b40d770d10a251be4340d1a46edfb5b35041
     steps:
       - uses: actions/checkout@v4
+      - name: Install Void runner prerequisites
+        shell: sh
+        run: xbps-install -Suy xbps && xbps-install -Sy bash git python3
       - uses: actions/download-artifact@v4
         with:
           name: candidate-source
@@ -315,6 +332,9 @@ jobs:
     container: ghcr.io/void-linux/void-glibc-full@sha256:abfccb6abc1462d9e1fcf19d1e76b40d770d10a251be4340d1a46edfb5b35041
     steps:
       - uses: actions/checkout@v4
+      - name: Install Void runner prerequisites
+        shell: sh
+        run: xbps-install -Suy xbps && xbps-install -Sy bash git python3
       - uses: actions/download-artifact@v4
         with:
           name: candidate-xbps
@@ -493,10 +513,9 @@ jobs:
           test -f /usr/share/metainfo/com.bongbetic.threshold.metainfo.xml
 
   appimage-verify:
+    if: needs.appimage.outputs.candidate_ready == 'true'
     needs: appimage
     runs-on: ubuntu-24.04
-    # See the continue-on-error note on the appimage job above.
-    continue-on-error: true
     steps:
       - name: Download AppImage candidate
         uses: actions/download-artifact@v4
@@ -528,7 +547,13 @@ jobs:
   # ── Draft assembly (manifest + checksums, private) ─────────────────────────────────
 
   assemble-draft:
-    if: github.event.inputs.promote_draft != 'true'
+    if: >-
+      always() && !cancelled() && github.event.inputs.promote_draft != 'true' &&
+      needs.deb.result == 'success' && needs.rpm.result == 'success' &&
+      needs.source.result == 'success' && needs.xbps.result == 'success' &&
+      needs.deb-verify.result == 'success' && needs.rpm-verify.result == 'success' &&
+      needs.xbps-verify.result == 'success' &&
+      (needs.appimage-verify.result == 'success' || needs.appimage-verify.result == 'skipped')
     needs: [deb, rpm, appimage, source, deb-verify, rpm-verify, appimage-verify, xbps, xbps-verify]
     runs-on: ubuntu-24.04
     steps:
@@ -544,13 +569,13 @@ jobs:
           mkdir -p ${{ env.CANDIDATES_DIR }}
           find dist -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \
             -o -name '*.tar.gz' -o -name '*.src.rpm' -o -name '*.xbps' \
-            -o -name 'x86_64-repodata' -o -name 'void-build.json' -o -name 'void-dependencies.txt' \) -exec cp {} ${{ env.CANDIDATES_DIR }}/ \;
+            -o -name 'x86_64-repodata' -o -name 'void-build.json' -o -name 'void-dependencies.txt' -o -name 'void-verification.json' \) -exec cp {} ${{ env.CANDIDATES_DIR }}/ \;
           ls -l ${{ env.CANDIDATES_DIR }}
           COUNT=$(ls ${{ env.CANDIDATES_DIR }} | wc -l)
           echo "Candidate count: $COUNT"
-          # Eight required files; optional AppImage makes nine.
+          # Nine required files; optional AppImage makes ten.
           # Exact names and cardinality are enforced by the inventory validator.
-          test "$COUNT" -ge 8
+          test "$COUNT" -ge 9
 
       - name: Verify candidate hashes against recorded build checksums
         run: |
@@ -602,6 +627,7 @@ jobs:
             ${{ env.CANDIDATES_DIR }}/x86_64-repodata
             ${{ env.CANDIDATES_DIR }}/void-build.json
             ${{ env.CANDIDATES_DIR }}/void-dependencies.txt
+            ${{ env.CANDIDATES_DIR }}/void-verification.json
             ${{ env.CANDIDATES_DIR }}/release-manifest.json
             ${{ env.CANDIDATES_DIR }}/SHA256SUMS
           generate_release_notes: true
@@ -617,6 +643,10 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+      - name: Require configured promotion reviewers
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/environments/release-promotion" \
+            --jq 'any(.protection_rules[]; .type == "required_reviewers" and (.reviewers | length) > 0)' | grep -x true
       - name: Require an immutable evidence revision
         env:
           EVIDENCE_REF: ${{ inputs.evidence_ref }}

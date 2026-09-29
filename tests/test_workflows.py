@@ -93,7 +93,8 @@ def test_release_workflow_promotes_protected_draft_unchanged():
     assert "make_latest: false" in text
     assert "release-promotion" in text
     assert "--draft=false" in text
-    assert "--clobber" in text or "clobber" in text
+    assert "--clobber" not in text
+    assert "cmp draft/SHA256SUMS final-draft/SHA256SUMS" in text
 
 
 def test_release_workflow_verifies_rpm_through_dnf_and_zypper():
@@ -235,7 +236,9 @@ def test_release_has_physical_gate_check_job():
     # Must validate SHA-256 binding
     assert "sha256sum" in text
     # Must validate sanitization
-    assert "sanitiz" in text.lower()
+    assert "release_inventory.py physical" in text
+    validator = (ROOT / "scripts/release_inventory.py").read_text()
+    assert "PRIVACY.search" in validator
 
 
 def test_release_promote_depends_on_physical_gate():
