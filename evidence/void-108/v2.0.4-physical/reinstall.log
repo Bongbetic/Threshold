@@ -1,0 +1,52 @@
+1 package will be installed:
+
+  threshold-2.0.4_1 
+
+Size required on disk:        1629KB
+Space available on disk:       446GB
+
+[*] threshold install message:
+Threshold installed its boot reconciliation service disabled, following Void
+service policy. Enable it explicitly with:
+
+  sudo ln -s /etc/sv/threshold-boot-reconcile /var/service/
+
+Add your user to the dedicated threshold group, then log out and back in:
+
+  sudo usermod -aG threshold "$USER"
+
+Secure Boot module signing and key enrollment remain administrator-owned.
+
+
+Updating GTK+ icon cache for /usr/share/icons/hicolor...
+Updating MIME database...
+Refreshing GSettings database from usr/share/glib-2.0/schemas... done.
+Deprecated feature: CLEAN (/usr/src/msi-ec-0.13.112/dkms.conf)
+Creating symlink /var/lib/dkms/msi-ec/0.13.112/source -> /usr/src/msi-ec-0.13.112
+Deprecated feature: CLEAN (/var/lib/dkms/msi-ec/0.13.112/source/dkms.conf)
+Sign command: /lib/modules/7.2.8_1/build/scripts/sign-file
+Signing key: /var/lib/dkms/mok.key
+Public certificate (MOK): /var/lib/dkms/mok.pub
+
+Building module(s)... done.
+Signing module /var/lib/dkms/msi-ec/0.13.112/build/msi-ec.ko
+Deprecated feature: CLEAN (/var/lib/dkms/msi-ec/0.13.112/source/dkms.conf)
+Found pre-existing /lib/modules/7.2.8_1/kernel/drivers/platform/x86/msi-ec.ko.zst, archiving for uninstallation
+Installing /lib/modules/7.2.8_1/kernel/drivers/platform/x86/msi-ec.ko.zst
+Running depmod... done.
+threshold-ec: EC setup available and verified.
+
+[*] Verifying package integrity
+threshold-2.0.4_1: verifying SHA256 hash...
+
+[*] Collecting package files
+threshold-2.0.4_1: collecting files...
+
+[*] Unpacking packages
+threshold-2.0.4_1: unpacking ...
+
+[*] Configuring unpacked packages
+threshold-2.0.4_1: configuring ...
+threshold-2.0.4_1: installed successfully.
+
+0 downloaded, 1 installed, 0 updated, 1 configured, 0 removed, 0 on hold.

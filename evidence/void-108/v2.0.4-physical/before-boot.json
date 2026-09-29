@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-09-29T17:51:20.209453+00:00",
+  "phase": "before",
+  "boot_identity_sha256": "c2f907b62c136083f0f5ffa0f00ef66031302a010d6e7b60650c2bd721f666d4",
+  "kernel": "7.2.8_1",
+  "package": "threshold-2.0.4_1",
+  "machine_policy": "60",
+  "batteries": [
+    {
+      "name": "BAT1",
+      "active_threshold": "60"
+    }
+  ],
+  "module_loaded": true,
+  "service_enabled": true,
+  "status": "setup_state=available\nlive=yes\nmaintenance=ok",
+  "kernel_log": "2026-09-29T23:17:56+05:30 module=msi-ec-0.13.112 kernel=7.2.8_1 dkms=built trust=signed load=loaded live=yes reconciliation=verified\n2026-09-29T23:20:12+05:30 module=msi-ec-0.13.112 kernel=7.2.8_1 dkms=- trust=- load=loaded live=yes reconciliation=noop",
+  "known_good_marker": true,
+  "service_running": true,
+  "state_boot_matches": true,
+  "secure_boot_enabled": false
+}

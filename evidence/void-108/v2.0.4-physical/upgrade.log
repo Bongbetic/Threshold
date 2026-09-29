@@ -1,0 +1,54 @@
+1 package will be downloaded:
+
+  zstd-1.5.7_1 
+1 package will be installed:
+
+  zstd-1.5.7_1 
+1 package will be updated:
+
+  threshold (2.0.3_1 -> 2.0.4_1) 
+
+Size to download:              151KB
+Size required on disk:        1990KB
+Space available on disk:       446GB
+
+
+[*] Downloading packages
+zstd-1.5.7_1.x86_64.xbps.sig2: [512B 100%] 13MB/s ETA: 00m00s
+zstd-1.5.7_1.x86_64.xbps.sig2: 512B [avg rate: 13MB/s]
+zstd-1.5.7_1.x86_64.xbps: [150KB 2%] 80MB/s ETA: 00m00s
+zstd-1.5.7_1.x86_64.xbps: [150KB 63%] 293KB/s ETA: 00m00s
+zstd-1.5.7_1.x86_64.xbps: 150KB [avg rate: 459KB/s]
+threshold-ec: Operation remove-<boot-id> already completed; skipping.
+Updating GTK+ icon cache for /usr/share/icons/hicolor...
+Updating MIME database...
+Refreshing GSettings database from usr/share/glib-2.0/schemas... done.
+
+Error! DKMS tree already contains: msi-ec/0.13.112
+You cannot add the same module/version combo more than once.
+threshold-ec: dkms add failed (may already be registered).
+Module msi-ec/0.13.112 already built for kernel 7.2.8_1 (x86_64), skip. You may override by specifying --force.
+Module msi-ec/0.13.112 already installed on kernel 7.2.8_1 (x86_64), skip. You may override by specifying --force.
+threshold-ec: EC setup available and verified.
+zstd-1.5.7_1: verifying RSA signature...
+
+[*] Verifying package integrity
+threshold-2.0.4_1: verifying SHA256 hash...
+
+[*] Collecting package files
+zstd-1.5.7_1: collecting files...
+threshold-2.0.4_1: collecting files...
+threshold-2.0.3_1: collecting files...
+
+[*] Unpacking packages
+zstd-1.5.7_1: unpacking ...
+threshold-2.0.3_1: updating to 2.0.4_1 ...
+threshold-2.0.4_1: unpacking ...
+
+[*] Configuring unpacked packages
+zstd-1.5.7_1: configuring ...
+zstd-1.5.7_1: installed successfully.
+threshold-2.0.4_1: configuring ...
+threshold-2.0.4_1: updated successfully.
+
+1 downloaded, 1 installed, 1 updated, 2 configured, 0 removed, 0 on hold.

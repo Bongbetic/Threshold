@@ -1,0 +1,23 @@
+1 package will be removed:
+
+  threshold-2.0.4_1 
+
+Size freed on disk:           1629KB
+Space available on disk:       446GB
+
+threshold-ec: msi_ec module loaded and working; leaving it in place.
+Module msi-ec/0.13.112 for kernel 7.2.8_1 (x86_64):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/7.2.8_1/kernel/drivers/platform/x86/msi-ec.ko.zst
+Restoring archived original module /lib/modules/7.2.8_1/kernel/drivers/platform/x86/msi-ec.ko.zst
+Running depmod... done.
+
+Deleting module msi-ec/0.13.112 completely from the DKMS tree.
+threshold-ec: EC lifecycle removed; charge threshold policy and foreign assets preserved.
+Updating GTK+ icon cache for /usr/share/icons/hicolor...
+Updating MIME database...
+Refreshing GSettings database from usr/share/glib-2.0/schemas... done.
+Removing `threshold-2.0.4_1' ...
+Removed `threshold-2.0.4_1' successfully.
+
+0 downloaded, 0 installed, 0 updated, 0 configured, 1 removed, 0 on hold.
