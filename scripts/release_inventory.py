@@ -42,7 +42,7 @@ def names_for(version, names):
         rf"threshold-{re.escape(version)}-.*\.src\.rpm",
         rf"Threshold-{re.escape(version)}\.tar\.gz",
         rf"threshold-{re.escape(version)}_1\.x86_64\.xbps",
-        "x86_64-repodata", "void-build.json", "void-dependencies.txt",
+        "x86_64-repodata", "void-build.json", "void-dependencies.txt", "void-verification.json",
     ]
     expected = set()
     for pattern in patterns:
@@ -78,6 +78,8 @@ def manifest(directory, version, revision, identity):
     provenance = json.loads((directory / 'void-build.json').read_text())
     if provenance['source_sha256'] != result['candidates'][source_name]['sha256']:
         fail('Void build used a different canonical source archive')
+    validate_void_report(directory, result)
+    result['verification']['void_package_report'] = 'void-verification.json'
     (directory / 'release-manifest.json').write_text(json.dumps(result, indent=2) + '\n')
     names.append('release-manifest.json')
     (directory / 'SHA256SUMS').write_text(''.join(
@@ -113,7 +115,23 @@ def verify(directory, version, revision):
     provenance = json.loads((directory / 'void-build.json').read_text())
     if provenance['source_sha256'] != inventory[f'Threshold-{version}.tar.gz']:
         fail('Void source archive mismatch')
+    validate_void_report(directory, data)
     return data
+
+
+def validate_void_report(directory, data):
+    report = json.loads((directory / 'void-verification.json').read_text())
+    candidate = report['candidate']
+    if not candidate.endswith('.x86_64.xbps') or candidate not in data['candidates']:
+        fail('Void verification must name the XBPS candidate')
+    if report['sha256'] != data['candidates'][candidate]['sha256']:
+        fail('Void verification hash mismatch')
+    required = {'installation', 'owned_payload', 'runtime_typelibs', 'schema',
+                'disabled_service', 'reinstall_policy', 'removal_policy', 'foreign_probe_preserved'}
+    if report['result'] != 'pass' or not required <= set(report['checks']):
+        fail('Void package verification did not pass all checks')
+    if report.get('physical') is not False:
+        fail('Container verification must not claim physical acceptance')
 
 
 def physical(directory, report_path, version, revision, now=None):

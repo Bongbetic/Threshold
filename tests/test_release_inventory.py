@@ -31,6 +31,14 @@ def draft(tmp_path):
     (folder / 'void-build.json').write_text(json.dumps({
         'source_sha256': release.digest(folder / 'Threshold-2.0.2.tar.gz'),
     }))
+    (folder / 'void-verification.json').write_text(json.dumps({
+        'candidate': 'threshold-2.0.2_1.x86_64.xbps',
+        'sha256': release.digest(folder / 'threshold-2.0.2_1.x86_64.xbps'),
+        'result': 'pass', 'physical': False,
+        'checks': ['installation', 'owned_payload', 'runtime_typelibs', 'schema',
+                   'disabled_service', 'reinstall_policy', 'removal_policy',
+                   'foreign_probe_preserved'],
+    }))
     release.manifest(folder, VERSION, REVISION, 'test-build')
     return folder
 

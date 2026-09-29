@@ -349,6 +349,9 @@ jobs:
     container: ghcr.io/void-linux/void-glibc-full@sha256:abfccb6abc1462d9e1fcf19d1e76b40d770d10a251be4340d1a46edfb5b35041
     steps:
       - uses: actions/checkout@v4
+      - name: Install Void runner prerequisites
+        shell: sh
+        run: xbps-install -Suy xbps && xbps-install -Sy bash git python3
       - name: Archive the exact checkout
         run: |
           V=$(sed -n "s/.*version: '\([0-9.]*\)'.*/\1/p" meson.build | head -1)

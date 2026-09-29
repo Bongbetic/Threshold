@@ -41,11 +41,14 @@ PY
 echo 80 > /var/lib/threshold/ec/charge-threshold
 mkdir -p /usr/src/threshold-foreign-probe
 printf 'foreign\n' > /usr/src/threshold-foreign-probe/marker
+mkdir -p /var/lib/dkms/msi-ec/0.13.112
+ln -s /usr/src/threshold-foreign-probe /var/lib/dkms/msi-ec/0.13.112/source
 xbps-install -yf --repository="$candidate_dir" "$expression"
 test "$(cat /var/lib/threshold/ec/charge-threshold)" = 80
 xbps-remove -y threshold
 test "$(cat /var/lib/threshold/ec/charge-threshold)" = 80
 test "$(cat /usr/src/threshold-foreign-probe/marker)" = foreign
+test "$(readlink /var/lib/dkms/msi-ec/0.13.112/source)" = /usr/src/threshold-foreign-probe
 test ! -e /usr/bin/threshold
 sha256sum --check candidate.sha256
 python3 - "$package" "$report" <<'PY'
