@@ -356,7 +356,7 @@ jobs:
         shell: bash
         run: |
           V=$(sed -n "s/.*version: '\([0-9.]*\)'.*/\1/p" meson.build | head -1)
-          git archive --format=tar --prefix="Threshold-$V/" HEAD | gzip -n > "/tmp/Threshold-$V.tar.gz"
+          git -c safe.directory="$PWD" archive --format=tar --prefix="Threshold-$V/" HEAD | gzip -n > "/tmp/Threshold-$V.tar.gz"
           echo "SOURCE_ARCHIVE=/tmp/Threshold-$V.tar.gz" >> "$GITHUB_ENV"
       - name: Build native XBPS package
         run: bash scripts/build-void-candidate.sh "$PWD" "$SOURCE_ARCHIVE" "$PWD/xbps-candidate"
