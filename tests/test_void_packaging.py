@@ -10,7 +10,8 @@ def test_void_template_is_unified_glibc_package():
     text = (VOID / "template").read_text()
     assert 'archs="x86_64"' in text
     assert "x86_64-musl" in text and "broken=" in text
-    assert 'dkms_modules="msi-ec 0.13.112"' in text
+    assert "dkms_modules=" not in text
+    assert "msi-ec-0.13.112" in text
     assert 'system_groups="threshold"' in text
     assert "vsv threshold-boot-reconcile" in text
     assert "usr/sbin" not in text
@@ -36,6 +37,8 @@ def test_void_removal_preserves_state_explicitly():
     assert "rm -rf /var/lib/threshold" not in text
 
 
-def test_void_package_is_not_a_release_candidate():
+def test_void_package_is_a_verified_release_candidate():
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text()
-    assert "candidate-xbps" not in workflow
+    assert "candidate-xbps" in workflow
+    assert "xbps-verify" in workflow
+    assert "x86_64-repodata" in workflow

@@ -3,7 +3,7 @@
 ## Overview
 
 The MSI Thin A15 B7UCX is the mandatory physical validation system for
-Threshold v2.0.1. This gate ensures that live EC control, reboot
+each Threshold release. This gate ensures that live EC control, reboot
 reconciliation, Secure Boot/MOK behavior, kernel recovery, notification-area
 integration, and removal are proven on real hardware before any release
 candidate is promoted to public.
@@ -365,3 +365,11 @@ The release workflow enforces:
   evidence on the MSI Thin A15 B7UCX is accepted.
 - **Sanitization**: Evidence containing privacy-sensitive patterns is
   rejected.
+
+## Void release extension
+
+For XBPS installation, enabled runit reconciliation, DMS/niri checks, and the
+structured evidence report consumed by promotion, follow the
+[Void candidate protocol](void-candidate.md). Historical DEB records cannot
+satisfy the new XBPS gate. Evidence is committed separately from the immutable
+release source after candidate construction.
