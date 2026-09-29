@@ -436,7 +436,9 @@ class TestMachinePolicy:
         assert result.error_code == ErrorCode.POLICY_SAVE_FAILED
         assert "active threshold changed" in result.message
 
-    def test_unavailable_ec_still_requires_installed_boot_policy(self, dispatcher, notify_only_state):
+    def test_unavailable_ec_still_requires_installed_boot_policy(
+        self, dispatcher, notify_only_state
+    ):
         with patch("pathlib.Path.is_file", return_value=True), \
                 patch("threshold.commands._persist_machine_threshold", return_value=False) as save:
             result = dispatcher.dispatch("apply_threshold", {"threshold": 70}, notify_only_state)

@@ -1,10 +1,11 @@
 threshold (2.0.3-1) trixie; urgency=high
 
+  * Pass the explicit repair kernel to DKMS; verify only after booting it.
   * Save machine-wide charge policy through the EC authority when needed.
   * Report denied or unverified policy saves instead of claiming success.
   * Retain physical rejection evidence for the unpublished 2.0.2 candidate.
 
- -- Soubarna <Soubarna@live.in>  Tue, 29 Sep 2026 22:45:00 +0530
+ -- Soubarna <Soubarna@live.in>  Tue, 29 Sep 2026 23:31:00 +0530
 
 threshold (2.0.2-1) trixie; urgency=medium
 

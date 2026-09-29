@@ -93,7 +93,11 @@ boot_id() {
 running_kernel() {
     # Overridable so fake-system tests (and offline repair of a named
     # kernel booted into another) can target a specific kernel.
-    echo "${THRESHOLD_EC_KERNEL:-$(uname -r)}"
+    echo "${THRESHOLD_EC_KERNEL:-$(booted_kernel)}"
+}
+
+booted_kernel() {
+    cat "$(sysroot /proc/sys/kernel/osrelease)" 2>/dev/null || uname -r
 }
 
 set_setup_state() {
@@ -373,7 +377,7 @@ do_setup() {
     if ! dkms add -m "$DKMS_NAME" -v "$MSI_EC_VERSION" 2>&1; then
         log "dkms add failed (may already be registered)."
     fi
-    if ! dkms build -m "$DKMS_NAME" -v "$MSI_EC_VERSION" 2>&1; then
+    if ! dkms build -m "$DKMS_NAME" -v "$MSI_EC_VERSION" -k "$(running_kernel)" 2>&1; then
         set_setup_state unavailable build_failed
         write_maintenance_status failed
         # Issue #92: failed new-kernel build preserves successful older builds.
@@ -381,7 +385,7 @@ do_setup() {
         log "dkms build failed; older module (if any) remains in control."
         return 0
     fi
-    if ! dkms install -m "$DKMS_NAME" -v "$MSI_EC_VERSION" 2>&1; then
+    if ! dkms install -m "$DKMS_NAME" -v "$MSI_EC_VERSION" -k "$(running_kernel)" 2>&1; then
         set_setup_state unavailable build_failed
         write_maintenance_status failed
         # Issue #92: failed new-kernel build preserves successful older builds.
@@ -396,6 +400,17 @@ do_setup() {
 
     ledger_add "$DKMS_SRC"
     ledger_add "$MODULES_LOAD"
+
+    if [ "$(running_kernel)" != "$(booted_kernel)" ]; then
+        # The running module says nothing about a different kernel's live
+        # capability. Verification must happen after actually booting it.
+        set_setup_state pending_reboot
+        write_maintenance_status pending
+        record_pending_reboot repair
+        record_kernel_event "$(running_kernel)" built unknown noload none pending
+        log "Kernel $(running_kernel) prepared; boot it to verify EC control."
+        return 0
+    fi
 
     # Try to load now; Secure Boot failure is a structured reason with a
     # known reboot-completable path (enroll MOK, reboot completes it).
@@ -546,10 +561,15 @@ do_handoff_snapshot() {
 # ── Boot reconciliation (once, bounded, single write + readback) ──────────
 
 do_reconcile() {
+    COMPLETES_REPAIR=no
     # Consume pending_reboot on the first different boot.
     if [ -f "$EC_PENDING" ]; then
         PENDING_BOOT=$(sed -n 's/^boot_id=//p' "$EC_PENDING")
         if [ "$PENDING_BOOT" != "$(boot_id)" ]; then
+            if grep -q '^action=repair$' "$EC_PENDING" &&
+               grep -Fxq "target_kernel=$(booted_kernel)" "$EC_PENDING"; then
+                COMPLETES_REPAIR=yes
+            fi
             # Different boot: the attempt was consumed. Outcome is decided
             # by live verification below.
             rm -f "$EC_PENDING"
@@ -597,6 +617,7 @@ do_reconcile() {
                 # Issue #92: kernel becomes known-good after real boot,
                 # live capability verification, and successful reconciliation.
                 mark_kernel_known_good "$(running_kernel)"
+                [ "$COMPLETES_REPAIR" != yes ] || write_maintenance_status ok
                 record_kernel_event "$(running_kernel)" - - loaded yes reconciled ""
                 log "Reconciled threshold to ${DESIRED}% (verified); kernel marked known-good."
             else
@@ -618,6 +639,7 @@ do_reconcile() {
         # Issue #92: even on no-write (active matches desired), mark kernel
         # as known-good since live capability is verified.
         mark_kernel_known_good "$(running_kernel)"
+        [ "$COMPLETES_REPAIR" != yes ] || write_maintenance_status ok
         record_kernel_event "$(running_kernel)" - - loaded yes noop ""
         log "Active and desired thresholds agree; no write needed; kernel marked known-good."
     fi
@@ -780,6 +802,14 @@ do_support_export() {
 
 # Ensure the lock is released on any exit path.
 trap 'release_lock' EXIT
+
+if [ "${1:-}" = repair ] && [ "$#" -gt 1 ]; then
+    [ "$#" -eq 2 ] || exit 2
+    case "$2" in
+        ''|*[!a-zA-Z0-9._+-]*) exit 2 ;;
+    esac
+    THRESHOLD_EC_KERNEL=$2
+fi
 
 case "${1:-}" in
     set-charge-threshold)
