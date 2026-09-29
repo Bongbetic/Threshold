@@ -47,6 +47,15 @@ failure, repair, and removal behavior before support is declared.
 
 ## Physical acceptance and publication
 
+The `Sign release tag` workflow accepts a full source commit already merged into
+main and covered by successful CI. After approval in `release-promotion`, it
+uses the existing GitHub `RELEASE_SIGNING_KEY` to sign a new version tag and
+explicitly dispatches the release workflow. GitHub does not trigger push workflows
+from tags pushed with `GITHUB_TOKEN`. The signing job refuses an existing tag;
+if dispatch alone fails after signing, dispatch `release.yml` on that unchanged
+tag rather than recreating it. Public promotion also verifies the tag signature
+against the release key.
+
 The release workflow assembles a draft only after package jobs pass. Its
 manifest binds every asset to the source revision and hashes, without claiming
 that package tests establish physical or desktop success. The existing AppImage

@@ -1,0 +1,101 @@
+name: Sign release tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_revision:
+        description: 'Full main commit ID that passed CI and will be signed'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-tag-signing
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      revision: ${{ steps.source.outputs.revision }}
+      version: ${{ steps.source.outputs.version }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SOURCE_REVISION: ${{ inputs.source_revision }}
+    steps:
+      - name: Validate full commit ID
+        run: test "${#SOURCE_REVISION}" -eq 40 && [[ "$SOURCE_REVISION" =~ ^[0-9a-f]+$ ]]
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_revision }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require tested main source and a new version
+        id: source
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_REVISION"
+          git merge-base --is-ancestor "$SOURCE_REVISION" origin/main
+          V=$(sed -n "s/.*version: '\([0-9.]*\)'.*/\1/p" meson.build | head -1)
+          [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          if git show-ref --verify --quiet "refs/tags/v$V"; then
+            echo 'Version tag already exists; refusing replacement.' >&2
+            exit 1
+          fi
+          gh run list --workflow ci.yml --commit "$SOURCE_REVISION" --json conclusion,status > /tmp/ci.json
+          python3 - <<'PY'
+          import json
+          runs = json.load(open('/tmp/ci.json'))
+          assert any(r['status'] == 'completed' and r['conclusion'] == 'success' for r in runs), 'Source must pass CI before signing'
+          PY
+          echo "revision=$SOURCE_REVISION" >> "$GITHUB_OUTPUT"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          printf 'Sign tag **v%s** for source commit **%s**, then dispatch draft construction. Public promotion remains gated.\n' "$V" "$SOURCE_REVISION" >> "$GITHUB_STEP_SUMMARY"
+
+  sign:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    environment: release-promotion
+    permissions:
+      contents: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SOURCE_REVISION: ${{ needs.prepare.outputs.revision }}
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.revision }}
+      - name: Sign the source tag with the existing release key
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          export GNUPGHOME=$(mktemp -d)
+          SIGNER=$(mktemp)
+          chmod 700 "$GNUPGHOME"
+          trap 'rm -rf "$GNUPGHOME"; rm -f "$SIGNER"' EXIT
+          printf '%s' "$RELEASE_SIGNING_KEY" | gpg --batch --import
+          gpg --batch --list-secret-keys --with-colons > "$GNUPGHOME/keys"
+          test "$(grep -c '^sec:' "$GNUPGHOME/keys")" -eq 1
+          KEY=$(awk -F: '$1 == "fpr" {print $10; exit}' "$GNUPGHOME/keys")
+          test -n "$KEY"
+          printf '#!/bin/sh\nexec gpg --batch --pinentry-mode error "$@"\n' > "$SIGNER"
+          chmod 700 "$SIGNER"
+          git config user.name 'Threshold release automation'
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git -c gpg.program="$SIGNER" tag --sign --local-user "$KEY" \
+            -m "Threshold $RELEASE_VERSION from $SOURCE_REVISION" \
+            "v$RELEASE_VERSION" "$SOURCE_REVISION"
+          git verify-tag "v$RELEASE_VERSION"
+          git push origin "refs/tags/v$RELEASE_VERSION"
+      - name: Dispatch immutable draft construction
+        # GITHUB_TOKEN pushes do not trigger another push workflow.
+        # workflow_dispatch is the explicit supported exception.
+        run: gh workflow run release.yml --ref "v$RELEASE_VERSION"

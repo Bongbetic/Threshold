@@ -217,3 +217,15 @@ def test_concurrency_lock_scoped_to_version_tag():
     assert "cancel-in-progress: false" in text
     # Must be scoped to ref (tag), not global
     assert "release-" in text or "github.ref" in text
+
+
+def test_tag_signing_requires_tested_source_and_protected_approval():
+    text = (ROOT / '.github/workflows/sign-release-tag.yml').read_text()
+    assert 'git merge-base --is-ancestor "$SOURCE_REVISION" origin/main' in text
+    assert '--commit "$SOURCE_REVISION"' in text
+    assert 'environment: release-promotion' in text
+    assert 'git verify-tag' in text
+    assert 'git push origin "refs/tags/v$RELEASE_VERSION"' in text
+    assert '--force' not in text
+    assert 'gh workflow run release.yml --ref "v$RELEASE_VERSION"' in text
+    assert '--draft=false' not in text
