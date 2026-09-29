@@ -1,0 +1,75 @@
+name: Publish release verification key
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-key-publication
+  cancel-in-progress: false
+
+jobs:
+  publish-key:
+    runs-on: ubuntu-24.04
+    environment: release-promotion
+    permissions:
+      contents: write
+    env:
+      EXPECTED_FINGERPRINT: CFD943DFD8A7D4A5B1B839BD7186251A35457456
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Export only the existing public verification key
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          export GNUPGHOME=$(mktemp -d)
+          chmod 700 "$GNUPGHOME"
+          trap 'rm -rf "$GNUPGHOME"' EXIT
+          printf '%s' "$RELEASE_SIGNING_KEY" | gpg --batch --import
+          gpg --batch --with-colons --fingerprint --list-keys "$EXPECTED_FINGERPRINT" > "$GNUPGHOME/fingerprints"
+          grep -F ":$EXPECTED_FINGERPRINT:" "$GNUPGHOME/fingerprints"
+          gpg --batch --armor --export "$EXPECTED_FINGERPRINT" > packaging/trust/threshold-release-signing.asc
+          head -1 packaging/trust/threshold-release-signing.asc | grep -Fx -- '-----BEGIN PGP PUBLIC KEY BLOCK-----'
+          cat > packaging/trust/release-signing.md <<'MD'
+          # Release verification key
+
+          `threshold-release-signing.asc` contains the public OpenPGP key for
+          Threshold source tags and release checksum signatures. Its fingerprint is:
+
+          `CFD943DFD8A7D4A5B1B839BD7186251A35457456`
+
+          This is the key identified by the v2.0.1 checksum signature and the v2.0.2
+          source-tag signature. Confirm this fingerprint through a trusted project
+          channel before importing the key and verifying downloaded signatures.
+
+          ```sh
+          gpg --show-keys --fingerprint threshold-release-signing.asc
+          gpg --import threshold-release-signing.asc
+          gpg --verify SHA256SUMS.asc SHA256SUMS
+          ```
+
+          The AppImage EC bundle uses a separate Ed25519 trust key described in
+          `README.md`. This public OpenPGP key cannot sign EC bundles or releases.
+          MD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-verification-key
+          path: |
+            packaging/trust/threshold-release-signing.asc
+            packaging/trust/release-signing.md
+          if-no-files-found: error
+      - name: Publish the public key and fingerprint in the repository
+        run: |
+          set -euo pipefail
+          git config user.name 'Threshold release automation'
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git add packaging/trust/threshold-release-signing.asc packaging/trust/release-signing.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'docs(trust): publish release verification key'
+            git push origin HEAD:main
+          fi
