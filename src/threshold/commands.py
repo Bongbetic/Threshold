@@ -5,6 +5,8 @@ Returns structured results instead of raising through the presentation boundary.
 """
 
 from dataclasses import dataclass, field
+import pathlib
+import subprocess
 from typing import Any, Optional
 
 from threshold.battery import (
@@ -17,21 +19,34 @@ from threshold.battery import (
 from threshold.config import Config
 from threshold.state import ThresholdState
 
-# Machine-wide threshold policy mirror read by the EC lifecycle authority's
-# boot reconciliation (written best-effort; unprivileged runs simply skip it).
+# Machine-wide policy read by the EC lifecycle authority's boot reconciliation.
 EC_THRESHOLD_FILE = "/var/lib/threshold/ec/charge-threshold"
 
 
-def _persist_machine_threshold(value: int) -> None:
-    """Best-effort machine-wide copy of the confirmed charge threshold."""
-    import pathlib
-
+def _persist_machine_threshold(value: int, *, authorize: bool = False) -> bool:
+    """Save confirmed policy, asking the installed authority when necessary."""
     try:
         path = pathlib.Path(EC_THRESHOLD_FILE)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(f"{value}\n")
+        return path.read_text().strip() == str(value)
     except OSError:
-        pass
+        if not authorize:
+            return False
+
+    # Native packages share this root-owned authority. Void's /usr/sbin is
+    # merged into /usr/bin. Never make the lifecycle state directory writable.
+    authority = pathlib.Path(CommandDispatcher.PACKAGE_LIFECYCLE)
+    if not authority.is_file():
+        return False
+    try:
+        result = subprocess.run(
+            ["pkexec", str(authority), "set-charge-threshold", str(value)],
+            capture_output=True, text=True, timeout=60,
+        )
+        return result.returncode == 0 and path.read_text().strip() == str(value)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
 
 
 # ── Result types ────────────────────────────────────────────────────────────
@@ -55,6 +70,7 @@ class ErrorCode:
     THRESHOLD_OUT_OF_RANGE = "threshold_out_of_range"
     NO_BATTERY = "no_battery"
     WRITE_FAILED = "write_failed"
+    POLICY_SAVE_FAILED = "policy_save_failed"
     PERMISSION_DENIED = "permission_denied"
     EC_MISMATCH = "ec_mismatch"
     EC_NOT_AVAILABLE = "ec_not_available"
@@ -147,7 +163,18 @@ class CommandDispatcher:
         # Notification-only mode — alarm only, no sysfs write
         if state.control_mode == ControlMode.NOTIFY_ONLY:
             self._config.set_charge_threshold(threshold)
-            _persist_machine_threshold(threshold)
+            # Alarm-only installations without an EC authority retain their
+            # ordinary user preference. Installed boot integration must also
+            # retain policy while live EC control is temporarily unavailable.
+            authority_installed = pathlib.Path(self.PACKAGE_LIFECYCLE).is_file()
+            saved = _persist_machine_threshold(threshold, authorize=authority_installed)
+            if authority_installed and not saved:
+                return CommandResult(
+                    success=False,
+                    error_code=ErrorCode.POLICY_SAVE_FAILED,
+                    message=("The alarm preference was saved, but the boot policy "
+                             "could not be saved. Apply again and authorize the save."),
+                )
             return CommandResult(
                 success=True,
                 data={
@@ -189,7 +216,14 @@ class CommandDispatcher:
                 pass
 
         self._config.set_charge_threshold(threshold)
-        _persist_machine_threshold(threshold)
+        if not _persist_machine_threshold(threshold, authorize=True):
+            return CommandResult(
+                success=False,
+                error_code=ErrorCode.POLICY_SAVE_FAILED,
+                data={"threshold": threshold, "ec_mismatch": ec_mismatch},
+                message=("The active threshold changed, but the boot policy could "
+                         "not be saved. Apply again and authorize the save."),
+            )
 
         return CommandResult(
             success=True,
