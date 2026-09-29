@@ -490,6 +490,12 @@ class BridgeHandler:
                 'event': 'battery',
                 'data': self._serialize_state(self._state),
             })
+        else:
+            self._show_notification(
+                'Threshold change failed',
+                result.message or 'The charge threshold could not be saved.',
+                is_error=True,
+            )
 
     def _on_tray_quit(self, *_args) -> None:
         """Quit the application from tray."""

@@ -192,13 +192,13 @@ outcome, known-good status.
 Repair EC setup targeting a specific failing kernel:
 
 ```bash
-# Explicit repair for the named kernel
-sudo /usr/sbin/threshold-ec-lifecycle repair
+# Set TARGET_KERNEL to an actually installed kernel needing repair.
+sudo /usr/sbin/threshold-ec-lifecycle repair "$TARGET_KERNEL"
 
 # Verify repair outcome
 /usr/sbin/threshold-ec-lifecycle diagnostics
-# setup_state: available
-# maintenance: ok
+# For a different kernel: pending_reboot; maintenance: pending.
+# Boot the target and reconcile before claiming it is verified.
 
 # Verify live control is not disturbed
 cat /sys/class/power_supply/BAT0/charge_control_end_threshold

@@ -46,6 +46,7 @@ def fake_system(tmp_path: Path):
         d.mkdir(parents=True)
 
     (sysroot / "proc/sys/kernel/random/boot_id").write_text("boot-a\n")
+    (sysroot / "proc/sys/kernel/osrelease").write_text("fake-kernel\n")
 
     # Tools: default to success paths; tests flip them per scenario.
     stub(bindir / "dkms", """\
@@ -1056,3 +1057,34 @@ def test_policy_save_rejects_invalid_input_without_mutation(fake_system, args):
     )
     assert result.returncode == 2
     assert policy.read_text() == "60\n"
+
+
+def test_named_kernel_repair_targets_dkms_without_verifying_running_kernel(fake_system):
+    fake = fake_system
+    make_msi(fake)
+    add_threshold_interface(fake)
+    (fake.sysroot / "lib/modules/repair-target/build").mkdir(parents=True)
+    (fake.sysroot / "proc/sys/kernel/osrelease").write_text("fake-kernel\n")
+    bindir = Path(fake.env["PATH"].split(":")[0])
+    stub(bindir / "dkms", '#!/bin/sh\necho "dkms $*" >> "$DKMS_LOG"\n')
+    result = subprocess.run(
+        [str(LIFECYCLE), "repair", "repair-target"],
+        env=fake.env, capture_output=True, text=True, timeout=10,
+    )
+    assert result.returncode == 0, result.stderr
+    log = Path(fake.env["DKMS_LOG"]).read_text()
+    assert "dkms build -m msi-ec -v 0.13.112 -k repair-target" in log
+    assert "dkms install -m msi-ec -v 0.13.112 -k repair-target" in log
+    assert "modprobe" not in log
+    assert "target_kernel=repair-target" in (fake.state / "pending-reboot").read_text()
+    record = (fake.state / "kernels/repair-target.log").read_text()
+    assert "live=none" in record
+    assert not (fake.state / "kernels/repair-target.known-good").exists()
+
+    fake.env["THRESHOLD_EC_KERNEL"] = "repair-target"
+    (fake.sysroot / "proc/sys/kernel/osrelease").write_text("repair-target\n")
+    result = run_lifecycle(fake, "reconcile", boot_id="boot-repaired")
+    assert result.returncode == 0
+    assert (fake.state / "kernels/repair-target.known-good").exists()
+    assert not (fake.state / "pending-reboot").exists()
+    assert read_maintenance(fake) == "ok"
