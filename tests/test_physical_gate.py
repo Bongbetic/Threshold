@@ -6,20 +6,17 @@ and contain only sanitized content. Promotion is blocked without valid
 physical gate evidence.
 """
 
-import hashlib
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE_DIR = ROOT / "evidence"
-RELEASES_DIR = ROOT / "releases"
 PHYSICAL_GATE_DOC = ROOT / "docs" / "verification" / "msi-physical-gate.md"
 RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
 
-EVIDENCE_MAX_AGE_DAYS = 7
 
 # Patterns that must never appear in sanitized evidence.
 PRIVACY_PATTERNS = [
@@ -30,14 +27,6 @@ PRIVACY_PATTERNS = [
     re.compile(r"ssh-rsa "),
     re.compile(r"BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY"),
 ]
-
-
-def _sha256_of_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def _find_physical_evidence() -> list[Path]:
@@ -71,17 +60,6 @@ def _find_timestamped_evidence() -> list[tuple[Path, datetime]]:
             except ValueError:
                 continue
     return results
-
-
-def _candidate_sha256s() -> dict[str, str]:
-    """Compute SHA-256 of all release candidates."""
-    candidates = {}
-    if not RELEASES_DIR.exists():
-        return candidates
-    for path in RELEASES_DIR.rglob("*"):
-        if path.is_file() and path.suffix in (".deb", ".rpm"):
-            candidates[path.name] = _sha256_of_file(path)
-    return candidates
 
 
 # ── Protocol document existence ────────────────────────────────────────────
@@ -125,18 +103,9 @@ def test_physical_gate_protocol_covers_all_required_sections():
 # ── Evidence freshness (≤7 days) ───────────────────────────────────────────
 
 
-def test_evidence_freshness_at_most_seven_days():
-    """All timestamped evidence must be no older than 7 days."""
-    now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(days=EVIDENCE_MAX_AGE_DAYS)
-    timestamped = _find_timestamped_evidence()
-    if not timestamped:
-        pytest.skip("no timestamped evidence found")
-    for path, ts in timestamped:
-        assert ts >= cutoff, (
-            f"Evidence {path.name} is stale: {ts.isoformat()} "
-            f"(cutoff: {cutoff.isoformat()})"
-        )
+# Historical reports are archived facts, not current release acceptance.
+# Freshness and exact downloaded-candidate binding are tested behaviorally in
+# test_release_inventory.py and enforced by the promotion validator.
 
 
 def test_evidence_timestamp_format_is_iso8601_utc():
@@ -154,21 +123,9 @@ def test_evidence_timestamp_format_is_iso8601_utc():
 # ── SHA-256 binding ────────────────────────────────────────────────────────
 
 
-def test_evidence_contains_candidate_sha256():
-    """Physical evidence must reference the exact candidate SHA-256."""
-    candidates = _candidate_sha256s()
-    if not candidates:
-        pytest.skip("no release candidates found")
-    physical_evidence = _find_physical_evidence()
-    if not physical_evidence:
-        pytest.skip("no physical gate evidence found")
-    for ev_file in physical_evidence:
-        content = ev_file.read_text(encoding="utf-8", errors="replace")
-        # At least one candidate SHA-256 must appear in the evidence
-        found = any(sha in content for sha in candidates.values())
-        assert found, (
-            f"Evidence {ev_file.name} does not reference any candidate SHA-256"
-        )
+def test_historical_evidence_contains_well_formed_candidate_sha256():
+    for ev_file in _find_physical_evidence():
+        assert re.search(r"^SHA-256: [0-9a-f]{64}$", ev_file.read_text(), re.M)
 
 
 def test_physical_evidence_has_sha256_field():

@@ -441,9 +441,23 @@ async function handleEcAction(action: string): Promise<void> {
   }
 }
 
+const paletteKeys = new Set([
+  '--bg-page', '--bg-surface', '--bg-surface-raised', '--bg-grid-gap',
+  '--bg-interactive-hover', '--bg-interactive-active', '--border-subtle',
+  '--border-strong', '--text-primary', '--text-secondary', '--text-tertiary',
+  '--text-placeholder', '--text-on-accent', '--focus-color',
+  '--scrollbar-track', '--scrollbar-thumb', '--accent-color', '--accent-hover',
+]);
+
 /** Apply theme scheme to the document root. */
 function applyAppearance(appearance: AppearanceState): void {
   const root = document.documentElement;
+  const mode = document.getElementById('appearance-mode') as HTMLSelectElement | null;
+  if (mode) mode.value = appearance.mode ?? appearance.scheme;
+  for (const key of paletteKeys) root.style.removeProperty(key);
+  for (const [key, color] of Object.entries(appearance.palette ?? {})) {
+    if (paletteKeys.has(key) && /^#[0-9a-f]{6}$/i.test(color)) root.style.setProperty(key, color);
+  }
   root.classList.remove('cds--g100', 'cds--white');
   root.classList.add(
     appearance.scheme === 'dark' ? 'cds--g100' : 'cds--white',
@@ -749,6 +763,10 @@ async function init(): Promise<void> {
     const darkToggle = document.querySelector('[data-testid="dark-mode-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
     const titleToggle = document.querySelector('[data-testid="title-percentage-toggle"] input[type="checkbox"]') as HTMLInputElement | null;
     const accentSwatches = document.querySelectorAll<HTMLElement>('.accent-swatch');
+
+    document.getElementById('appearance-mode')?.addEventListener('change', async (event) => {
+      await bridge.request('set_appearance_mode', { mode: (event.target as HTMLSelectElement).value });
+    });
 
     darkToggle?.addEventListener('change', async () => {
       await setDarkMode(darkToggle.checked);

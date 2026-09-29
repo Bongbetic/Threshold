@@ -105,15 +105,14 @@ class ThresholdState:
     alarm_armed: bool = False
     alarm_fired: bool = False
 
-    # ── System theme (detected but not consulted by effective_theme_scheme;
-    # the Dark mode control is a direct on/off switch, not a "follow system"
-    # tri-state, so an explicit off must always render light) ─────────────
+    # System fallback. DesktopAppearance resolves the live System/Light/Dark
+    # preference; effective_theme_scheme retains the legacy boolean projection.
     system_theme_scheme: str = "light"
 
     # ── Derived values ────────────────────────────────────────────────────
     @property
     def effective_theme_scheme(self) -> str:
-        """Effective theme scheme: directly follows the dark_mode switch."""
+        """Legacy boolean scheme; live desktop appearance is resolved separately."""
         return "dark" if self.dark_mode else "light"
 
     @property

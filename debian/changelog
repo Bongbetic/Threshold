@@ -1,3 +1,11 @@
+threshold (2.0.2-1) trixie; urgency=medium
+
+  * Add downloadable Void XBPS candidates with exact-source verification.
+  * Follow DMS appearance and repair native Wayland window integration.
+  * Keep dashboard content visible at normal and tiled window sizes.
+
+ -- Soubarna <Soubarna@live.in>  Tue, 29 Sep 2026 23:30:00 +0530
+
 threshold (2.0.1-1) trixie; urgency=high
 
   * Fix application startup crash on every installed package (DEB, RPM,

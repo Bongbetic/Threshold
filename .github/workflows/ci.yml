@@ -346,40 +346,29 @@ jobs:
 
   void-x86_64-glibc:
     runs-on: ubuntu-24.04
-    container: ghcr.io/void-linux/void-glibc-full:latest
+    container: ghcr.io/void-linux/void-glibc-full@sha256:abfccb6abc1462d9e1fcf19d1e76b40d770d10a251be4340d1a46edfb5b35041
     steps:
-      - uses: actions/checkout@v4
-      - name: Install prerequisites
+      - name: Install Void runner prerequisites
         shell: sh
-        run: xbps-install -Suy xbps bash git
+        run: xbps-install -Suy xbps && xbps-install -Sy bash git python3
+      - uses: actions/checkout@v4
+      - name: Archive the exact checkout
+        shell: bash
+        run: |
+          V=$(sed -n "s/.*version: '\([0-9.]*\)'.*/\1/p" meson.build | head -1)
+          git -c safe.directory="$PWD" archive --format=tar --prefix="Threshold-$V/" HEAD | gzip -n > "/tmp/Threshold-$V.tar.gz"
+          echo "SOURCE_ARCHIVE=/tmp/Threshold-$V.tar.gz" >> "$GITHUB_ENV"
       - name: Build native XBPS package
-        # GitHub Actions container jobs run as root with no unprivileged
-        # user namespaces available, so xbps-src's default unshare-based
-        # chroot (uunshare) can't work here. Use the "ethereal" chroot
-        # style instead: it's void-packages' own documented mechanism for
-        # disposable CI containers, operating directly on the container's
-        # root filesystem (via a masterdir -> / symlink) instead of an
-        # isolated namespace. XBPS_ALLOW_CHROOT_BREAKOUT is what permits
-        # xbps-src to run as root under this mode.
-        run: |
-          git clone --depth=1 https://github.com/void-linux/void-packages.git /tmp/void-packages
-          mkdir -p /tmp/void-packages/srcpkgs/threshold
-          cp packaging/void/template packaging/void/INSTALL packaging/void/REMOVE packaging/void/INSTALL.msg /tmp/void-packages/srcpkgs/threshold/
-          cp -a packaging/void/files /tmp/void-packages/srcpkgs/threshold/
-          cd /tmp/void-packages
-          ln -s / masterdir
-          xbps-uhelper arch > /.xbps_chroot_init
-          export XBPS_CHROOT_CMD=ethereal
-          export XBPS_ALLOW_CHROOT_BREAKOUT=yes
-          ./xbps-src binary-bootstrap
-          ./xbps-src pkg threshold
-      - name: Verify XBPS payload
-        run: |
-          PKG=$(find /tmp/void-packages/hostdir/binpkgs -name 'threshold-*.xbps' | head -1)
-          test -n "$PKG"
-          xbps-query --repository=/tmp/void-packages/hostdir/binpkgs -Rf threshold | grep -q 'usr/bin/threshold'
-          xbps-query --repository=/tmp/void-packages/hostdir/binpkgs -Rf threshold | grep -q 'etc/sv/threshold-boot-reconcile/run'
-          xbps-query --repository=/tmp/void-packages/hostdir/binpkgs -Rf threshold | grep -q 'usr/src/msi-ec-0.13.112'
+        run: bash scripts/build-void-candidate.sh "$PWD" "$SOURCE_ARCHIVE" "$PWD/xbps-candidate"
+      - name: Verify installed XBPS package
+        run: bash scripts/verify-void-candidate.sh "$PWD/xbps-candidate" "$PWD/void-verification.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: void-package-and-evidence
+          path: |
+            xbps-candidate/*
+            void-verification.json
+          if-no-files-found: error
 
   web:
     runs-on: ubuntu-24.04

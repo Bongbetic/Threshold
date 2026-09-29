@@ -59,8 +59,8 @@ def test_window_command_dispatch():
     # Test begin_drag command
     result = dispatcher.dispatch("begin_drag", {}, None)
     assert result.success is True, f"begin_drag failed: {result.message}"
-    assert result.data.get("dragging") is True
-    window.begin_move_drag.assert_called_once_with(1, -1, -1, -1)
+    assert result.data.get("dragging") is False
+    window.begin_move_drag.assert_not_called()
     print("✓ begin_drag command dispatched successfully")
 
     print("\nAll window command dispatches passed!")

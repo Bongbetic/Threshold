@@ -23,19 +23,34 @@ notification alarm.
 
 ### Void Linux (`x86_64-glibc`)
 
-Void support is provided as an XBPS source template in `packaging/void/` while submission to the official `void-packages` repository is prepared. Copy that directory into a `void-packages` checkout as `srcpkgs/threshold`, then build and install it through `xbps-src`:
+The release targets current Void `x86_64-glibc`. From the same release, download
+`threshold-<version>_1.x86_64.xbps`, `x86_64-repodata`, `SHA256SUMS`, and
+`SHA256SUMS.asc` into an empty directory. Verify the checksum signature with
+the independently trusted release key, then verify both downloaded files:
 
 ```bash
-./xbps-src binary-bootstrap
-./xbps-src pkg threshold
-sudo xbps-install --repository=hostdir/binpkgs threshold
+gpg --verify SHA256SUMS.asc SHA256SUMS
+# Replace <version> with the selected release version.
+grep -E '  (threshold-<version>_1.x86_64.xbps|x86_64-repodata)$' SHA256SUMS > void.sha256
+test "$(wc -l < void.sha256)" -eq 2
+sha256sum --check void.sha256
+sudo xbps-install --repository="$PWD" 'threshold-<version>_1'
 sudo usermod -aG threshold "$USER"  # log out and back in
 sudo ln -s /etc/sv/threshold-boot-reconcile /var/service/
 ```
 
+Keep both files together. This is a local repository; do not configure unsigned
+GitHub download URLs as a remote XBPS repository. Distribution dependencies
+come from the existing Void repositories. Package setup/removal delegates DKMS
+to Threshold’s provenance-aware lifecycle rather than the generic XBPS DKMS trigger.
+
+For source builds, `scripts/prepare-void-source.py` seeds a fresh `void-packages`
+checkout with the canonical release archive and its checksum; see
+[the Void candidate protocol](docs/verification/void-candidate.md).
+
 The runit service is intentionally installed disabled. Once enabled, it performs one bounded boot reconciliation and then remains paused instead of retrying. Threshold reports disabled reconciliation but never enables it from the UI. Secure Boot module signing and key enrollment are administrator-owned; Void support does not automate them.
 
-Only current `x86_64-glibc` Void is supported. Musl is excluded until its GTK, WebKitGTK, Python GI, polkit, DKMS, and hardware paths pass the same acceptance suite. A successful package CI run is necessary but not sufficient: support is declared only after a physical-machine run is recorded in `evidence/void-acceptance.md`.
+The release target is current `x86_64-glibc` Void. Musl is excluded until its GTK, WebKitGTK, Python GI, polkit, DKMS, and hardware paths pass the same acceptance suite. A successful package CI run is necessary but not sufficient: support is declared only after a physical-machine run is recorded in `evidence/void-acceptance.md`.
 
 ---
 

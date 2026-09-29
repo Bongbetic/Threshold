@@ -129,6 +129,10 @@ class BridgeHandler:
         self._tray = None
         self._alarm_armed = False
         self._alarm_fired = False
+        from threshold.appearance import DesktopAppearance
+        self._appearance = DesktopAppearance()
+        self._appearance_source_id = None
+        self._last_appearance = None
 
     def set_window(self, window) -> None:
         """Set the window reference for window commands."""
@@ -144,6 +148,7 @@ class BridgeHandler:
         """Listen for GSettings appearance and preference changes."""
         appearance_keys = [
             'dark-mode',
+            'appearance-mode',
             'accent-color',
             'compact-mode',
             'title-percentage',
@@ -169,6 +174,8 @@ class BridgeHandler:
 
     def stop_gsettings_listeners(self) -> None:
         """Disconnect GSettings listeners."""
+        for handler_id in self._gsettings_handler_ids:
+            self._config.disconnect(handler_id)
         self._gsettings_handler_ids.clear()
 
     def _on_appearance_changed(self, settings, key) -> None:
@@ -332,13 +339,28 @@ class BridgeHandler:
         from gi.repository import GLib
         if self._polling_source_id is not None:
             return
+        self._appearance.start()
+        self._appearance_source_id = GLib.timeout_add_seconds(1, self._appearance_tick)
         self._polling_source_id = GLib.timeout_add_seconds(
             interval_seconds, self._poll_tick
         )
 
+    def _appearance_tick(self):
+        self._appearance.refresh()
+        if self._state is not None:
+            appearance = self._serialize_appearance(self._state)
+            if appearance != self._last_appearance:
+                self._last_appearance = appearance
+                self._push_to_js({'event': 'appearance', 'data': appearance})
+        return True
+
     def stop_polling(self) -> None:
         """Stop periodic state push."""
         from gi.repository import GLib
+        self._appearance.stop()
+        if self._appearance_source_id is not None:
+            GLib.source_remove(self._appearance_source_id)
+            self._appearance_source_id = None
         if self._polling_source_id is not None:
             GLib.source_remove(self._polling_source_id)
             self._polling_source_id = None
@@ -370,7 +392,7 @@ class BridgeHandler:
 
         Skipped while a write is in flight.
         """
-        if self._writing or self._battery_path is None:
+        if self._writing or self._battery_path is None or self._state is None:
             return
 
         from threshold.battery import detect_control_mode, read_sysfs
@@ -409,6 +431,8 @@ class BridgeHandler:
             on_activate=self._on_tray_show,
             on_threshold=self._on_tray_threshold,
             on_quit=self._on_tray_quit,
+            on_readiness_lost=self._on_notification_area_lost,
+            on_activation_token=self._on_activation_token,
         )
         if self._state:
             self._update_tray()
@@ -420,12 +444,32 @@ class BridgeHandler:
         pct = self._state.charge_percent or 0
         status = self._state.charge_status
         threshold = self._state.pending_threshold or self._state.active_threshold or 100
+        icon_name = _battery_icon_name(pct, status)
+        import gi
+        gi.require_version('Gtk', '4.0')
+        from gi.repository import Gtk, Gdk
+        display = Gdk.Display.get_default()
+        if display is not None:
+            theme = Gtk.IconTheme.get_for_display(display)
+            standard = icon_name.removeprefix('com.bongbetic.threshold-')
+            for candidate in (standard + '-symbolic', standard):
+                if theme.has_icon(candidate):
+                    icon_name = candidate
+                    break
         self._tray.set_state(
             pct,
             status,
-            _battery_icon_name(pct, status),
+            icon_name,
             threshold,
         )
+
+    def _on_notification_area_lost(self):
+        if self._window is not None and not self._window.get_visible():
+            self._window.present()
+
+    def _on_activation_token(self, token):
+        if self._window is not None:
+            self._window.set_startup_id(token)
 
     def _on_tray_show(self, *_args) -> None:
         """Restore the window from tray."""
@@ -584,10 +628,9 @@ class BridgeHandler:
 
     def _serialize_appearance(self, state) -> dict[str, Any]:
         """Serialize appearance state for the bridge."""
-        return {
-            "scheme": state.effective_theme_scheme,
-            "accent_color": state.accent_color,
-        }
+        return self._appearance.snapshot(
+            self._config.get_appearance_mode(), state.system_theme_scheme, state.accent_color,
+        )
 
 
 # ── Carbon Window (deferred GTK imports) ────────────────────────────────────
@@ -626,7 +669,10 @@ def create_carbon_window(application, config):
     # Inject bridge source at document start. UserScript.new expects
     # JavaScript source, not a file URI.
     shim = WebKit.UserScript.new(
-        _load_shim_source(),
+        _load_shim_source() + (
+            "\ndocument.addEventListener('DOMContentLoaded', () => "
+            "document.documentElement.classList.add('native-titlebar'));"
+        ),
         WebKit.UserContentInjectedFrames.TOP_FRAME,
         WebKit.UserScriptInjectionTime.START,
         None,  # allow_list: NULL means every frame; an empty list matches none
@@ -651,6 +697,7 @@ def create_carbon_window(application, config):
     )
     win.set_resizable(True)
     win.set_size_request(MIN_WIDTH, MIN_HEIGHT)
+    win.set_titlebar(Gtk.HeaderBar())
     win.set_child(web_view)
 
     # Wire window reference to handler and dispatcher
@@ -661,7 +708,8 @@ def create_carbon_window(application, config):
     if saved_maximized:
         win.maximize()
 
-    # Set up native tray icon
+    # Set up native tray icon with a useful initial state.
+    handler._state = handler._build_state()
     handler._setup_tray()
 
     # Connect close request — minimize-to-tray or normal close

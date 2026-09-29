@@ -66,6 +66,9 @@ html, body {
   font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
 }
 
+html.native-titlebar .window-controls,
+html.native-titlebar .header-drag-region { display: none; }
+
 /* ── Header ────────────────────────────────────────────────────────────────── */
 
 .app-header {
@@ -318,7 +321,7 @@ html, body {
 .stat-value--large {
   font-size: 2.5rem;
   font-weight: 300;
-  color: #ff832a;
+  color: var(--accent-color, #ff832a);
   letter-spacing: -0.02em;
   line-height: 1;
 }
@@ -367,15 +370,15 @@ html, body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #ff832a;
+  background: var(--accent-color, #ff832a);
   cursor: pointer;
   border: 2px solid var(--bg-surface);
-  box-shadow: 0 0 0 1px #ff832a;
+  box-shadow: 0 0 0 1px var(--accent-color, #ff832a);
 }
 
 .charge-slider::-webkit-slider-thumb:hover {
-  background: #ff9a4a;
-  box-shadow: 0 0 0 2px #ff832a;
+  background: var(--accent-hover, #ff9a4a);
+  box-shadow: 0 0 0 2px var(--accent-color, #ff832a);
 }
 
 .charge-slider::-webkit-slider-thumb:active {
@@ -386,10 +389,10 @@ html, body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #ff832a;
+  background: var(--accent-color, #ff832a);
   cursor: pointer;
   border: 2px solid var(--bg-surface);
-  box-shadow: 0 0 0 1px #ff832a;
+  box-shadow: 0 0 0 1px var(--accent-color, #ff832a);
 }
 
 .charge-slider:disabled {
@@ -414,7 +417,7 @@ html, body {
   min-width: 0;
   height: 2.75rem;
   padding: 0 1rem;
-  background-color: #ff832a;
+  background-color: var(--accent-color, #ff832a);
   color: var(--text-on-accent);
   border: none;
   border-radius: 4px;
@@ -425,7 +428,7 @@ html, body {
   transition: background-color 0.15s;
 }
 
-.action-btn:hover { background-color: #ff9a4a; }
+.action-btn:hover { background-color: var(--accent-hover, #ff9a4a); }
 .action-btn:active { background-color: #e96d00; }
 
 .action-btn--secondary {
@@ -472,8 +475,8 @@ html, body {
 }
 
 .preset-btn[aria-pressed="true"] {
-  background-color: #ff832a;
-  border-color: #ff832a;
+  background-color: var(--accent-color, #ff832a);
+  border-color: var(--accent-color, #ff832a);
 }
 
 .preset-btn[aria-pressed="true"] .preset-value {
@@ -581,7 +584,7 @@ html, body {
 }
 
 .toggle-switch input:checked + .toggle-slider {
-  background-color: #ff832a;
+  background-color: var(--accent-color, #ff832a);
 }
 
 .toggle-switch input:checked + .toggle-slider::before {
@@ -653,7 +656,7 @@ html, body {
 .floating-label {
   font-size: 1.25rem;
   font-weight: 300;
-  color: #ff832a;
+  color: var(--accent-color, #ff832a);
   min-width: 3.5rem;
   text-align: right;
 }
@@ -757,7 +760,7 @@ html, body {
 }
 
 ::selection {
-  background-color: #ff832a;
+  background-color: var(--accent-color, #ff832a);
   color: var(--text-on-accent);
 }
 
@@ -841,7 +844,7 @@ cds-toast-notification[kind="info"] {
 
 .pending-indicator {
   font-size: 0.75rem;
-  color: #ff832a;
+  color: var(--accent-color, #ff832a);
   text-align: center;
   padding: 0.5rem;
 }
@@ -849,3 +852,11 @@ cds-toast-notification[kind="info"] {
 .pending-indicator[hidden] {
   display: none;
 }
+
+html.accent-orange { --accent-color: #ff832a; --accent-hover: #ff9a4a; }
+html.accent-blue { --accent-color: #78a9ff; --accent-hover: #a6c8ff; }
+html.accent-green { --accent-color: #42be65; --accent-hover: #6fdc8c; }
+html.accent-purple { --accent-color: #a56eff; --accent-hover: #be95ff; }
+html.accent-red { --accent-color: #ff8389; --accent-hover: #ffb3b8; }
+[hidden] { display: none !important; }
+#appearance-mode { background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-strong); padding: .3rem; }
