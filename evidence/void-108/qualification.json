@@ -1,0 +1,23 @@
+{
+  "candidate": "threshold-2.0.2_1.x86_64.xbps",
+  "sha256": "dd23116b5cc562ace672560a68d1be693960cac4f3a0add2dcb347cb60f321c2",
+  "timestamp": "2026-09-29T16:27:26Z",
+  "physical": false,
+  "checks": [
+    "installation",
+    "owned_payload",
+    "runtime_typelibs",
+    "schema",
+    "disabled_service",
+    "reinstall_policy",
+    "removal_policy",
+    "foreign_probe_preserved"
+  ],
+  "unverified": [
+    "previous_version_upgrade",
+    "hardware",
+    "reboot",
+    "desktop"
+  ],
+  "result": "pass"
+}
