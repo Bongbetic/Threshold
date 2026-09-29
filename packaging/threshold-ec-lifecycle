@@ -237,10 +237,17 @@ except OSError:
 
 begin_op() {
     # begin_op <verb> — record a started operation.
-    # Returns a deterministic operation ID (verb-boot_id) for idempotency:
-    # the same verb on the same boot is detected as already completed.
+    # Only boot reconciliation is deduplicated per boot. Each package
+    # transaction or explicit repair is a new attempt: an earlier success
+    # cannot prove that assets removed/replaced since then are still ready.
     mkdir -p "$EC_STATE_DIR"
     local op_id="$1-$(boot_id)"
+    if [ "$1" != reconcile ]; then
+        local attempt
+        attempt=$(mktemp "$EC_STATE_DIR/attempt.XXXXXXXX") || return 1
+        op_id="$op_id-${attempt##*/}"
+        rm -f "$attempt"
+    fi
     echo "$(date -Iseconds) start $op_id $1" >> "$EC_OPS_JOURNAL" 2>/dev/null || :
     echo "$op_id"
 }
@@ -837,7 +844,7 @@ case "${1:-}" in
         ;;
     install-or-upgrade|repair|reconcile|remove)
         acquire_lock
-        OP_ID=$(begin_op "$1")
+        OP_ID=$(begin_op "$1") || exit 1
         if was_completed "$OP_ID"; then
             log "Operation $OP_ID already completed; skipping."
             exit 0

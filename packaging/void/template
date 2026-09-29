@@ -1,11 +1,11 @@
 # Template for current x86_64-glibc Void Linux.
 pkgname=threshold
-version=2.0.3
+version=2.0.4
 revision=1
 build_style=meson
 hostmakedepends="pkg-config gettext desktop-file-utils glib-devel"
 makedepends="gtk4-devel libadwaita-devel libwebkitgtk60-devel"
-depends="python3-gobject gtk4 libadwaita libnotify libwebkitgtk60 libdbusmenu-glib dkms kmod polkit hicolor-icon-theme"
+depends="python3-gobject gtk4 libadwaita libnotify libwebkitgtk60 libdbusmenu-glib dkms kmod zstd polkit hicolor-icon-theme"
 short_desc="Battery charge threshold controller for Linux laptops"
 maintainer="Soubarna <Soubarna@live.in>"
 license="GPL-3.0-or-later"
