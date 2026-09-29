@@ -76,3 +76,43 @@ changed the preference. The reboot service recorded a no-op while the prior
 boot, so initial policy/readback preservation remains an inference from the
 service log rather than a direct measurement. No threshold was changed during
 this capture.
+
+## Controlled reboot comparison for issue #117
+
+The draft v2.0.4 assets were downloaded again and passed
+`scripts/release_inventory.py verify` for source
+`3682e414b40918ff7c1a8071ae26830e1dd858c4`. The immutable XBPS archive hash
+is `62d55b0b7814472fdf2effb3efbe2c85eb1f90278b23777941e187af01af74f6`.
+The installed package reports `threshold-2.0.4_1`, matching the candidate
+version; the earlier installation observation above records installation of
+that exact archive.
+
+[`controlled-before-reboot.json`](controlled-before-reboot.json) and
+[`controlled-before-reboot-session.json`](controlled-before-reboot-session.json)
+are fresh, read-only captures from this boot. Use the latter as the comparison
+baseline: at `2026-09-29T18:55:14Z` it records Void Linux, the MSI Thin A15
+B7UCX, kernel `7.2.8_1`, installed package version `threshold-2.0.4_1`, and
+policy, GSettings preference, and BAT1 readback all at 70%. It also records the
+loaded EC module, enabled and running 30-second bounded reconciliation
+service, lifecycle state for this boot, a known-good marker refreshed during
+this boot, and Secure Boot disabled. The raw boot ID is not stored; the capture
+records its SHA-256. Secure Boot disabled does not establish MOK enrollment.
+
+The follow-up must be a normal user-coordinated reboot into the same kernel.
+Before opening Threshold or changing the threshold, run from this checkout as
+the normal desktop user:
+
+```sh
+python3 evidence/void-108/v2.0.4-physical/capture-boot.py after \
+  --before evidence/void-108/v2.0.4-physical/controlled-before-reboot-session.json
+```
+
+This writes a new `controlled-after-reboot.json` without replacing prior
+captures. It also reads the session preference, policy, sysfs threshold,
+service state, lifecycle state, known-good marker, and appended reconciliation
+log entry. It waits up to 40 seconds for that bounded boot reconciliation to
+record its result before taking the snapshot; it does not write hardware or
+package state. `reconciliation=noop`
+identifies a no-write reconciliation, while `reconciliation=reconciled`
+identifies a write followed by successful readback. Resume evidence review
+before any threshold-changing interaction.
