@@ -98,9 +98,9 @@ def test_sha256_binding_in_verification_script():
         pytest.skip("verification script not found")
 
     content = script_path.read_text()
-    # Script should compute SHA-256 for candidates
-    assert "sha256sum" in content, "Verification script missing sha256sum"
-    # Script should record evidence
-    assert "record_evidence" in content, "Verification script missing evidence recording"
-    # Script should sanitize evidence
-    assert "sanitize" in content.lower(), "Verification script missing sanitization"
+    # The wrapper delegates to the shared fail-closed validator.
+    assert 'release_inventory.py" verify' in content
+    assert '--version' in content and '--revision' in content
+    validator = (ROOT / 'scripts/release_inventory.py').read_text()
+    assert "hashlib.file_digest" in validator
+    assert "Checksum mismatch" in validator

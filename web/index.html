@@ -117,6 +117,14 @@
           <h3>Appearance</h3>
           <div class="card-body appearance-controls">
             <div class="control-row">
+              <label class="control-label" for="appearance-mode">Theme</label>
+              <select id="appearance-mode" aria-label="Theme">
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </div>
+            <div class="control-row" hidden>
               <span class="control-label">Dark mode</span>
               <label class="toggle-switch" data-testid="dark-mode-toggle">
     <input type="checkbox" id="dark-mode-toggle-input" aria-label="Dark mode" />

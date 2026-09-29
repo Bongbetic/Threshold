@@ -1,6 +1,6 @@
 project(
     'threshold',
-    version: '2.0.1',
+    version: '2.0.2',
     meson_version: '>= 1.0.0',
     license: 'GPL-3.0-or-later',
     default_options: [

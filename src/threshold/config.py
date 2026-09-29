@@ -30,6 +30,24 @@ class Config:
 
     def set_dark_mode(self, value: bool) -> None:
         self._settings.set_boolean('dark-mode', value)
+        self.set_appearance_mode('dark' if value else 'light')
+
+    def get_appearance_mode(self) -> str:
+        mode = self._settings.get_string('appearance-mode')
+        if mode != 'legacy':
+            return mode
+        # Preserve a saved boolean, including explicit light; untouched installs
+        # follow the desktop. No migration writes or preference loss are needed.
+        saved = self._settings.get_user_value('dark-mode')
+        return ('dark' if saved.unpack() else 'light') if saved is not None else 'system'
+
+    def set_appearance_mode(self, value: str) -> None:
+        if value not in ('system', 'light', 'dark'):
+            raise ValueError('Invalid appearance mode')
+        self._settings.set_string('appearance-mode', value)
+
+    def disconnect(self, handler_id: int) -> None:
+        self._settings.disconnect(handler_id)
 
     # ── autostart ──────────────────────────────────────────────────────────────
 
