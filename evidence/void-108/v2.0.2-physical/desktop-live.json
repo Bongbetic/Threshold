@@ -1,0 +1,259 @@
+{
+  "steps": [
+    {
+      "phase": 0,
+      "visible": true,
+      "window": {
+        "is_focused": true,
+        "is_floating": false
+      },
+      "icon": "battery-good-symbolic",
+      "appearance": {
+        "mode": "system",
+        "scheme": "dark",
+        "accent_color": "orange",
+        "palette": {
+          "--bg-page": "#141218",
+          "--bg-surface": "#211f24",
+          "--bg-surface-raised": "#211f24",
+          "--bg-grid-gap": "#141218",
+          "--bg-interactive-hover": "#141218",
+          "--bg-interactive-active": "#211f24",
+          "--text-primary": "#e6e0e9",
+          "--text-secondary": "#e6e0e9",
+          "--text-tertiary": "#e6e0e9",
+          "--text-placeholder": "#e6e0e9",
+          "--border-subtle": "#e6e0e9",
+          "--border-strong": "#e6e0e9",
+          "--scrollbar-track": "#141218",
+          "--scrollbar-thumb": "#e6e0e9",
+          "--accent-color": "#d0bcff",
+          "--accent-hover": "#d0bcff",
+          "--text-on-accent": "#381e72",
+          "--focus-color": "#d0bcff"
+        }
+      },
+      "web": {
+        "theme": "native-titlebar cds--g100 accent-orange",
+        "bg": "rgb(20, 18, 24)",
+        "accent": "#d0bcff",
+        "mode": "system",
+        "width": 954,
+        "height": 982,
+        "scroll": 954,
+        "bodyScroll": 954,
+        "native": true
+      }
+    },
+    {
+      "phase": 1,
+      "visible": true,
+      "window": {
+        "is_focused": true,
+        "is_floating": false
+      },
+      "icon": "battery-good-symbolic",
+      "appearance": {
+        "mode": "system",
+        "scheme": "dark",
+        "accent_color": "orange",
+        "palette": {
+          "--bg-page": "#141218",
+          "--bg-surface": "#211f24",
+          "--bg-surface-raised": "#211f24",
+          "--bg-grid-gap": "#141218",
+          "--bg-interactive-hover": "#141218",
+          "--bg-interactive-active": "#211f24",
+          "--text-primary": "#e6e0e9",
+          "--text-secondary": "#e6e0e9",
+          "--text-tertiary": "#e6e0e9",
+          "--text-placeholder": "#e6e0e9",
+          "--border-subtle": "#e6e0e9",
+          "--border-strong": "#e6e0e9",
+          "--scrollbar-track": "#141218",
+          "--scrollbar-thumb": "#e6e0e9",
+          "--accent-color": "#d0bcff",
+          "--accent-hover": "#d0bcff",
+          "--text-on-accent": "#381e72",
+          "--focus-color": "#d0bcff"
+        }
+      },
+      "web": {
+        "theme": "native-titlebar cds--g100 accent-orange",
+        "bg": "rgb(20, 18, 24)",
+        "accent": "#d0bcff",
+        "mode": "system",
+        "width": 640,
+        "height": 982,
+        "scroll": 640,
+        "bodyScroll": 640,
+        "native": true
+      }
+    },
+    {
+      "phase": 2,
+      "visible": true,
+      "window": {
+        "is_focused": true,
+        "is_floating": false
+      },
+      "icon": "battery-good-symbolic",
+      "appearance": {
+        "mode": "system",
+        "scheme": "dark",
+        "accent_color": "orange",
+        "palette": {
+          "--bg-page": "#141218",
+          "--bg-surface": "#211f24",
+          "--bg-surface-raised": "#211f24",
+          "--bg-grid-gap": "#141218",
+          "--bg-interactive-hover": "#141218",
+          "--bg-interactive-active": "#211f24",
+          "--text-primary": "#e6e0e9",
+          "--text-secondary": "#e6e0e9",
+          "--text-tertiary": "#e6e0e9",
+          "--text-placeholder": "#e6e0e9",
+          "--border-subtle": "#e6e0e9",
+          "--border-strong": "#e6e0e9",
+          "--scrollbar-track": "#141218",
+          "--scrollbar-thumb": "#e6e0e9",
+          "--accent-color": "#d0bcff",
+          "--accent-hover": "#d0bcff",
+          "--text-on-accent": "#381e72",
+          "--focus-color": "#d0bcff"
+        }
+      },
+      "web": {
+        "theme": "native-titlebar cds--g100 accent-orange",
+        "bg": "rgb(20, 18, 24)",
+        "accent": "#d0bcff",
+        "mode": "system",
+        "width": 480,
+        "height": 982,
+        "scroll": 480,
+        "bodyScroll": 480,
+        "native": true
+      }
+    },
+    {
+      "phase": 3,
+      "visible": false,
+      "window": null,
+      "icon": "battery-good-symbolic",
+      "appearance": {
+        "mode": "system",
+        "scheme": "dark",
+        "accent_color": "orange",
+        "palette": {
+          "--bg-page": "#141218",
+          "--bg-surface": "#211f24",
+          "--bg-surface-raised": "#211f24",
+          "--bg-grid-gap": "#141218",
+          "--bg-interactive-hover": "#141218",
+          "--bg-interactive-active": "#211f24",
+          "--text-primary": "#e6e0e9",
+          "--text-secondary": "#e6e0e9",
+          "--text-tertiary": "#e6e0e9",
+          "--text-placeholder": "#e6e0e9",
+          "--border-subtle": "#e6e0e9",
+          "--border-strong": "#e6e0e9",
+          "--scrollbar-track": "#141218",
+          "--scrollbar-thumb": "#e6e0e9",
+          "--accent-color": "#d0bcff",
+          "--accent-hover": "#d0bcff",
+          "--text-on-accent": "#381e72",
+          "--focus-color": "#d0bcff"
+        }
+      },
+      "web": {
+        "theme": "native-titlebar cds--g100 accent-orange",
+        "bg": "rgb(20, 18, 24)",
+        "accent": "#d0bcff",
+        "mode": "system",
+        "width": 480,
+        "height": 982,
+        "scroll": 480,
+        "bodyScroll": 480,
+        "native": true
+      }
+    },
+    {
+      "phase": 4,
+      "visible": true,
+      "window": {
+        "is_focused": true,
+        "is_floating": false
+      },
+      "icon": "battery-good-symbolic",
+      "appearance": {
+        "mode": "system",
+        "scheme": "dark",
+        "accent_color": "orange",
+        "palette": {
+          "--bg-page": "#141218",
+          "--bg-surface": "#211f24",
+          "--bg-surface-raised": "#211f24",
+          "--bg-grid-gap": "#141218",
+          "--bg-interactive-hover": "#141218",
+          "--bg-interactive-active": "#211f24",
+          "--text-primary": "#e6e0e9",
+          "--text-secondary": "#e6e0e9",
+          "--text-tertiary": "#e6e0e9",
+          "--text-placeholder": "#e6e0e9",
+          "--border-subtle": "#e6e0e9",
+          "--border-strong": "#e6e0e9",
+          "--scrollbar-track": "#141218",
+          "--scrollbar-thumb": "#e6e0e9",
+          "--accent-color": "#d0bcff",
+          "--accent-hover": "#d0bcff",
+          "--text-on-accent": "#381e72",
+          "--focus-color": "#d0bcff"
+        }
+      },
+      "web": {
+        "theme": "native-titlebar cds--g100 accent-orange",
+        "bg": "rgb(20, 18, 24)",
+        "accent": "#d0bcff",
+        "mode": "system",
+        "width": 954,
+        "height": 982,
+        "scroll": 954,
+        "bodyScroll": 954,
+        "native": true
+      }
+    }
+  ],
+  "gtk": "4.22.4",
+  "webkit": "2.50.4",
+  "backend": "GdkWaylandDisplay",
+  "surface": "GdkWaylandToplevel",
+  "appearance": {
+    "mode": "system",
+    "scheme": "dark",
+    "accent_color": "orange",
+    "palette": {
+      "--bg-page": "#141218",
+      "--bg-surface": "#211f24",
+      "--bg-surface-raised": "#211f24",
+      "--bg-grid-gap": "#141218",
+      "--bg-interactive-hover": "#141218",
+      "--bg-interactive-active": "#211f24",
+      "--text-primary": "#e6e0e9",
+      "--text-secondary": "#e6e0e9",
+      "--text-tertiary": "#e6e0e9",
+      "--text-placeholder": "#e6e0e9",
+      "--border-subtle": "#e6e0e9",
+      "--border-strong": "#e6e0e9",
+      "--scrollbar-track": "#141218",
+      "--scrollbar-thumb": "#e6e0e9",
+      "--accent-color": "#d0bcff",
+      "--accent-hover": "#d0bcff",
+      "--text-on-accent": "#381e72",
+      "--focus-color": "#d0bcff"
+    }
+  },
+  "readiness": "ready",
+  "icon": "battery-good-symbolic",
+  "close_blocked": true,
+  "hidden_after_close": true
+}

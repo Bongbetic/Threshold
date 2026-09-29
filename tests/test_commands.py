@@ -14,6 +14,12 @@ from threshold.battery import ControlMode, THRESHOLD_MIN, THRESHOLD_MAX
 from threshold.state import ThresholdState
 
 
+@pytest.fixture(autouse=True)
+def isolated_machine_policy(tmp_path, monkeypatch):
+    """Command tests must never modify the host's boot policy."""
+    monkeypatch.setattr("threshold.commands.EC_THRESHOLD_FILE", str(tmp_path / "policy"))
+
+
 # ── Golden fixtures ──────────────────────────────────────────────────────────
 
 
@@ -388,3 +394,60 @@ class TestCommandResult:
         )
         assert r.success is False
         assert r.error_code == "x"
+
+
+class TestMachinePolicy:
+    def test_permission_failure_uses_authority_and_verifies(self, tmp_path):
+        from threshold.commands import _persist_machine_threshold
+        with patch("pathlib.Path.write_text", side_effect=PermissionError), \
+                patch("pathlib.Path.is_file", return_value=True), \
+                patch("pathlib.Path.read_text", return_value="70\n"), \
+                patch("threshold.commands.subprocess.run") as run:
+            run.return_value.returncode = 0
+            assert _persist_machine_threshold(70, authorize=True)
+            assert run.call_args.args[0] == [
+                "pkexec", CommandDispatcher.PACKAGE_LIFECYCLE,
+                "set-charge-threshold", "70",
+            ]
+
+    @pytest.mark.parametrize("status,readback", [(126, "70"), (0, "60")])
+    def test_denied_or_unverified_save_fails(self, status, readback):
+        from threshold.commands import _persist_machine_threshold
+        with patch("pathlib.Path.write_text", side_effect=PermissionError), \
+                patch("pathlib.Path.is_file", return_value=True), \
+                patch("pathlib.Path.read_text", return_value=readback), \
+                patch("threshold.commands.subprocess.run") as run:
+            run.return_value.returncode = status
+            assert not _persist_machine_threshold(70, authorize=True)
+
+    def test_alarm_save_never_requests_privileges(self):
+        from threshold.commands import _persist_machine_threshold
+        with patch("pathlib.Path.write_text", side_effect=PermissionError), \
+                patch("threshold.commands.subprocess.run") as run:
+            assert not _persist_machine_threshold(70)
+            run.assert_not_called()
+
+    def test_policy_failure_does_not_claim_apply_success(self, dispatcher, ec_msi_state):
+        with patch("threshold.commands.write_threshold", return_value=(True, "direct")), \
+                patch("threshold.commands.read_sysfs", return_value="70"), \
+                patch("threshold.commands._persist_machine_threshold", return_value=False):
+            result = dispatcher.dispatch("apply_threshold", {"threshold": 70}, ec_msi_state)
+        assert not result.success
+        assert result.error_code == ErrorCode.POLICY_SAVE_FAILED
+        assert "active threshold changed" in result.message
+
+    def test_unavailable_ec_still_requires_installed_boot_policy(self, dispatcher, notify_only_state):
+        with patch("pathlib.Path.is_file", return_value=True), \
+                patch("threshold.commands._persist_machine_threshold", return_value=False) as save:
+            result = dispatcher.dispatch("apply_threshold", {"threshold": 70}, notify_only_state)
+        save.assert_called_once_with(70, authorize=True)
+        assert not result.success
+        assert result.error_code == ErrorCode.POLICY_SAVE_FAILED
+
+    def test_alarm_only_without_authority_remains_usable(self, dispatcher, notify_only_state):
+        with patch("pathlib.Path.is_file", return_value=False), \
+                patch("threshold.commands._persist_machine_threshold", return_value=False) as save:
+            result = dispatcher.dispatch("apply_threshold", {"threshold": 70}, notify_only_state)
+        save.assert_called_once_with(70, authorize=False)
+        assert result.success
+        assert result.data["method"] == "alarm"

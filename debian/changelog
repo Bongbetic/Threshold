@@ -1,3 +1,11 @@
+threshold (2.0.3-1) trixie; urgency=high
+
+  * Save machine-wide charge policy through the EC authority when needed.
+  * Report denied or unverified policy saves instead of claiming success.
+  * Retain physical rejection evidence for the unpublished 2.0.2 candidate.
+
+ -- Soubarna <Soubarna@live.in>  Tue, 29 Sep 2026 22:45:00 +0530
+
 threshold (2.0.2-1) trixie; urgency=medium
 
   * Add downloadable Void XBPS candidates with exact-source verification.
