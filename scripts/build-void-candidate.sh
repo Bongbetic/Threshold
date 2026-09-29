@@ -9,6 +9,7 @@ source "$source_root/packaging/void/build-pins.env"
 test ! -e "$out"
 xbps-install -Suy xbps
 xbps-install -Sy bash git python3
+xbps-install -Sy -R https://repo-default.voidlinux.org/current/bootstrap base-chroot
 build_root=$(mktemp -d)
 git init -q "$build_root/void-packages"
 git -C "$build_root/void-packages" fetch -q --depth 1 https://github.com/void-linux/void-packages.git "$VOID_PACKAGES_COMMIT"
@@ -20,7 +21,11 @@ xbps-uhelper arch > /.xbps_chroot_init
 export XBPS_CHROOT_CMD=ethereal XBPS_ALLOW_CHROOT_BREAKOUT=yes
 ./xbps-src binary-bootstrap
 # Preserve build dependencies until their exact versions are recorded.
-./xbps-src -C pkg threshold
+./xbps-src -C pkg threshold 2>&1 | tee "$build_root/build.log"
+if grep -q '=> ERROR:' "$build_root/build.log"; then
+    echo "xbps-src reported a failed hook; refusing candidate output" >&2
+    exit 1
+fi
 version=$(sed -n 's/^version=//p' srcpkgs/threshold/template)
 revision=$(sed -n 's/^revision=//p' srcpkgs/threshold/template)
 mkdir "$out"
