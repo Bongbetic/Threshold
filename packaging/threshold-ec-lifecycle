@@ -782,6 +782,29 @@ do_support_export() {
 trap 'release_lock' EXIT
 
 case "${1:-}" in
+    set-charge-threshold)
+        # An explicit desktop gesture uses pkexec to save the boot policy.
+        # Accept only a bounded percentage, never a caller-supplied path.
+        [ "$#" -eq 2 ] || exit 2
+        case "$2" in
+            [2-9][0-9]|100) ;;
+            *) exit 2 ;;
+        esac
+        acquire_lock
+        POLICY_TMP="$EC_STATE_DIR/charge-threshold.tmp.$$"
+        umask 022
+        if ! printf '%s\n' "$2" > "$POLICY_TMP"; then
+            rm -f "$POLICY_TMP"
+            exit 1
+        fi
+        sync_file "$POLICY_TMP"
+        if ! mv -f "$POLICY_TMP" "$EC_STATE_DIR/charge-threshold"; then
+            rm -f "$POLICY_TMP"
+            exit 1
+        fi
+        [ "$(cat "$EC_STATE_DIR/charge-threshold")" = "$2" ] || exit 1
+        exit 0
+        ;;
     install-or-upgrade|repair|reconcile|remove)
         acquire_lock
         OP_ID=$(begin_op "$1")
@@ -848,7 +871,7 @@ case "${1:-}" in
         do_support_export
         ;;
     *)
-        echo "usage: $0 {install-or-upgrade|repair|reconcile|remove|handoff-snapshot|diagnostics|support-export}" >&2
+        echo "usage: $0 {install-or-upgrade|repair|reconcile|remove|handoff-snapshot|diagnostics|support-export|set-charge-threshold VALUE}" >&2
         exit 2
         ;;
 esac

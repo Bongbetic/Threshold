@@ -1025,3 +1025,34 @@ class TestFakeSystemLifecycle:
         assert st["reason"] == "build_failed"
         assert read_maintenance(fake) == "failed"
         assert self._status_kv(fake)["live"] == "yes"
+
+
+@pytest.mark.parametrize("value", ["20", "60", "100"])
+def test_explicit_policy_save_preserves_hardware(fake_system, value):
+    fake = fake_system
+    add_threshold_interface(fake)
+    threshold = fake.battery / "charge_control_end_threshold"
+    threshold.write_text("80\n")
+    result = subprocess.run(
+        [str(LIFECYCLE), "set-charge-threshold", value],
+        env=fake.env, capture_output=True, text=True, timeout=10,
+    )
+    assert result.returncode == 0, result.stderr
+    assert (fake.state / "charge-threshold").read_text() == value + "\n"
+    assert threshold.read_text() == "80\n"
+    assert not (fake.state / "state").exists()
+
+
+@pytest.mark.parametrize("args", [[], ["19"], ["101"], ["060"], ["60\n70"],
+                                  ["60", "/tmp/elsewhere"], ["$(id)"], ["true"]])
+def test_policy_save_rejects_invalid_input_without_mutation(fake_system, args):
+    fake = fake_system
+    policy = fake.state / "charge-threshold"
+    policy.parent.mkdir(exist_ok=True)
+    policy.write_text("60\n")
+    result = subprocess.run(
+        [str(LIFECYCLE), "set-charge-threshold", *args],
+        env=fake.env, capture_output=True, text=True, timeout=10,
+    )
+    assert result.returncode == 2
+    assert policy.read_text() == "60\n"
