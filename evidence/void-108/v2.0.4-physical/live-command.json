@@ -1,0 +1,41 @@
+{
+  "timestamp": "2026-09-29T17:48:52.879847+00:00",
+  "execution": "normal desktop user, installed command dispatcher",
+  "steps": [
+    {
+      "requested": 70,
+      "result": {
+        "success": true,
+        "data": {
+          "threshold": 70,
+          "method": "pkexec",
+          "ec_mismatch": false
+        },
+        "error_code": null,
+        "message": null
+      },
+      "active": "70",
+      "policy": "70",
+      "preference": 70
+    },
+    {
+      "requested": 60,
+      "result": {
+        "success": true,
+        "data": {
+          "threshold": 60,
+          "method": "pkexec",
+          "ec_mismatch": false
+        },
+        "error_code": null,
+        "message": null
+      },
+      "active": "60",
+      "policy": "60",
+      "preference": 60
+    }
+  ],
+  "administrative_cleanup_required": false,
+  "restored_active": "60",
+  "restored_policy": "60"
+}
