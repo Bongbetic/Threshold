@@ -149,3 +149,36 @@ was captured at `2026-10-01T03:19:55Z` on the MSI Thin A15 B7UCX (Void Linux).
 Gates evidenced: `reboot_reconciliation`, `machine_policy`, `known_good_boot`,
 observed `secure_boot` (disabled). Not covered: physical failed-kernel recovery
 and other items listed under "Remaining" above.
+
+## Kernel recovery for issue #118
+
+Known-good kernel `7.2.8_1`, target `6.18.54_1`, same candidate (XBPS SHA-256
+`62d55b0b…af74f6`, installed `threshold-2.0.4_1`). All steps ran on the
+physical MSI Thin A15 B7UCX; reboots were user-coordinated.
+
+- Two initial failure injections (hiding headers `.config`, then `sign-file`)
+  did **not** fail the build; each time the 6.18.54_1 build was removed
+  (`dkms uninstall`/`unbuild`, that kernel only) before retrying.
+- 2026-10-01T03:35:03Z: with the 6.18.54_1 headers `Makefile` hidden, the
+  installed `threshold-ec-lifecycle repair 6.18.54_1` ran a real failing
+  `make` (bad exit status 2). The 7.2.8_1 module stayed loaded, threshold and
+  policy stayed 60%, NVIDIA registrations and the 7.2.8_1 known-good marker
+  were unchanged. See [`kernel-recovery-before-boot.json`](kernel-recovery-before-boot.json).
+- Observation: the global `state`/`status` files recorded
+  `build_failed` for kernel 6.18.54_1 while the running kernel's module was
+  healthy, and `6.18.54_1.log` holds no failure record. Not changed here.
+- 03:35:16Z: restored headers; named repair built `msi-ec` for 6.18.54_1 only
+  and left it `pending_reboot`.
+- 05:01:57Z: booted 6.18.54_1: module loaded, `live=yes`, reconciliation no-op
+  at 60%, kernel marked known-good ([`kernel-recovery-after-boot-6.18.json`](kernel-recovery-after-boot-6.18.json)).
+- 05:09:49Z: booted back into 7.2.8_1: module loaded, 60%, both known-good
+  markers present. Ordinary-user `apply_threshold` via real pkexec set 70% then
+  restored 60% with matching hardware readback and policy
+  ([`kernel-recovery-after-return-7.2.json`](kernel-recovery-after-return-7.2.json)).
+- The earlier v2.0.4 install/upgrade/removal/reinstall observations above were
+  made with this exact candidate hash and still apply; foreign NVIDIA
+  registrations and the working module were preserved in each.
+
+Gates evidenced: `failed_kernel_build`, `named_kernel_repair`,
+`known_good_boot`, `subsequent_verification`, `live_ec`. This is not a passing
+`release-acceptance.json`; other gates and publication remain open.
