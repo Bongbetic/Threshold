@@ -116,3 +116,36 @@ package state. `reconciliation=noop`
 identifies a no-write reconciliation, while `reconciliation=reconciled`
 identifies a write followed by successful readback. Resume evidence review
 before any threshold-changing interaction.
+
+## Controlled reboot result for issue #117
+
+The first controlled baseline (`controlled-before-reboot-session.json`, 70%,
+2026-09-29T18:55:14Z) became stale: further reboots and a threshold change to
+60% happened before the follow-up capture. [`controlled-after-reboot.json`](controlled-after-reboot.json)
+(2026-10-01T03:05:31Z) is therefore **not** a valid comparison
+(`preboot_policy_preserved=false` reflects the stale baseline, not a product
+failure) and is kept unmodified as raw evidence only.
+
+A fresh baseline was captured read-only on the live boot at
+`2026-10-01T03:10:40Z` ([`controlled-before-reboot-2.json`](controlled-before-reboot-2.json)):
+policy, GSettings preference and BAT1 readback all 60%. After a user-coordinated
+normal reboot into the same kernel `7.2.8_1`, with no threshold change or
+Threshold launch in between, [`controlled-after-reboot-2.json`](controlled-after-reboot-2.json)
+was captured at `2026-10-01T03:19:55Z` on the MSI Thin A15 B7UCX (Void Linux).
+
+- Boot identity changed (`c8e707…` to `adde8e…`); package `threshold-2.0.4_1`
+  and candidate identity (XBPS SHA-256 `62d55b0b…af74f6`) unchanged.
+- EC module loaded; `threshold-boot-reconcile` enabled, running, bounded (30 s);
+  lifecycle state belongs to the new boot.
+- Post-boot machine policy, session preference and BAT1 readback all 60%,
+  equal to the pre-boot confirmed threshold.
+- Boot reconciliation at 2026-10-01T08:48:39+05:30 was `reconciliation=noop`:
+  no hardware write occurred; the 60% value was already in effect.
+- Live capability and successful reconciliation observed on this boot; known-good
+  marker refreshed at `2026-10-01T03:18:39Z`. Policy consistent across the
+  session transition (preference equals policy).
+- Secure Boot is disabled; this does not establish MOK enrollment.
+
+Gates evidenced: `reboot_reconciliation`, `machine_policy`, `known_good_boot`,
+observed `secure_boot` (disabled). Not covered: physical failed-kernel recovery
+and other items listed under "Remaining" above.
