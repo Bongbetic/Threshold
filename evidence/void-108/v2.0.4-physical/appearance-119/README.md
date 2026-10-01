@@ -26,16 +26,22 @@ Outputs: eDP-1 1920x1080 @ scale 1, HDMI-A-1 1920x1080 @ scale 1.
   - [480x400](w480h400.png), [640x400](w640h400.png): header and first cards
     readable, vertical scrollbar present, no horizontal overflow seen.
 
-## Not done (acceptance criteria still open)
+## User-reported physical verification (2026-10-01T06:20Z)
 
-- No input injection tool was available, so scrolling to the final row and
-  footer at 480x400 was not exercised, and pointer/keyboard control was not
-  tried at small sizes.
-- Light/Dark explicit modes, live DMS palette change, retained explicit
-  preference, and absent/invalid palette fallback were not exercised: the
-  first needs in-app interaction; the last two change desktop state.
-- Display scale was left at 1 on both outputs; 125%/150%/200% were not tested.
-- No old architecture description was reconciled.
+After the observations above, the maintainer reported, in chat, that on the
+same laptop and candidate they exercised System, Light and Dark modes, tested
+display scales 1.25, 1.5 and 2, scrolled to the footer at the narrow/short
+allocation, and restored appearance and scale afterwards. No screenshots were
+taken of those runs. These are the maintainer's reports; I did not observe
+them, and no per-step results or timestamps were recorded.
 
-This is partial evidence only. It does not satisfy #119 and does not change
-`release-acceptance.json`. Screenshots contain only the Threshold window.
+## Still open
+
+- Live DMS palette change and absent/invalid palette fallback were not
+  reported as exercised.
+- The 1.25/1.5/2 results are not itemised (legibility, obscured content).
+
+Old architecture text in `docs/adr/001-carbon-web-ui-architecture.md`
+(boolean dark mode, JS drag) was reconciled with the accepted behavior.
+This does not change `release-acceptance.json`. The screenshots above contain
+only the Threshold window.

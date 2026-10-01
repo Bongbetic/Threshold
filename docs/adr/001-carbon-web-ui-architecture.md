@@ -36,7 +36,7 @@ Layout regions: header, top status grid, dominant charge limit panel, lower sett
 - **Title + live percentage:** header shows `"Threshold — {pct}%"`, updated live over the bridge.
 - **Nav:** region focus anchors (Overview / Threshold / Settings / About). Active = orange underline. About opens a `cds-modal`. The single-page contract remains: nav moves keyboard focus, not pages.
 - **Menu button:** dropped for v1 (nothing to open in a one-screen design).
-- **Drag:** JS mousedown on header drag zone → bridge `window.begin-drag` → Python `self.begin_move_drag()`. Double-click on drag zone → toggle maximize/restore.
+- **Drag:** superseded. A native GTK header bar owns titlebar gestures and window controls; the web header's duplicate controls are hidden inside the native application. Legacy `begin_drag` requests report `dragging: false`.
 - **Resizable.** Default `~1180×860`, minimum `480×400`, no maximum. The minimum was lowered by the adaptive layout decision above.
 
 Resolved in [#55](https://github.com/Bongbetic/Threshold/issues/55).
@@ -69,7 +69,7 @@ Resolved in [#38](https://github.com/Bongbetic/Threshold/issues/38).
 ### 5. Theme: White ↔ Gray 100, parity with system dark mode
 
 - **Theme pair:** White (light) ↔ Gray 100 (dark). No Gray 10, no Gray 90.
-- **Scheme policy:** `dark-mode` bool — ON forces dark (Adw `FORCE_DARK`), OFF follows system (Adw `DEFAULT`). No tri-state, no settings-key migration. Live flips while open.
+- **Scheme policy:** superseded by a System/Light/Dark preference. Untouched installs select System (portal preference, then a valid DMS palette, then the GNOME/light fallback). A persisted legacy `dark-mode` boolean maps to explicit Light or Dark and stays available for rollback. Live changes apply while open. See `evidence/desktop-107/README.md`.
 - **Accent:** five accents (orange default, blue, green, purple, red). Per-theme tone pairs — a bright step for Gray 100, a deep step for White.
 - **Python is single source of truth** for theme scheme. Adw.StyleManager computes effective scheme; web layer does not read `prefers-color-scheme` as authority.
 - **Theme reaches the page over the bridge:** appearance (scheme + accent) in the state snapshot; changes as push events. Page swaps Carbon theme tokens (`cds--g100` ↔ `cds--white` root class) and accent custom properties — no reload.
