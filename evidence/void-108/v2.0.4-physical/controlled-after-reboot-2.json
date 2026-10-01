@@ -1,0 +1,77 @@
+{
+  "timestamp": "2026-10-01T03:19:55.234922Z",
+  "phase": "after",
+  "candidate": {
+    "version": "2.0.4",
+    "package": "threshold-2.0.4_1",
+    "asset": "threshold-2.0.4_1.x86_64.xbps",
+    "sha256": "62d55b0b7814472fdf2effb3efbe2c85eb1f90278b23777941e187af01af74f6",
+    "source_revision": "3682e414b40918ff7c1a8071ae26830e1dd858c4"
+  },
+  "physical_machine": "MSI Thin A15 B7UCX",
+  "os": "Void Linux",
+  "kernel": "7.2.8_1",
+  "boot_identity_sha256": "adde8e49811f8d4f7ada5479d24e0caf6b9d5420d93f777890f27e734819d44a",
+  "installed_package": "threshold-2.0.4_1",
+  "installed_package_matches_candidate_version": true,
+  "machine_policy": "60",
+  "session_preference_threshold": "60",
+  "session_preference_matches_policy": true,
+  "active_thresholds": [
+    {
+      "battery": "BAT1",
+      "value": "60"
+    }
+  ],
+  "active_thresholds_match_policy": true,
+  "module_loaded": true,
+  "module_path": "/lib/modules/7.2.8_1/kernel/drivers/platform/x86/msi-ec.ko.zst",
+  "reconciliation_service": {
+    "name": "threshold-boot-reconcile",
+    "enabled": true,
+    "running": true,
+    "bounded_timeout_seconds": 30,
+    "bounded": true
+  },
+  "lifecycle_state": {
+    "setup_state": "available",
+    "kernel": "7.2.8_1",
+    "belongs_to_current_boot": true
+  },
+  "known_good_marker": true,
+  "known_good_marker_updated_this_boot": true,
+  "known_good_marker_timestamp": "2026-10-01T03:18:39Z",
+  "secure_boot_enabled": false,
+  "reconciliation_events": [
+    "2026-09-29T23:17:56+05:30 module=msi-ec-0.13.112 kernel=7.2.8_1 dkms=built trust=signed load=loaded live=yes reconciliation=verified",
+    "2026-09-29T23:20:12+05:30 module=msi-ec-0.13.112 kernel=7.2.8_1 dkms=- trust=- load=loaded live=yes reconciliation=noop",
+    "2026-09-29T23:39:18+05:30 module=msi-ec-0.13.112 kernel=7.2.8_1 dkms=- trust=- load=loaded live=yes reconciliation=noop",
+    "2026-09-30T07:42:18+05:30 module=msi-ec-0.13.112 kernel=7.2.8_1 dkms=- trust=- load=loaded live=yes reconciliation=noop",
+    "2026-09-30T11:27:03+05:30 module=msi-ec-0.13.112 kernel=7.2.8_1 dkms=- trust=- load=loaded live=yes reconciliation=noop",
+    "2026-10-01T06:01:48+05:30 module=msi-ec-0.13.112 kernel=7.2.8_1 dkms=- trust=- load=loaded live=yes reconciliation=noop",
+    "2026-10-01T08:48:39+05:30 module=msi-ec-0.13.112 kernel=7.2.8_1 dkms=- trust=- load=loaded live=yes reconciliation=noop"
+  ],
+  "comparison": {
+    "boot_changed": true,
+    "candidate_unchanged": true,
+    "installed_package_unchanged": true,
+    "preboot_policy_preserved": true,
+    "session_preference_preserved": true,
+    "postboot_session_preference_matches_policy": true,
+    "postboot_active_matches_preboot_policy": true,
+    "postboot_active_matches_postboot_policy": true,
+    "module_loaded": true,
+    "reconciliation_service_enabled": true,
+    "reconciliation_service_running": true,
+    "reconciliation_service_bounded": true,
+    "lifecycle_state_belongs_to_current_boot": true,
+    "known_good_marker": true,
+    "known_good_marker_updated_this_boot": true,
+    "new_boot_reconciliation_event": "2026-10-01T08:48:39+05:30 module=msi-ec-0.13.112 kernel=7.2.8_1 dkms=- trust=- load=loaded live=yes reconciliation=noop",
+    "new_boot_reconciliation_outcome": "noop",
+    "no_op_reconciliation": true,
+    "write_and_readback_reconciliation": false,
+    "kernel_log_appended_since_preboot": true
+  },
+  "reconciliation_wait_seconds": 0.0
+}
