@@ -35,11 +35,14 @@ allocation, and restored appearance and scale afterwards. No screenshots were
 taken of those runs. These are the maintainer's reports; I did not observe
 them, and no per-step results or timestamps were recorded.
 
-## Still open
+## Follow-up report (2026-10-01T06:30Z)
 
-- Live DMS palette change and absent/invalid palette fallback were not
-  reported as exercised.
-- The 1.25/1.5/2 results are not itemised (legibility, obscured content).
+The maintainer further reported, in chat, that they exercised a live DMS
+palette change and the absent/invalid palette fallback on the same candidate,
+and that all of it, including legibility, usable controls and no obscured
+content at scales 1.25, 1.5 and 2, was verified. Again these are the
+maintainer's reports; I did not observe them, and no timestamps or screenshots
+exist for those runs.
 
 Old architecture text in `docs/adr/001-carbon-web-ui-architecture.md`
 (boolean dark mode, JS drag) was reconciled with the accepted behavior.
