@@ -1,0 +1,26 @@
+{
+  "candidate": {"package": "threshold-2.0.4_1", "xbps_sha256": "62d55b0b7814472fdf2effb3efbe2c85eb1f90278b23777941e187af01af74f6"},
+  "observed_utc": "2026-10-01T05:09:49Z",
+  "environment": {"host": "MSI Thin A15 B7UCX", "os": "Void Linux glibc", "running_kernel": "7.2.8_1", "boot_identity_sha256_prefix": "1da7d94eac1d", "previous_boot_kernel": "6.18.54_1", "user_coordinated_reboot": true},
+  "subsequent_verification": {
+    "ec_module_loaded": true,
+    "lifecycle_state": "setup_state=available kernel=7.2.8_1",
+    "reconciliation": "2026-10-01T10:33:26+05:30 live=yes reconciliation=noop; kernel marked known-good",
+    "battery_threshold_percent": 60,
+    "machine_policy_percent": 60,
+    "known_good_markers": ["6.18.54_1", "7.2.8_1"],
+    "dkms": "msi-ec and nvidia installed for both kernels; foreign nvidia preserved"
+  },
+  "ordinary_user_confirmation": {
+    "executed_as": "normal desktop user via installed dispatcher apply_threshold (EC_MSI mode, real pkexec)",
+    "steps": [
+      {"t": "2026-10-01T05:10:26Z", "requested": 70, "success": true, "method": "pkexec", "ec_mismatch": false, "active": 70, "policy": 70},
+      {"t": "2026-10-01T05:10:33Z", "requested": 60, "success": true, "method": "pkexec", "ec_mismatch": false, "active": 60, "policy": 60}
+    ],
+    "session_preference_after": 60,
+    "restored_to_prior_preference_percent": 60,
+    "note": "An earlier call without a battery state returned no_battery and changed nothing (harness error, not a product result)."
+  },
+  "gates_observed": ["subsequent_verification", "live_ec (7.2.8_1 after recovery cycle)", "machine_policy readback"],
+  "limits": ["The pkexec authorization prompt was not separately recorded; success shows pkexec authorization was granted.", "Install/upgrade/removal/reinstall applicability check not yet written up."]
+}

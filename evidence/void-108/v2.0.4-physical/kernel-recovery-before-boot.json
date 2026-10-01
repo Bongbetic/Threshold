@@ -1,0 +1,17 @@
+{
+  "candidate": {"package": "threshold-2.0.4_1", "xbps_sha256": "62d55b0b7814472fdf2effb3efbe2c85eb1f90278b23777941e187af01af74f6", "signed_source": "3682e414b40918ff7c1a8071ae26830e1dd858c4", "installed_filename_sha256_matches": true},
+  "environment": {"host": "MSI Thin A15 B7UCX", "os": "Void Linux glibc", "known_good_kernel": "7.2.8_1", "target_kernel": "6.18.54_1", "secure_boot": "disabled", "charge_threshold_percent": 60, "machine_policy_percent": 60, "foreign_dkms": "nvidia/595.99.02 registered and installed for both kernels"},
+  "chronology_utc": [
+    {"t": "2026-10-01T03:34:23Z", "event": "baseline: msi-ec registered only for 7.2.8_1; module loaded; threshold/policy 60; nvidia on both kernels"},
+    {"t": "2026-10-01T03:34:28Z", "event": "attempt 1: hid kernel-headers .config for 6.18.54_1 then ran `threshold-ec-lifecycle repair 6.18.54_1`. Build did NOT fail; module built/installed, state pending_reboot. Not a failed build."},
+    {"t": "2026-10-01T03:34:48Z", "event": "attempt 2 (after dkms uninstall/unbuild for 6.18.54_1 only): hid scripts/sign-file. Build did NOT fail; unsigned module installed. Not a failed build."},
+    {"t": "2026-10-01T03:35:02Z", "event": "attempt 3 (after uninstall/unbuild for 6.18.54_1 only): hid headers Makefile; repair 6.18.54_1 ran real `make -C /lib/modules/6.18.54_1/build` -> bad exit status 2. Actual failed build for identified target."},
+    {"t": "2026-10-01T03:35:03Z", "event": "after failure (Makefile restored): msi-ec only registered/installed for 7.2.8_1; running 7.2.8_1 module still loaded; BAT1 threshold 60, policy 60; nvidia registrations unchanged; 7.2.8_1.known-good kept; lifecycle log: build failed, older known-good preserved."},
+    {"t": "2026-10-01T03:35:16Z", "event": "installed named-kernel repair `threshold-ec-lifecycle repair 6.18.54_1` (headers restored): built+installed msi-ec for 6.18.54_1 only; state pending_reboot kernel=6.18.54_1; kernel log reconciliation=pending live=none. Target not running: remains pending until actual boot."}
+  ],
+  "observations": [
+    "Global state/status files recorded setup_state=unavailable reason=build_failed kernel=6.18.54_1 after the failed target build while live=yes for the running 7.2.8_1 module. Per-kernel log 6.18.54_1.log has no failure record (failure only in lifecycle.log and state)."
+  ],
+  "gates_pending": ["named_kernel_repair (until 6.18.54_1 boots)", "known_good_boot", "subsequent_verification", "live_ec"],
+  "gates_observed": ["failed_kernel_build"]
+}
