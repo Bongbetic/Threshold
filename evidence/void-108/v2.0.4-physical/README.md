@@ -182,3 +182,9 @@ physical MSI Thin A15 B7UCX; reboots were user-coordinated.
 Gates evidenced: `failed_kernel_build`, `named_kernel_repair`,
 `known_good_boot`, `subsequent_verification`, `live_ec`. This is not a passing
 `release-acceptance.json`; other gates and publication remain open.
+
+## Native desktop controls (issue #120)
+
+User-attested only, 2026-10-06: see
+[`desktop-controls-120/README.md`](desktop-controls-120/README.md). No
+agent-captured screenshots or assets exist for these observations.
