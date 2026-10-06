@@ -87,6 +87,31 @@ waiving the gate.
 - Restore the user's confirmed charge threshold after each controlled write test.
 - Record UTC timestamps at observation time.
 
+## Container smoke check (NOT qualifying evidence)
+
+Run 2026-10-06 by an agent with rootless `podman` (`debian:trixie`, DEB
+`threshold_2.0.4-1_amd64.deb`). This is a sanity check of the package only. It
+satisfies **no** #121 criterion and must not be cited as physical acceptance.
+
+- SHA-256 of downloaded DEB matched the draft release digest
+  (`66e95260...e318f574`); RPM and src.rpm digests matched too.
+- `apt-get install` of the DEB resolved all dependencies and configured cleanly.
+  postinst printed `Kernel build tree for 7.2.9_1 missing; EC setup repairable`
+  (no kernel headers/DKMS build in a container: expected, nothing was tested).
+- `threshold --version` is unsupported (`Unknown option --version`); the
+  `threshold` process starts and maps a window under Xvfb + xfwm4 + xfce4-panel.
+- `kwin_wayland --virtual` runs only after clearing its `cap_sys_nice` file
+  capability; the app then starts under it. `plasmashell` fails (`starting
+  invalid corona`), so no Plasma panel or tray host was exercised. The
+  notification-area item was not verified on KDE or XFCE.
+- Container `/sys` and the kernel are the host's (a Void machine); it shows
+  `msi-ec`, `BAT1` and the product name, but those are the host's, not an
+  existing-desktop OS. No EC write, reboot, kernel, Secure Boot or MOK path
+  was exercised, and no DKMS/lifecycle behavior beyond package install.
+
+Conclusion: a container cannot satisfy #121. It needs a real second OS session
+on the physical MSI Thin A15 B7UCX plus operator/recovery/scheduling decisions.
+
 ## Closing this issue
 
 Close #121 only when an environment above is genuinely available, the checklist
